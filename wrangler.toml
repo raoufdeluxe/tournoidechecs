@@ -1,0 +1,13 @@
+name = "echecs"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+kv_namespaces = [
+  { binding = "CHESS_TOURNAMENT", id = "eee56da29a8546c7b4da982eff43f4b1" }
+]
+
+# La page du tournoi (public/index.html) est servie en statique par le Worker.
+# Les requêtes qui ne correspondent à aucun fichier tombent sur worker.js (route /state).
+# NB : [assets] doit rester en DERNIER — en TOML, toute clé écrite après appartient à cette table.
+[assets]
+directory = "./public"

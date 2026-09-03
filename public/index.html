@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournoi d'Échecs</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons@2/tabler-icons.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>
+                <span class="chess-icon">♟️</span> Grand Prix des Échecs
+                <svg class="chief-icon" viewBox="0 0 140 80" xmlns="http://www.w3.org/2000/svg" aria-label="Coiffe de plumes façon Mardi Gras Indian">
+                    <!-- Grandes plumes dorées en éventail -->
+                    <path d="M70 44 C64 24 58 4 46 -4 C56 8 60 22 62 40 Z" fill="#F5C518" transform="translate(0,4)"/>
+                    <path d="M70 44 C60 28 48 12 30 6 C44 16 52 28 58 42 Z" fill="#EFB90C" transform="translate(0,4)"/>
+                    <path d="M70 44 C56 34 40 26 20 26 C38 30 50 36 60 46 Z" fill="#FFDB58" transform="translate(0,4)"/>
+                    <path d="M70 44 C58 42 44 44 28 52 C42 48 54 48 62 50 Z" fill="#D4A017" transform="translate(0,4)"/>
+                    <path d="M70 44 C64 24 58 4 46 -4 C56 8 60 22 62 40 Z" fill="#F5C518" transform="translate(0,4) scale(-1,1) translate(-140,0)"/>
+                    <path d="M70 44 C60 28 48 12 30 6 C44 16 52 28 58 42 Z" fill="#EFB90C" transform="translate(0,4) scale(-1,1) translate(-140,0)"/>
+                    <path d="M70 44 C56 34 40 26 20 26 C38 30 50 36 60 46 Z" fill="#FFDB58" transform="translate(0,4) scale(-1,1) translate(-140,0)"/>
+                    <path d="M70 44 C58 42 44 44 28 52 C42 48 54 48 62 50 Z" fill="#D4A017" transform="translate(0,4) scale(-1,1) translate(-140,0)"/>
+                    <!-- Nervures des plumes -->
+                    <path d="M70 48 L46 4" stroke="#B8860B" stroke-width="1" opacity="0.5" fill="none"/>
+                    <path d="M70 48 L94 4" stroke="#B8860B" stroke-width="1" opacity="0.5" fill="none"/>
+                    <!-- Bandeau perlé -->
+                    <rect x="42" y="46" width="56" height="14" rx="7" fill="#4E2067"/>
+                    <circle cx="52" cy="53" r="3" fill="#D4A017"/>
+                    <circle cx="62" cy="53" r="3" fill="#1B8A5A"/>
+                    <circle cx="72" cy="53" r="3" fill="#D4A017"/>
+                    <circle cx="82" cy="53" r="3" fill="#1B8A5A"/>
+                    <circle cx="88" cy="53" r="3" fill="#D4A017"/>
+                </svg>
+            </h1>
+            <p>Poule qualificative · Demi-finales · Grande Finale</p>
+            <div id="tournament-name-display" class="tournament-name-display" hidden></div>
+            <button id="btn-menu" class="menu-toggle" type="button" aria-label="Ouvrir le menu"
+                    aria-expanded="false" aria-controls="main-menu" onclick="toggleMainMenu()">
+                <span></span><span></span><span></span>
+            </button>
+            <nav id="main-menu" class="main-menu" aria-labelledby="btn-menu" hidden>
+                <button id="btn-reset" class="menu-item" onclick="startNewTournament()">↺ Nouveau tournoi</button>
+                <button id="btn-copy-link" class="menu-item" onclick="copyTournamentLink()">🔗 Copier le lien</button>
+                <button id="btn-rename" class="menu-item" onclick="togglePlayersPanel()">✏️ Renommer</button>
+                <button id="btn-list" class="menu-item" onclick="toggleTournamentsPanel()">📋 Tous les tournois</button>
+            </nav>
+            <div><span id="sync-status" class="sync-status" data-state="saved">✓ Enregistré</span></div>
+        </header>
+
+        <div id="players-panel" class="tournaments-panel" hidden>
+            <div class="tournaments-head">
+                <strong>✏️ Renommer le tournoi et les partants</strong>
+                <button class="secondary" onclick="togglePlayersPanel()">Fermer</button>
+            </div>
+            <div id="players-editor"></div>
+            <div class="players-actions">
+                <button onclick="savePlayerNames()">Enregistrer</button>
+            </div>
+        </div>
+
+        <div id="tournaments-panel" class="tournaments-panel" hidden>
+            <div class="tournaments-head">
+                <strong>📋 Tournois enregistrés</strong>
+                <button class="secondary" onclick="toggleTournamentsPanel()">Fermer</button>
+            </div>
+            <div id="tournaments-list"></div>
+        </div>
+
+        <div id="sync-conflict" class="sync-conflict" hidden>
+            <strong>Le tournoi a été modifié sur un autre appareil.</strong>
+            <div style="margin-top: 6px; font-size: 14px;">Deux versions existent en parallèle. Choisis celle à conserver — l'autre sera définitivement perdue.</div>
+            <div class="sync-conflict-actions">
+                <button class="secondary" data-action="pull">Prendre la version de l'autre appareil</button>
+                <button data-action="push">Garder la mienne et l'imposer</button>
+            </div>
+        </div>
+
+        <!-- ÉCRAN 1: Configuration -->
+        <div class="screen active" id="screen-config">
+            <div class="card">
+                <h2 class="card-title">🎟️ Inscription des partants</h2>
+                
+                <div class="form-group">
+                    <label for="tournament-name">Nom du tournoi <span style="color: var(--text-secondary); font-weight: 400;">(optionnel — sert d'adresse au tournoi)</span></label>
+                    <input type="text" id="tournament-name" placeholder="Ex. Tournoi des potes" maxlength="64">
+                </div>
+
+                <div class="form-group">
+                    <label for="player-count">Nombre de partants</label>
+                    <input type="number" id="player-count" min="4" max="16" value="4">
+                </div>
+
+                <div id="player-inputs"></div>
+
+                <div class="button-group">
+                    <button onclick="startTournament()">🏁 Donner le départ</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ÉCRAN 2: Tournoi (Poule) -->
+        <div class="screen" id="screen-tournament">
+            <div class="card">
+                <div class="card-head">
+                    <h2 class="card-title">🏇 Phase de Poule</h2>
+                    <select id="round-select-top" class="result-select round-picker" onchange="goToRound(this.value)"></select>
+                </div>
+
+                <h3 id="standings-title" style="margin-top: 10px; margin-bottom: 20px; color: var(--text-primary); font-family: var(--font-sport); font-weight: 700;">Classement</h3>
+                <div class="table-scroll">
+                <table class="standings-table" id="standings">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">Rang</th>
+                            <th>Partant</th>
+                            <th style="width: 60px;">Pts</th>
+                            <th style="width: 80px;">Manches</th>
+                        </tr>
+                    </thead>
+                    <tbody id="standings-body"></tbody>
+                </table>
+                </div>
+
+                <div class="info-banner">
+                    <strong>Manche qualificative — Championnat en journées</strong>
+                    Chaque partant affronte tous les autres une fois à l'aller, une fois au retour — un duel par journée. Celui qui reçoit à l'aller se déplace au retour. Victoire = 1 pt, Nulle = 0,5 pt, Défaite = 0 pt. Les 4 premiers au classement se qualifient.
+                </div>
+
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill" style="width: 0%;"></div>
+                </div>
+                <div class="progress-labels">
+                    <span>🏁 Départ</span>
+                    <span>🏆 Arrivée</span>
+                </div>
+
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <div class="summary-card-value" id="matches-played">0</div>
+                        <div class="summary-card-label">Manches jouées</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-value" id="matches-total">0</div>
+                        <div class="summary-card-label">Manches au programme</div>
+                    </div>
+                </div>
+
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+                    <h3 id="round-label" style="color: var(--text-primary); font-family: var(--font-sport); font-weight: 700;">Journée</h3>
+                    <select id="round-select" class="result-select" style="width: auto;" onchange="goToRound(this.value)"></select>
+                </div>
+                <div id="matches-container"></div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; flex-wrap: wrap; gap: 12px;">
+                    <button class="secondary" id="prev-round-btn" onclick="prevRound()" style="flex: none; width: auto; white-space: nowrap; padding: 10px 18px;">← Précédente</button>
+                    <button class="success" id="next-round-btn" onclick="nextRound()" style="flex: none; width: auto; white-space: nowrap; padding: 10px 18px;">Suivante →</button>
+                </div>
+
+                <h3 style="margin-top: 40px; margin-bottom: 16px; color: var(--text-primary); font-family: var(--font-sport); font-weight: 700;">Progression journée après journée</h3>
+                <div id="progress-chart-container" style="background: var(--bg-secondary); border-radius: 12px; padding: 16px;"></div>
+            </div>
+        </div>
+
+        <!-- ÉCRAN 3: Demi-finales -->
+        <div class="screen" id="screen-semifinals">
+            <div class="card">
+                <h2 class="card-title">🥊 Demi-Finales</h2>
+                
+                <div class="info-banner">
+                    <strong>Confrontations — 1er vs 4e / 2e vs 3e</strong>
+                    Chaque demi-finale se joue en 2 manches, une chez chacun. En cas d'égalité : le partant au plus bas Elo est qualifié ; à défaut d'Elo, une manche décisive (belle) est ajoutée ; si la belle est nulle elle aussi, le mieux classé en poule passe.
+                </div>
+
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill-semis" style="width: 0%;"></div>
+                </div>
+
+                <div class="finals-bracket">
+                    <div class="bracket-round">
+                        <div class="bracket-title">1ère Demi-Finale</div>
+                        <div class="bracket-match" id="semi1-match">
+                            <div id="semi1-content"></div>
+                        </div>
+                    </div>
+                    <div class="bracket-round">
+                        <div class="bracket-title">Finale</div>
+                        <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
+                            <div style="text-align: center; width: 100%;" id="final-placeholder">
+                                En attente des demi-finales...
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bracket-round">
+                        <div class="bracket-title">2e Demi-Finale</div>
+                        <div class="bracket-match" id="semi2-match">
+                            <div id="semi2-content"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group" style="margin-top: 40px;">
+                    <button class="secondary" onclick="backToTournament()">← Retour à la poule</button>
+                    <button class="success" onclick="startFinals()" id="start-finals-btn" disabled>🏆 Vers la Grande Finale →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ÉCRAN 4: Finale -->
+        <div class="screen" id="screen-finals">
+            <div class="card">
+                <h2 class="card-title">🏆 Grande Finale</h2>
+                
+                <div class="info-banner">
+                    <strong>La der des ders — 2 manches</strong>
+                    Les deux finalistes s'affrontent pour le titre, une manche chez chacun (la belle éventuelle sur terrain neutre). En cas d'égalité, même règle qu'en demies : Elo le plus bas, puis manche décisive (belle), puis classement de la poule.
+                </div>
+
+                <div class="finals-bracket">
+                    <div class="bracket-round">
+                        <div class="bracket-title">Les Finalistes</div>
+                        <div id="finalistes-list"></div>
+                    </div>
+                    <div class="bracket-round">
+                        <div class="bracket-title">Résultat</div>
+                        <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
+                            <div style="text-align: center; width: 100%;">
+                                <div id="final-result-placeholder" style="color: var(--text-secondary); font-size: 14px;">
+                                    En attente du résultat...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="final-matches-container" style="margin-top: 40px;"></div>
+
+                <div class="button-group" style="margin-top: 40px;">
+                    <button class="secondary" onclick="backToSemifinals()">← Retour aux demies</button>
+                    <button class="success" onclick="finalizeFinals()" id="finalize-finals-btn" disabled>🏆 Proclamer le vainqueur →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ÉCRAN 5: Résultats finaux -->
+        <div class="screen" id="screen-results">
+            <div class="card">
+                <h2 class="card-title">🏆 Arrivée Officielle</h2>
+                
+                <div id="podium" style="margin: 40px 0; text-align: center;"></div>
+
+                <h3 style="margin-top: 30px; margin-bottom: 20px; color: var(--text-primary); font-family: var(--font-sport); font-weight: 700;">Classement final</h3>
+                <div class="table-scroll">
+                <table class="standings-table" id="final-standings">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">Rang</th>
+                            <th>Partant</th>
+                            <th style="width: 60px;">Pts</th>
+                            <th style="width: 100px;">Manches</th>
+                        </tr>
+                    </thead>
+                    <tbody id="final-standings-body"></tbody>
+                </table>
+                </div>
+
+                <div class="button-group" style="margin-top: 30px;">
+                    <button class="secondary" onclick="startNewTournament()">🏁 Nouveau tournoi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/core.js"></script>
+    <script src="js/poule.js"></script>
+    <script src="js/finales.js"></script>
+    <script src="js/tournois.js"></script>
+    <script src="js/sync.js"></script>
+</body>
+</html>

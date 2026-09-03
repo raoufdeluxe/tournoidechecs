@@ -1,0 +1,962 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    /* Identité Nouvelle-Orléans : violet & vert Mardi Gras, or, fond chaud façon Vieux Carré */
+    --primary: #6B2D8C;
+    --primary-light: #F0E3F5;
+    --primary-dark: #4E2067;
+    --accent: #1B8A5A;
+    --accent-light: #E2F1E7;
+    --danger: #C1272D;
+    --danger-light: #FBEAEA;
+    --success: #1B8A5A;
+    --warning: #B8860B;
+    --gold: #D4A017;
+    --gray-50: #FBF4E8;
+    --gray-100: #EFE1C8;
+    --gray-200: #D8C6A3;
+    --gray-300: #A9926F;
+    --gray-900: #2E1E12;
+    --border: #E3D3B0;
+    --text-primary: #2E1E12;
+    --text-secondary: #7A6952;
+    --bg-light: #FFFBF2;
+    --bg-secondary: #F6EAD3;
+    --navy: #2A1240;
+    --navy-dark: #170A24;
+    --font-display: 'Poppins', sans-serif;
+    --font-sport: 'Poppins', sans-serif;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background:
+        radial-gradient(560px circle at 82% 8%, rgba(212, 160, 23, 0.22), transparent 60%),
+        radial-gradient(480px circle at 12% 92%, rgba(27, 138, 90, 0.22), transparent 60%),
+        linear-gradient(160deg, var(--navy) 0%, var(--navy-dark) 100%);
+    min-height: 100vh;
+    color: var(--text-primary);
+    padding: 20px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+    color: white;
+    position: relative;
+    padding-bottom: 6px;
+    /* marge à droite pour ne pas passer sous le bouton du menu */
+    padding-right: 56px;
+    padding-left: 56px;
+}
+
+
+header h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 42px;
+    line-height: 1.15;
+    margin-bottom: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+}
+
+header p {
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    opacity: 0.75;
+}
+
+.chess-icon {
+    font-size: 44px;
+}
+
+/* Bouton de remise a zero, disponible depuis n'importe quel ecran */
+.header-reset {
+    margin-top: 18px;
+    padding: 8px 18px;
+    min-width: 0;
+    font-size: 13px;
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.header-reset:hover {
+    background: rgba(255, 255, 255, 0.18);
+    box-shadow: none;
+}
+
+.header-reset[hidden] {
+    display: none;
+}
+
+.tournament-name-display {
+    margin-top: 10px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 20px;
+    color: var(--gold);
+}
+
+.tournament-name-display[hidden] { display: none; }
+
+/* Etat de la sauvegarde partagee */
+.sync-status {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: var(--font-sport);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.sync-status[data-state="saved"]    { color: #8FE3B8; }
+.sync-status[data-state="saving"]   { color: rgba(255, 255, 255, 0.72); }
+.sync-status[data-state="offline"],
+.sync-status[data-state="conflict"] {
+    color: #FFD98A;
+    border-color: rgba(255, 217, 138, 0.45);
+    background: rgba(255, 217, 138, 0.12);
+}
+
+.tournaments-panel {
+    max-width: 1200px;
+    margin: 0 auto 20px;
+    padding: 22px 24px;
+    border-radius: 16px;
+    background: var(--bg-light);
+    border: 1px solid var(--border);
+}
+
+.tournaments-panel[hidden] { display: none; }
+
+.tournaments-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.tournaments-head strong {
+    font-family: var(--font-sport);
+    font-size: 18px;
+}
+
+.tournaments-head button { flex: none; width: auto; min-width: 0; padding: 8px 16px; font-size: 13px; }
+
+.tournament-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: var(--bg-secondary);
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.tournament-row.is-current { box-shadow: inset 0 0 0 2px var(--accent); }
+
+.tournament-row button { flex: none; width: auto; min-width: 0; padding: 9px 18px; font-size: 13px; }
+.tournament-row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.tournament-row button[disabled] { opacity: 0.45; cursor: default; }
+
+.tournament-row-name { font-weight: 600; font-family: var(--font-sport); }
+.tournament-row-meta { font-size: 13px; color: var(--text-secondary); margin-top: 3px; }
+
+.tournament-badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--accent-light);
+    color: var(--success);
+}
+
+.tournaments-empty { color: var(--text-secondary); font-size: 14px; padding: 8px 2px; }
+
+.card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.card-head .card-title { margin-bottom: 20px; }
+
+/* .result-select impose width:100% plus bas dans la feuille : on prend le dessus
+   avec un sélecteur plus spécifique, sinon le menu passe à la ligne. */
+.card-head .round-picker {
+    width: auto;
+    max-width: 100%;
+    margin-bottom: 20px;
+    font-size: 14px;
+    padding: 9px 12px;
+}
+
+/* Journée de référence du classement, en rappel discret du titre */
+.standings-round {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+/* --- Adaptation aux petits écrans --- */
+/* --- Menu hamburger --- */
+/* Les règles globales « button { flex: 1; min-width: 120px } » ne conviennent
+   ni au bouton ni aux entrées : on les neutralise explicitement. */
+.menu-toggle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 46px;
+    height: 46px;
+    flex: 0 0 auto;
+    min-width: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+.menu-toggle:hover {
+    background: rgba(255, 255, 255, 0.16);
+    transform: none;
+    box-shadow: none;
+}
+
+.menu-toggle span {
+    display: block;
+    width: 20px;
+    height: 2px;
+    border-radius: 2px;
+    background: white;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+/* Le bouton se transforme en croix quand le menu est ouvert. */
+.menu-toggle[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.menu-toggle[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+.menu-toggle[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+.main-menu {
+    position: absolute;
+    top: 54px;
+    left: 0;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    min-width: 240px;
+    max-width: calc(100vw - 32px);
+    padding: 8px;
+    text-align: left;
+    background: var(--bg-light);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 18px 40px rgba(7, 18, 41, 0.35);
+}
+
+.main-menu[hidden] { display: none; }
+
+.main-menu .menu-item {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    padding: 11px 14px;
+    text-align: left;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: transparent;
+    border: none;
+    border-radius: 9px;
+    white-space: nowrap;
+}
+
+.main-menu .menu-item:hover {
+    background: var(--bg-secondary);
+    transform: none;
+    box-shadow: none;
+}
+
+.main-menu .menu-item[hidden] { display: none; }
+
+@media (max-width: 700px) {
+    body { padding: 12px; }
+
+    header h1 { font-size: 30px; gap: 10px; }
+    .chess-icon { font-size: 32px; }
+    .chief-icon { width: 64px; }
+    header p { font-size: 14px; }
+
+    .card { padding: 18px 14px; border-radius: 14px; }
+    .card-title { font-size: 19px; }
+
+    .menu-toggle { width: 42px; height: 42px; }
+    .main-menu { top: 50px; }
+
+    .standings-table th,
+    .standings-table td { padding: 10px 8px; font-size: 14px; }
+
+    .tournaments-panel { padding: 16px 14px; }
+
+    .players-actions button { width: 100%; min-width: 0; }
+    .rename-input { min-width: 0; max-width: none; width: 100%; }
+
+    .button-group { flex-direction: column; }
+    .button-group button { width: 100%; }
+}
+
+/* Sur téléphone, « Manches » (le nombre de rencontres jouées) est la colonne
+   la moins utile : on la masque plutôt que d'imposer un défilement latéral.
+   Elle réapparaît dès qu'il y a la place. */
+@media (max-width: 480px) {
+    .standings-table th:nth-child(4),
+    .standings-table td:nth-child(4) { display: none; }
+
+    .standings-table th,
+    .standings-table td { padding: 9px 6px; font-size: 13px; }
+
+    /* Les mentions Favori/Outsider passent sous le nom au lieu de l'élargir. */
+    .standings-table .tag-favori,
+    .standings-table .tag-outsider {
+        display: inline-block;
+        margin-left: 0;
+        margin-top: 3px;
+        font-size: 10px;
+        padding: 1px 6px;
+    }
+}
+
+@media (max-width: 420px) {
+    header h1 { font-size: 25px; }
+    .medal { margin-right: 6px; }
+}
+
+.venue {
+    display: block;
+    margin-top: 5px;
+    /* exactement la moitié du nom, quelle que soit la taille de celui-ci */
+    font-size: 0.5em;
+    font-weight: 700;
+    font-family: var(--font-sport);
+    letter-spacing: 0.02em;
+}
+
+.venue-home    { color: var(--success); }
+.venue-away    { color: var(--text-secondary); }
+.venue-neutral { color: var(--warning); }
+
+.rename-input {
+    flex: 1;
+    min-width: 200px;
+    max-width: 420px;
+    padding: 9px 12px;
+    font-size: 15px;
+}
+
+.players-actions { margin-top: 14px; }
+.players-actions button { width: auto; min-width: 220px; flex: none; }
+
+.sync-conflict {
+    max-width: 1200px;
+    margin: 0 auto 20px;
+    padding: 18px 20px;
+    border-radius: 12px;
+    background: #FBF1DA;
+    border: 1px solid var(--warning);
+    color: var(--text-primary);
+}
+
+.sync-conflict[hidden] { display: none; }
+
+.sync-conflict-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+}
+
+.sync-conflict-actions button {
+    flex: 1;
+    min-width: 200px;
+    font-size: 14px;
+    padding: 10px 16px;
+}
+
+.chief-icon {
+    width: 90px;
+    height: auto;
+}
+
+.screen {
+    display: none;
+}
+
+.screen.active {
+    display: block;
+}
+
+.card {
+    background: var(--bg-light);
+    border-radius: 16px;
+    padding: 30px;
+    border: 1px solid var(--border);
+    border-top: 4px solid var(--accent);
+    box-shadow: 0 20px 45px rgba(7, 18, 41, 0.25);
+    margin-bottom: 20px;
+}
+
+.card-title {
+    font-family: var(--font-sport);
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: var(--text-primary);
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+input[type="number"],
+input[type="text"],
+select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 16px;
+    font-family: inherit;
+    background: var(--bg-light);
+    color: var(--text-primary);
+}
+
+input[type="number"]:focus,
+input[type="text"]:focus,
+select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.button-group {
+    display: flex;
+    gap: 12px;
+    margin-top: 30px;
+    flex-wrap: wrap;
+}
+
+button {
+    padding: 13px 24px;
+    border: 2px solid var(--primary);
+    border-radius: 10px;
+    font-family: var(--font-sport);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: var(--primary);
+    color: white;
+    flex: 1;
+    min-width: 120px;
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(107, 45, 140, 0.3);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+button.secondary {
+    background: transparent;
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+button.secondary:hover {
+    background: var(--primary-light);
+}
+
+button.danger {
+    background: var(--danger);
+    border-color: var(--danger);
+}
+
+button.danger:hover {
+    box-shadow: 0 8px 24px rgba(229, 72, 77, 0.3);
+}
+
+button.success {
+    background: var(--success);
+    border-color: var(--success);
+}
+
+button.success:hover {
+    box-shadow: 0 8px 24px rgba(0, 181, 136, 0.3);
+}
+
+.player-input-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 15px;
+    padding: 15px;
+    background: var(--bg-secondary);
+    border-radius: 10px;
+}
+
+@media (max-width: 600px) {
+    .player-input-group {
+        grid-template-columns: 1fr;
+    }
+}
+
+.standings-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+/* Un tableau plus large que l'écran défile dans son propre cadre,
+   au lieu de faire déborder toute la page. */
+.table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    /* le classement est désormais en tête de carte : on dégage ce qui suit */
+    margin-bottom: 26px;
+}
+
+/* Pas de largeur plancher : le tableau se comprime d'abord, et ne défile
+   que si son contenu l'exige vraiment. */
+
+.standings-table thead {
+    background: var(--primary-light);
+}
+
+.standings-table th {
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--primary);
+    border: 1px solid var(--border);
+}
+
+.standings-table td {
+    padding: 15px;
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+}
+
+.standings-table tbody tr:nth-child(even) {
+    background: var(--bg-secondary);
+}
+
+.standings-table tbody tr:hover {
+    background: var(--primary-light);
+}
+
+.medal {
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    margin-right: 10px;
+}
+
+.medal-gold { background: #FFD700; color: #000; box-shadow: 0 0 0 4px rgba(255,215,0,0.25); }
+.medal-silver { background: #C0C0C0; color: #000; box-shadow: 0 0 0 4px rgba(192,192,192,0.25); }
+.medal-bronze { background: #CD7F32; box-shadow: 0 0 0 4px rgba(205,127,50,0.25); }
+
+@keyframes podium-pop {
+    0% { transform: scale(0.4); opacity: 0; }
+    70% { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); }
+}
+
+.match-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 15px;
+    display: grid;
+    grid-template-columns: 1fr 100px 1fr;
+    gap: 15px;
+    align-items: center;
+}
+
+.match-card--compact {
+    grid-template-columns: 1fr 50px 1fr;
+    gap: 8px;
+    padding: 10px;
+}
+
+/* En dessous de 700px les deux adversaires s'empilent : en 3 colonnes
+   les noms se coupent en morceaux illisibles. */
+@media (max-width: 700px) {
+    .match-card,
+    .match-card--compact {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .vs-indicator {
+        justify-self: center;
+        width: auto;
+        padding: 4px 18px;
+    }
+}
+
+.player-result {
+    padding: 12px;
+    background: var(--bg-light);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    text-align: center;
+    /* le nom du partant est l'information principale de la carte */
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+/* Les demi-finales tiennent dans un tableau à trois colonnes : un cran en dessous. */
+.match-card--compact .player-result {
+    padding: 8px;
+    font-size: 17px;
+}
+
+.player-result.winner {
+    background: var(--accent-light);
+    border-color: var(--accent);
+    font-weight: 600;
+}
+
+.player-result.loser {
+    background: var(--danger-light);
+    border-color: #E39B9B;
+    color: var(--text-secondary);
+}
+
+.player-result.draw {
+    background: #FBF1DA;
+    border-color: var(--gold);
+    font-weight: 600;
+}
+
+.result-icon {
+    margin-right: 4px;
+}
+
+.vs-indicator {
+    text-align: center;
+    font-size: 11px;
+    color: white;
+    font-family: var(--font-sport);
+    font-weight: 700;
+    background: var(--navy);
+    border-radius: 999px;
+    padding: 6px 4px;
+}
+
+.match-controls {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.match-controls button {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 13px;
+    min-width: 60px;
+}
+
+.score-input {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.score-input input {
+    width: 60px;
+    padding: 8px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-primary {
+    background: var(--primary-light);
+    color: var(--primary);
+}
+
+.badge-success {
+    background: var(--accent-light);
+    color: var(--success);
+}
+
+.badge-warning {
+    background: #FAEEDA;
+    color: var(--warning);
+}
+
+.badge-danger {
+    background: #FCEBEB;
+    color: var(--danger);
+}
+
+.progress-bar {
+    width: 100%;
+    height: 14px;
+    background: var(--gray-100);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 8px;
+    position: relative;
+    border: 1px solid var(--border);
+}
+
+.progress-fill {
+    height: 100%;
+    background: repeating-linear-gradient(45deg, var(--primary), var(--primary) 10px, var(--primary-dark) 10px, var(--primary-dark) 20px);
+    transition: width 0.3s ease;
+}
+
+.progress-labels {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-sport);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+}
+
+.silk-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+    border: 1px solid rgba(0,0,0,0.2);
+    vertical-align: middle;
+}
+
+.result-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-light);
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.result-select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.result-hint {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tag-favori {
+    background: var(--gold);
+    color: #3A2A00;
+    font-family: var(--font-sport);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-left: 8px;
+}
+
+.tag-outsider {
+    background: var(--gray-100);
+    color: var(--text-secondary);
+    font-family: var(--font-sport);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-left: 8px;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.summary-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+}
+
+.summary-card-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 8px;
+}
+
+.summary-card-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.finals-bracket {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 30px;
+    margin-top: 40px;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .finals-bracket {
+        grid-template-columns: 1fr;
+    }
+}
+
+.bracket-round {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+
+.bracket-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.bracket-match {
+    background: var(--bg-light);
+    border: 2px solid var(--primary);
+    border-radius: 12px;
+    padding: 15px;
+}
+
+.bracket-player {
+    padding: 10px;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bracket-player.winner {
+    background: var(--accent-light);
+    border-left: 4px solid var(--success);
+    padding-left: 12px;
+}
+
+.winner-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 28px;
+    margin: 20px auto;
+}
+
+.controls-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+}
+
+.info-banner {
+    background: var(--accent-light);
+    border: 1px solid var(--accent);
+    border-left: 5px solid var(--accent);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    color: var(--success);
+    font-size: 14px;
+}
+
+.info-banner strong {
+    display: block;
+    margin-bottom: 5px;
+    font-family: var(--font-sport);
+}
