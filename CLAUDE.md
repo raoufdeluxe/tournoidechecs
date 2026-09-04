@@ -93,6 +93,11 @@ DOM factice (`tests/aide/app.mjs`) ; `fetch`, les minuteries, `confirm` et
   navigation et rien d'autre. Une action propre à une page vit sur cette page.
 - **Le nom du tournoi est l'information principale de l'accueil** ; il en est le
   titre, pas une mention discrète.
+- **Regarder ce qui se fait dans les standards actuels du web.** Un contrôle
+  inventé pour l'occasion — soulignement en pointillé, bricolage maison — ne se
+  reconnaît pas. Reprendre les formes établies, et d'abord celles que
+  l'application emploie déjà : un champ de saisie porte le cadre et le halo des
+  autres champs.
 - **Une visite ne crée rien.** Un tournoi ne reçoit son adresse qu'au premier
   « Donner le départ ».
 

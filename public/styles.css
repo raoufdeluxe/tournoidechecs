@@ -326,16 +326,6 @@ header .sync-status { margin-top: 10px; }
 
     .standings-table th,
     .standings-table td { padding: 9px 6px; font-size: 13px; }
-
-    /* Les mentions Favori/Outsider passent sous le nom au lieu de l'élargir. */
-    .standings-table .tag-favori,
-    .standings-table .tag-outsider {
-        display: inline-block;
-        margin-left: 0;
-        margin-top: 3px;
-        font-size: 10px;
-        padding: 1px 6px;
-    }
 }
 
 @media (max-width: 420px) {
@@ -804,27 +794,57 @@ button.success:hover {
     gap: 6px;
 }
 
-.tag-favori {
-    background: var(--gold);
-    color: #3A2A00;
-    font-family: var(--font-sport);
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 4px;
-    margin-left: 8px;
+/* Feuilletage des journées : le numéro au centre, une flèche de chaque côté. */
+.journee-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin: 30px 0 20px;
 }
+.journee-titre {
+    flex: 0 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 0;
+    white-space: nowrap;
+    color: var(--text-primary);
+    font-family: var(--font-sport);
+    font-weight: 700;
+}
+.journee-fleche {
+    flex: none;
+    width: 40px;
+    min-width: 0;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 24px;
+    line-height: 1;
+    background: transparent;
+    color: var(--primary);
+    border-color: var(--primary);
+}
+.journee-fleche:hover:not(:disabled) { background: var(--primary-light); transform: none; }
+.journee-fleche:disabled { opacity: 0.3; cursor: default; }
 
-.tag-outsider {
-    background: var(--gray-100);
-    color: var(--text-secondary);
-    font-family: var(--font-sport);
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 4px;
-    margin-left: 8px;
+/* Le numéro se saisit comme tout autre champ de l'application : même cadre, même
+   halo au focus, hérités de la règle des <input>. Seuls sa taille, son centrage
+   et l'absence de compteur le distinguent — les flèches font déjà ce travail. */
+input.journee-numero {
+    width: 3.2em;
+    padding: 6px 8px;
+    text-align: center;
+    font: inherit;
+    appearance: textfield;
+    -moz-appearance: textfield;
 }
+input.journee-numero::-webkit-inner-spin-button,
+input.journee-numero::-webkit-outer-spin-button { appearance: none; margin: 0; }
+.journee-total { flex: none; color: var(--text-secondary); font-weight: 500; }
+.journee-titre .badge { margin-left: 2px; }
 
 .summary-grid {
     display: grid;

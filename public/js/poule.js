@@ -317,7 +317,7 @@ function renderClassement() {
         return `
         <tr>
             <td><strong>${idx + 1}</strong></td>
-            <td>${buildCasaque(p.id)}${escapeHtml(p.name)}${p.absent ? buildTagFicheAbsente() : ''}${pendingTag}${idx === 0 ? '<span class="tag-favori">Favori</span>' : ''}${idx === standings.length - 1 && standings.length > 1 ? '<span class="tag-outsider">Outsider</span>' : ''}</td>
+            <td>${buildCasaque(p.id)}${escapeHtml(p.name)}${p.absent ? buildTagFicheAbsente() : ''}${pendingTag}</td>
             <td style="text-align: center; font-weight: 600; font-size: 18px;">${p.points.toFixed(1)}</td>
             <td style="text-align: center;">${p.matches}</td>
         </tr>
@@ -411,30 +411,18 @@ function renderParties() {
     const leg = current <= total / 2 ? 1 : 2;
     const allPlayed = tournoi.matches.every(m => m.played);
 
-    document.getElementById('round-label').innerHTML =
-        `Journée ${current} <span style="color: var(--text-secondary); font-weight: 500;">/ ${total}</span>` +
-        `<span class="badge badge-primary" style="margin-left: 10px;">${leg === 1 ? 'Aller' : 'Retour'}</span>`;
+    const champJournee = document.getElementById('round-input');
+    champJournee.value = current;
+    champJournee.max = total;
+    document.getElementById('round-total').textContent = '/ ' + total;
+    document.getElementById('round-leg').textContent = leg === 1 ? 'Aller' : 'Retour';
 
-    let options = '';
-    for (let r = 1; r <= total; r++) {
-        const rLeg = r <= total / 2 ? 'Aller' : 'Retour';
-        options += `<option value="${r}" ${r === current ? 'selected' : ''}>Journée ${r} — ${rLeg}</option>`;
-    }
-    document.getElementById('round-select').innerHTML = options;
-
+    // Les flèches ne font que feuilleter : elles s'éteignent au bout du calendrier.
     document.getElementById('prev-round-btn').disabled = current <= 1;
+    document.getElementById('next-round-btn').disabled = current >= total;
 
-    const nextBtn = document.getElementById('next-round-btn');
-    if (allPlayed) {
-        // Le bouton "Suivante" laisse place au bouton de clôture, dès que tous les duels sont joués
-        nextBtn.innerHTML = '🏁 Clôturer la poule';
-        nextBtn.onclick = finalizePoule;
-        nextBtn.disabled = false;
-    } else {
-        nextBtn.innerHTML = current >= total ? '✓ Dernière journée' : 'Suivante →';
-        nextBtn.onclick = nextJournee;
-        nextBtn.disabled = current >= total;
-    }
+    // La clôture n'apparaît qu'une fois tous les duels joués.
+    document.getElementById('cloture-poule').hidden = !allPlayed;
 
     const container = document.getElementById('matches-container');
     container.innerHTML = '';
@@ -518,17 +506,20 @@ function nextJournee() {
     }
 }
 
+// Le numéro de journée se saisit : taper 12 mène droit à la 12e. Hors
+// calendrier ou illisible, on s'en tient à la borne la plus proche — et le
+// champ reprend le numéro affiché, puisque tout se redessine.
+function goToJournee(value) {
+    const round = parseInt(value, 10);
+    if (Number.isFinite(round)) {
+        tournoi.currentRound = Math.min(Math.max(round, 1), tournoi.totalRounds);
+    }
+    renderPoule();
+}
+
 function prevJournee() {
     if (tournoi.currentRound > 1) {
         tournoi.currentRound--;
-        renderPoule();
-    }
-}
-
-function goToJournee(value) {
-    const round = parseInt(value);
-    if (round >= 1 && round <= tournoi.totalRounds) {
-        tournoi.currentRound = round;
         renderPoule();
     }
 }
