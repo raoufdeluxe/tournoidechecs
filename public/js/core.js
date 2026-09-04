@@ -145,7 +145,7 @@ function buildBoutonPicto(picto, libelle, action, classe) {
 }
 
 function buildTagFicheAbsente() {
-    return '<span class="tag-absent" title="Ce joueur n\'est plus dans la liste : son nom ne suivra plus les renommages.">fiche supprimée</span>';
+    return '<span class="etiquette tag-absent" title="Ce joueur n\'est plus dans la liste : son nom ne suivra plus les renommages.">fiche supprimée</span>';
 }
 
 // Applique un résultat ('p1', 'draw', 'p2', ou '' pour effacer) à un match

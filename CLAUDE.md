@@ -41,6 +41,35 @@ clé qu'elle produit reste `tournament` : la frontière tient en deux endroits,
 
 ---
 
+## Le générique d'abord
+
+**Chercher la forme la plus générale, réutiliser ce qui existe, ne spécialiser
+que sur demande.** Avant d'écrire une règle, une classe ou une fonction, regarder
+si le projet ne dit pas déjà la même chose ailleurs — et si trois endroits la
+disent, en faire une chose que les trois emploient.
+
+**Pourquoi :** la feuille de style avait vingt composants qui réinventaient
+chacun la même forme. `.sync-status`, `.badge`, `.tag-absent`,
+`.tournament-badge`, `.tournoi-ecart` posaient tous les mêmes sept déclarations
+pour dessiner une pastille ; sept surfaces encadrées redisaient chacune fond,
+bordure, rayon et retrait. Rien n'était faux, et personne ne pouvait s'y
+retrouver : changer l'allure des pastilles demandait cinq modifications, et une
+sixième pastille aurait fait une sixième règle.
+
+**Comment l'appliquer :**
+
+- Deux primitives valent mieux que vingt composants. `.etiquette` et `.surface`
+  portent la forme ; chaque emploi ne redit que ce qui le distingue.
+- Une valeur qui se répète devient un cran d'échelle, pas une constante de plus.
+  Voir l'échelle en tête de `styles.css` : `--e1…--e6`, `--t1…--t6`, `--r1…--r3`.
+- Une fonction employée par deux pages vit dans `core.js`, pas recopiée dans
+  chacune.
+- Spécialiser est une décision, pas un réflexe. Un cas particulier s'écrit quand
+  il est demandé ou quand le général échoue vraiment — et il se justifie alors
+  en commentaire.
+
+---
+
 ## Les tests
 
 Ils documentent **ce que fait l'application**. Pas la forme qu'elle a.

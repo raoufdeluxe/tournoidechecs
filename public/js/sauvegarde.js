@@ -222,7 +222,7 @@ async function prepareRestauration(fichier) {
 }
 
 function renderPlanRestauration(plan, sauvegarde, listeLue) {
-    const badge = (texte) => '<span class="tournament-badge">' + texte + '</span>';
+    const badge = (texte) => '<span class="etiquette tournament-badge">' + texte + '</span>';
 
     let html = '<div class="tournaments-empty">Sauvegarde du ' +
         escapeHtml(new Date(sauvegarde.exporteLe).toLocaleString('fr-FR')) +

@@ -14,7 +14,7 @@
     <div class="container">
         <header>
             <h1 id="tournament-name-display" class="titre-tournoi">Nouveau tournoi</h1>
-            <span id="sync-status" class="sync-status" data-state="saved">✓ Enregistré</span>
+            <span id="sync-status" class="etiquette sync-status" data-state="saved">✓ Enregistré</span>
             <button id="btn-menu" class="menu-toggle" type="button" aria-label="Ouvrir le menu"
                     aria-expanded="false" aria-controls="main-menu" onclick="toggleMenu()"></button>
             <nav id="main-menu" class="main-menu" aria-labelledby="btn-menu" hidden>
@@ -28,7 +28,7 @@
 
         <details class="reglement">
             <summary>Règlement</summary>
-            <div class="reglement-corps">
+            <div class="surface reglement-corps">
                 <h3>Poule qualificative — championnat en journées</h3>
                 <p>Chaque partant affronte tous les autres une fois à l'aller, une fois au retour — un duel par journée. Celui qui reçoit à l'aller se déplace au retour. Victoire = 1 pt, Nulle = 0,5 pt, Défaite = 0 pt. Les 4 premiers au classement se qualifient.</p>
                 <h3>Demi-finales — 1er vs 4e / 2e vs 3e</h3>
@@ -49,7 +49,7 @@
 
         <!-- ÉCRAN 1: Configuration -->
         <div class="screen active" id="screen-config">
-            <div class="card">
+            <div class="surface card">
                 <h2 class="card-title">🎟️ Inscription des partants</h2>
                 
                 <div class="form-group">
@@ -72,7 +72,7 @@
 
         <!-- ÉCRAN 2: Tournoi (Poule) -->
         <div class="screen" id="screen-tournament">
-            <div class="card">
+            <div class="surface card">
                 <h3 id="standings-title" class="titre-section">Classement</h3>
                 <div class="table-scroll">
                 <table class="standings-table" id="standings">
@@ -97,7 +97,7 @@
                 </div>
 
                 <div class="summary-grid">
-                    <div class="summary-card">
+                    <div class="surface summary-card">
                         <div class="summary-card-value">
                             <span id="matches-played">0</span>
                             <span class="sur-total">/ <span id="matches-total">0</span></span>
@@ -118,7 +118,7 @@
                                inputmode="numeric" aria-label="Aller à la journée"
                                onchange="goToJournee(this.value)">
                         <span class="sur-total" id="round-total"></span>
-                        <span class="badge badge-primary" id="round-leg"></span>
+                        <span class="etiquette badge badge-primary" id="round-leg"></span>
                     </h3>
                     <button type="button" class="journee-fleche" id="next-round-btn"
                             onclick="nextJournee()" aria-label="Journée suivante">›</button>
@@ -130,13 +130,13 @@
                 </div>
 
                 <h3 class="titre-section">Progression journée après journée</h3>
-                <div id="progress-chart-container" class="graphe-cadre"></div>
+                <div id="progress-chart-container" class="surface graphe-cadre"></div>
             </div>
         </div>
 
         <!-- ÉCRAN 3: Demi-finales -->
         <div class="screen" id="screen-semifinals">
-            <div class="card">
+            <div class="surface card">
                 <h2 class="card-title">🥊 Demi-Finales</h2>
                 
                 <div class="progress-bar">
@@ -146,7 +146,7 @@
                 <div class="finals-bracket">
                     <div class="bracket-round">
                         <div class="bracket-title">1ère Demi-Finale</div>
-                        <div class="bracket-match" id="semi1-match">
+                        <div class="surface bracket-match" id="semi1-match">
                             <div id="semi1-content"></div>
                         </div>
                     </div>
@@ -160,7 +160,7 @@
                     </div>
                     <div class="bracket-round">
                         <div class="bracket-title">2e Demi-Finale</div>
-                        <div class="bracket-match" id="semi2-match">
+                        <div class="surface bracket-match" id="semi2-match">
                             <div id="semi2-content"></div>
                         </div>
                     </div>
@@ -175,7 +175,7 @@
 
         <!-- ÉCRAN 4: Finale -->
         <div class="screen" id="screen-finals">
-            <div class="card">
+            <div class="surface card">
                 <h2 class="card-title">🏆 Grande Finale</h2>
                 
                 <div class="finals-bracket">
@@ -206,7 +206,7 @@
 
         <!-- ÉCRAN 5: Résultats finaux -->
         <div class="screen" id="screen-results">
-            <div class="card">
+            <div class="surface card">
                 <h2 class="card-title">🏆 Arrivée Officielle</h2>
                 
                 <div id="podium" class="podium"></div>

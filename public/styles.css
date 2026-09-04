@@ -81,6 +81,43 @@
     --font-sport: 'Poppins', sans-serif;
 }
 
+/* ── DEUX PRIMITIVES ────────────────────────────────────────────────────────
+   Presque tout ce que l'application dessine est soit une étiquette (un mot posé
+   sur une pastille), soit une surface (un contenu dans un cadre). Les deux
+   formes sont écrites ici, une fois. Chaque emploi ne redit ensuite que ce qui
+   le distingue, en changeant --ton, --fond ou --bord : une étiquette de plus,
+   c'est une ligne.
+
+   Elles sont posées avant tout le reste pour deux raisons, apprises à la dure :
+   un composant écrit plus bas doit pouvoir les préciser, et chaque primitive
+   redonne ses propres valeurs par défaut — sans quoi une carte dans une carte
+   hériterait du fond de sa mère. */
+
+.etiquette {
+    --ton: var(--text-secondary);
+    --fond: var(--bg-secondary);
+    --bord: transparent;
+    display: inline-block;
+    padding: var(--e1) var(--e2);
+    border-radius: var(--r3);
+    font-family: var(--font-sport);
+    font-size: var(--t1);
+    font-weight: 700;
+    color: var(--ton);
+    background: var(--fond);
+    border: 1px solid var(--bord);
+}
+
+.surface {
+    --fond: var(--bg-secondary);
+    --bord: var(--border);
+    --retrait: var(--e4);
+    padding: var(--retrait);
+    border-radius: var(--r2);
+    background: var(--fond);
+    border: 1px solid var(--bord);
+}
+
 /* ══════════════════════════════════════════════════════════════════════════════
    2. FONDATIONS
    Le fond de page, le conteneur, la carte, l'écran actif.
@@ -100,10 +137,8 @@ body {
 .screen.active { display: block; }
 
 .card {
-    background: var(--bg-light);
-    border-radius: var(--r2);
-    padding: var(--e5);
-    border: 1px solid var(--border);
+    --fond: var(--bg-light);
+    --retrait: var(--e5);
     border-top: 4px solid var(--accent);
     box-shadow: 0 20px 45px rgba(7, 18, 41, 0.25);
     margin-bottom: var(--e5);
@@ -259,7 +294,13 @@ header p { font-family: 'Inter', sans-serif; font-size: var(--t3); opacity: 0.75
 /* Le nom du tournoi est le titre de la page ; le témoin d'enregistrement se
    range sous lui, assez discret pour ne pas lui disputer la place. */
 .titre-tournoi { word-break: break-word; }
-header .sync-status { margin-top: var(--e3); }
+header .sync-status {
+    --ton: rgba(255, 255, 255, 0.72);
+    --fond: rgba(255, 255, 255, 0.06);
+    --bord: rgba(255, 255, 255, 0.18);
+    margin-top: var(--e3);
+    padding: var(--e1) var(--e4);
+}
 
 /* Etat de la sauvegarde partagee */
 
@@ -381,15 +422,9 @@ a.menu-item { display: block; text-decoration: none; }
 .medal-silver { background: #C0C0C0; color: #000; }
 .medal-bronze { background: #CD7F32; }
 
-.badge {
-    display: inline-block;
-    padding: var(--e2) var(--e3);
-    border-radius: var(--r2);
-    font-size: var(--t1);
-    font-weight: 600;
-}
+.badge { margin-left: var(--e2); }
 
-.badge-primary { background: var(--primary-light); color: var(--primary); }
+.badge-primary { --ton: var(--primary); --fond: var(--primary-light); }
 
 .silk-dot {
     display: inline-block;
@@ -420,12 +455,11 @@ a.menu-item { display: block; text-decoration: none; }
 .reglement > summary:hover { background: rgba(255, 255, 255, 0.14); }
 
 .reglement-corps {
+    --fond: rgba(255, 255, 255, 0.05);
+    --bord: rgba(255, 255, 255, 0.12);
+    --retrait: var(--e4) var(--e5);
     margin-top: var(--e3);
-    padding: var(--e4) var(--e5);
-    border-radius: var(--r2);
     line-height: 1.55;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .reglement-corps h3 { margin-top: var(--e4); font-family: var(--font-sport); font-size: var(--t2); color: white; }
@@ -481,18 +515,7 @@ a.menu-item { display: block; text-decoration: none; }
 
 /* Partant dont la fiche de joueur a été supprimée */
 
-.tag-absent {
-    display: inline-block;
-    margin-left: var(--e2);
-    padding: var(--e1) var(--e2);
-    border-radius: var(--r3);
-    font-size: var(--t1);
-    font-weight: 700;
-    color: var(--text-secondary);
-    background: var(--bg-secondary);
-    border: 1px dashed var(--border);
-    cursor: help;
-}
+.tag-absent { margin-left: var(--e2); --bord: var(--border); border-style: dashed; cursor: help; }
 
 /* Confirmations dans la page (à la place de confirm et prompt) */
 
@@ -595,10 +618,7 @@ a.menu-item { display: block; text-decoration: none; }
 .standings-table tbody tr:hover { background: var(--primary-light); }
 
 .match-card {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: var(--r2);
-    padding: var(--e5);
+    --retrait: var(--e5);
     margin-bottom: var(--e4);
     display: grid;
     grid-template-columns: 1fr 100px 1fr;
@@ -763,13 +783,7 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
     margin-bottom: var(--e5);
 }
 
-.summary-card {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: var(--r2);
-    padding: var(--e5);
-    text-align: center;
-}
+.summary-card { --retrait: var(--e5); text-align: center; }
 
 .summary-card-value { font-size: var(--t5); font-weight: 700; color: var(--primary); margin-bottom: var(--e2); }
 .summary-card-label { font-size: var(--t2); color: var(--text-secondary); font-weight: 600; }
@@ -792,7 +806,7 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
 .standings-table th:first-child { width: 40px; }
 .standings-table th:nth-child(3) { width: 60px; }
 .standings-table th:nth-child(4) { width: 90px; }
-.graphe-cadre { background: var(--bg-secondary); border-radius: var(--r2); padding: var(--e4); }
+.graphe-cadre { --bord: transparent; }
 
 /* Cellules chiffrées du classement. */
 .cell-points { text-align: center; font-weight: 600; font-size: var(--t3); }
@@ -817,12 +831,7 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
 
 /* Le cadre d'un duel de poule : les deux adversaires, les réglages, le résultat. */
 
-.carte-partie {
-    background: var(--bg-secondary);
-    border-radius: var(--r1);
-    padding: var(--e4);
-    margin-bottom: var(--e4);
-}
+.carte-partie { margin-bottom: var(--e4); }
 
 .match-card--serre { margin: 0 0 var(--e3); }
 
@@ -853,12 +862,7 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
     margin-bottom: var(--e5);
 }
 
-.bracket-match {
-    background: var(--bg-light);
-    border: 2px solid var(--primary);
-    border-radius: var(--r2);
-    padding: var(--e4);
-}
+.bracket-match { --fond: var(--bg-light); --bord: var(--primary); border-width: 2px; }
 
 .bracket-player {
     padding: var(--e3);
@@ -987,25 +991,12 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
 
 .tournament-row.is-current { box-shadow: inset 0 0 0 2px var(--accent); }
 
-/* Les boutons de texte d'une ligne. Le `:not()` écarte les boutons pictos, qui
-   ont leur propre taille : sans lui, laquelle des deux règles l'emporte dépend
-   de leur ordre dans le fichier — un piège pour qui range. */
-.tournament-row button:not(.bouton-picto) { padding: var(--e2) var(--e4); font-size: var(--t2); }
 .tournament-row-actions { display: flex; gap: var(--e2); flex-wrap: wrap; }
 .tournament-row button[disabled] { opacity: 0.45; cursor: default; }
 .tournament-row-name { font-weight: 600; font-family: var(--font-sport); }
 .tournament-row-meta { font-size: var(--t2); color: var(--text-secondary); margin-top: var(--e1); }
 
-.tournament-badge {
-    display: inline-block;
-    margin-left: var(--e2);
-    padding: var(--e1) var(--e2);
-    border-radius: var(--r3);
-    font-size: var(--t1);
-    font-weight: 700;
-    background: var(--accent-light);
-    color: var(--success);
-}
+.tournament-badge { margin-left: var(--e2); --ton: var(--success); --fond: var(--accent-light); }
 
 .tournaments-empty { color: var(--text-secondary); font-size: var(--t2); padding: var(--e2) var(--e1); }
 
@@ -1014,19 +1005,9 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
 .tournoi-edition .tournoi-nom { width: 100%; margin-bottom: var(--e1); font-weight: 600; }
 .tournoi-adresse { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
-.tournoi-ecart {
-    margin-left: var(--e2);
-    padding: var(--e1) var(--e3);
-    border-radius: var(--r3);
-    font-size: var(--t1);
-    font-weight: 700;
-    color: var(--warning);
-    background: var(--bg-primary, #FFFDF7);
-    border: 1px dashed var(--warning);
-    cursor: pointer;
-}
+.tournoi-ecart { margin-left: var(--e2); --ton: var(--warning); --fond: var(--bg-light); --bord: var(--warning); border-style: dashed; cursor: pointer; }
 
-.tournoi-ecart:hover { color: var(--bg-primary, #FFFDF7); background: var(--warning); border-style: solid; }
+.tournoi-ecart:hover { --ton: var(--bg-light); --fond: var(--warning); border-style: solid; }
 .actions-liste { margin: var(--e5) 0 var(--e5); }
 
 /* ══════════════════════════════════════════════════════════════════════════════

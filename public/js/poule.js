@@ -460,8 +460,8 @@ function renderCartePartie(match) {
 
     const div = document.createElement('div');
     div.innerHTML = `
-        <div class="carte-partie">
-            <div class="match-card match-card--serre">
+        <div class="surface carte-partie">
+            <div class="surface match-card match-card--serre">
                 <div class="player-result ${getClasseResultat(match, true)}">
                     ${getIconeResultat(match, true)}${buildCasaque(p1.id)}${escapeHtml(p1.name)}
                     ${buildBadgeTerrain(match, true)}

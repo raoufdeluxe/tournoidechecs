@@ -31,7 +31,7 @@ function renderDemie(index, elemPrefix) {
         html += `
             <div class="demie-manche">
                 <div class="demie-manche-titre">Match ${match.num}</div>
-                <div class="match-card match-card--compact">
+                <div class="surface match-card match-card--compact">
                     <div class="player-result ${getClasseResultat(match, true)}">
                         ${getIconeResultat(match, true)}${p1Name}
                         ${buildBadgeTerrain(match, true)}
@@ -170,7 +170,7 @@ function renderFinale() {
         div.innerHTML = `
             <div class="finale-manche">
                 <div class="finale-manche-titre">Match ${match.num}</div>
-                <div class="match-card">
+                <div class="surface match-card">
                     <div class="player-result ${getClasseResultat(match, true)}">
                         ${getIconeResultat(match, true)}${escapeHtml(finalist1.name)}
                         ${buildBadgeTerrain(match, true)}

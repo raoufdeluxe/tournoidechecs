@@ -68,7 +68,7 @@ function buildLigneTournoi(t, courant) {
     // remettre d'accord, plutôt que de laisser deux libellés se contredire.
     const adresseSuitLeNom = !t.name || slugify(t.name) === t.id;
     const alignement = adresseSuitLeNom ? '' : `
-        <button type="button" class="tournoi-ecart" onclick="renameTournoi('${escapeHtml(t.id)}')"
+        <button type="button" class="etiquette tournoi-ecart" onclick="renameTournoi('${escapeHtml(t.id)}')"
                 title="L'adresse deviendra …/#${escapeHtml(slugify(t.name))}, pour suivre « ${escapeHtml(t.name)} ». L'ancien lien cessera de fonctionner.">
             ⇢ aligner l'adresse
         </button>`;
@@ -79,7 +79,7 @@ function buildLigneTournoi(t, courant) {
                 <input type="text" class="tournoi-nom" maxlength="64" data-id="${escapeHtml(t.id)}"
                        aria-label="Nom du tournoi" placeholder="Sans nom" value="${escapeHtml(t.name || '')}">
                 <div class="tournament-row-meta">
-                    <span class="tournoi-adresse">…/#${escapeHtml(t.id)}</span>${alignement}${estCourant ? '<span class="tournament-badge">en cours</span>' : ''}
+                    <span class="tournoi-adresse">…/#${escapeHtml(t.id)}</span>${alignement}${estCourant ? '<span class="etiquette tournament-badge">en cours</span>' : ''}
                     · ${etape} · ${t.players} partant${t.players > 1 ? 's' : ''}${quand ? ' · ' + quand : ''}
                 </div>
             </div>
