@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # Rien à installer : ni package.json, ni dépendance. Les tests n'utilisent
+      # que le lanceur intégré de Node (node:test) et un DOM factice maison.
+      - name: Tests
+        run: node --test
+
+  worker:
+    name: Worker (build à blanc)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Vérifie que wrangler.toml et worker.js se compilent, sans rien déployer
+      # ni avoir besoin d'un jeton Cloudflare.
+      - name: wrangler deploy --dry-run
+        run: npx --yes wrangler@4 deploy --dry-run --outdir dist
+        env:
+          WRANGLER_SEND_METRICS: 'false'

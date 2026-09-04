@@ -95,6 +95,9 @@ nix develop ./nix
 
 # serveur local, sur http://localhost:8787
 wrangler dev
+
+# la suite de tests (Node >= 22.7, aucune dépendance à installer)
+node --test
 ```
 
 La page marche aussi en `file://` (double-clic sur `public/index.html`) : dans ce cas
@@ -110,6 +113,51 @@ wrangler deploy
 
 > ⚠️ Dans `wrangler.toml`, la table `[assets]` doit rester **en dernier** :
 > en TOML, toute clé écrite après elle lui appartient.
+
+---
+
+## Tests et intégration continue
+
+```bash
+node --test                        # tout
+node --test tests/poule.test.mjs   # un seul fichier
+```
+
+Les tests n'utilisent que le lanceur intégré de Node (`node:test`) : **pas de
+dépendance, pas de `node_modules`, pas de `package.json`, pas de build** — comme
+le reste du projet. L'extension `.mjs` suffit à ce que Node les lise comme des
+modules ; rien à configurer.
+
+```
+tests/
+  aide/app.mjs       charge public/js/*.js dans un DOM factice (voir plus bas)
+  aide/tournoi.mjs   fabriques : poule générée, résultats joués
+  aide/kv.mjs        faux espace KV + appel du Worker
+  core.test.mjs      départages : Elo, belle, 3e place, barème
+  poule.test.mjs     méthode du cercle, aller/retour, classement, progression
+  finales.test.mjs   qualification des 4 premiers, demies, Grande Finale, podium
+  sync.test.mjs      envois sérialisés, back-off hors-ligne, conflit 409
+  tournois.test.mjs  slug du nom, identifiant du lien, échappement HTML
+  worker.test.mjs    routes, versionnage, liste des tournois
+  statique.test.mjs  cohérence page ↔ code ↔ wrangler.toml
+```
+
+**Comment le front est testé sans navigateur.** Les scripts de `public/js/` sont
+écrits pour la page : variables globales, aucun export, effets de bord au
+chargement. Plutôt que de les refactorer, `tests/aide/app.mjs` les exécute tels
+quels dans un contexte `node:vm` muni d'un faux `document` — tout élément
+demandé répond, rien n'est rendu. Le test interroge ensuite les fonctions
+comme le ferait la page. Les minuteries et `fetch` sont pilotés depuis le test :
+c'est ce qui permet de vérifier le back-off (1s, 2s, 4s… 30s) sans attendre.
+
+`statique.test.mjs` attrape ce qu'aucun test unitaire ne voit : un `onclick=`
+qui appelle une fonction supprimée, un `getElementById` orphelin, un script
+ajouté dans `public/js/` mais oublié dans `index.html`, un binding absent de
+`wrangler.toml`, ou la table `[assets]` qui ne serait plus la dernière.
+
+La CI GitHub Actions (`.github/workflows/ci.yml`) rejoue tout cela à chaque
+push et chaque pull request, et vérifie en plus que le Worker se compile
+(`wrangler deploy --dry-run`, sans jeton Cloudflare ni déploiement).
 
 ---
 
