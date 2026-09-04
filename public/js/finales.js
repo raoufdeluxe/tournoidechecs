@@ -40,6 +40,9 @@ function renderSemifinal(index, elemPrefix) {
                         ${venueBadge(match, false)}
                     </div>
                 </div>
+                ${reglagesPartieHtml(match,
+                    `setSemifinalCadence(${index}, ${mIdx}, this.value)`,
+                    `setSemifinalVariante(${index}, ${mIdx}, this.value)`)}
                 <select class="result-select" style="font-size: 13px; padding: 8px;" onchange="setSemifinalResult(${index}, ${mIdx}, this.value)">
                     ${resultOptionsHtml(match, p1Name, p2Name)}
                 </select>
@@ -98,6 +101,14 @@ function setSemifinalResult(semiIdx, matchIdx, value) {
     checkSemifinalsComplete();
 }
 
+function setSemifinalCadence(semiIdx, matchIdx, valeur) {
+    if (definirCadence(tournament.semifinalMatches[semiIdx].matches[matchIdx], valeur)) saveState();
+}
+
+function setSemifinalVariante(semiIdx, matchIdx, valeur) {
+    if (definirVariante(tournament.semifinalMatches[semiIdx].matches[matchIdx], valeur)) saveState();
+}
+
 function updateSemifinalProgress() {
     const allMatches = tournament.semifinalMatches.flatMap(s => s.matches);
     const played = allMatches.filter(m => m.played).length;
@@ -127,8 +138,8 @@ function startFinals() {
     const finalist2 = tournament.players[tournament.semifinalMatches[1].winner];
     
     tournament.finalMatches = [
-        { player1: finalist1.id, player2: finalist2.id, player1Score: null, player2Score: null, played: false, num: 1 },
-        { player1: finalist1.id, player2: finalist2.id, player1Score: null, player2Score: null, played: false, num: 2 }
+        { player1: finalist1.id, player2: finalist2.id, player1Score: null, player2Score: null, played: false, num: 1, cadence: CADENCE_DEFAUT, variante: VARIANTE_DEFAUT },
+        { player1: finalist1.id, player2: finalist2.id, player1Score: null, player2Score: null, played: false, num: 2, cadence: CADENCE_DEFAUT, variante: VARIANTE_DEFAUT }
     ];
     
     checkFinalsComplete();
@@ -168,6 +179,9 @@ function renderFinals() {
                         ${venueBadge(match, false)}
                     </div>
                 </div>
+                ${reglagesPartieHtml(match,
+                    `setFinalCadence(${idx}, this.value)`,
+                    `setFinalVariante(${idx}, this.value)`)}
                 <select class="result-select" onchange="setFinalResult(${idx}, this.value)">
                     ${resultOptionsHtml(match, finalist1.name, finalist2.name)}
                 </select>
@@ -211,6 +225,14 @@ function checkFinalsComplete() {
 function setFinalResult(idx, value) {
     applyResultToMatch(tournament.finalMatches[idx], value);
     checkFinalsComplete();
+}
+
+function setFinalCadence(idx, valeur) {
+    if (definirCadence(tournament.finalMatches[idx], valeur)) saveState();
+}
+
+function setFinalVariante(idx, valeur) {
+    if (definirVariante(tournament.finalMatches[idx], valeur)) saveState();
 }
 
 function finalizeFinals() {

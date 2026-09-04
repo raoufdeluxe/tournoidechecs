@@ -184,7 +184,9 @@ function generateMatches() {
                     player1Score: null,
                     player2Score: null,
                     played: false,
-                    round: roundCounter
+                    round: roundCounter,
+                    cadence: CADENCE_DEFAUT,
+                    variante: VARIANTE_DEFAUT
                 });
             });
         });
@@ -477,6 +479,9 @@ function renderMatchCard(match) {
                     ${venueBadge(match, false)}
                 </div>
             </div>
+            ${reglagesPartieHtml(match,
+                `setMatchCadence('${match.id}', this.value)`,
+                `setMatchVariante('${match.id}', this.value)`)}
             <select class="result-select" onchange="setMatchResult('${match.id}', this.value)">
                 ${resultOptionsHtml(match, p1.name, p2.name)}
             </select>
@@ -485,6 +490,14 @@ function renderMatchCard(match) {
     `;
 
     container.appendChild(div);
+}
+
+function setMatchCadence(matchId, valeur) {
+    if (definirCadence(tournament.matches.find(m => m.id === matchId), valeur)) saveState();
+}
+
+function setMatchVariante(matchId, valeur) {
+    if (definirVariante(tournament.matches.find(m => m.id === matchId), valeur)) saveState();
 }
 
 function setMatchResult(matchId, value) {
@@ -532,8 +545,8 @@ function finalizeTournament() {
         type: 'semifinal',
         players: [top4[0].id, top4[3].id],
         matches: [
-            { player1: top4[0].id, player2: top4[3].id, player1Score: null, player2Score: null, played: false, num: 1 },
-            { player1: top4[0].id, player2: top4[3].id, player1Score: null, player2Score: null, played: false, num: 2 }
+            { player1: top4[0].id, player2: top4[3].id, player1Score: null, player2Score: null, played: false, num: 1, cadence: CADENCE_DEFAUT, variante: VARIANTE_DEFAUT },
+            { player1: top4[0].id, player2: top4[3].id, player1Score: null, player2Score: null, played: false, num: 2, cadence: CADENCE_DEFAUT, variante: VARIANTE_DEFAUT }
         ],
         winner: null
     });
@@ -544,8 +557,8 @@ function finalizeTournament() {
         type: 'semifinal',
         players: [top4[1].id, top4[2].id],
         matches: [
-            { player1: top4[1].id, player2: top4[2].id, player1Score: null, player2Score: null, played: false, num: 1 },
-            { player1: top4[1].id, player2: top4[2].id, player1Score: null, player2Score: null, played: false, num: 2 }
+            { player1: top4[1].id, player2: top4[2].id, player1Score: null, player2Score: null, played: false, num: 1, cadence: CADENCE_DEFAUT, variante: VARIANTE_DEFAUT },
+            { player1: top4[1].id, player2: top4[2].id, player1Score: null, player2Score: null, played: false, num: 2, cadence: CADENCE_DEFAUT, variante: VARIANTE_DEFAUT }
         ],
         winner: null
     });

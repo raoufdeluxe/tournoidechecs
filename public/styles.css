@@ -1073,3 +1073,29 @@ a.menu-item { display: block; text-decoration: none; }
 @media (max-width: 600px) {
     .notices { top: 8px; right: 8px; left: 8px; max-width: none; }
 }
+
+/* Réglages d'une partie : cadence et variante */
+.partie-reglages {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.partie-reglage {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.partie-reglage-titre {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+    font-weight: 700;
+}
+.partie-reglage select {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 13px;
+}

@@ -50,6 +50,9 @@ La **3e place** ne se joue pas : c'est le mieux classé en poule parmi les deux 
 - **Classement vivant.** Table des scores, barre de progression, cartes de résumé et
   **graphe de progression journée après journée**.
 - **De 4 à 16 partants**, nombre impair géré (journée de repos), Elo optionnel par joueur.
+- **Cadence et type par partie** — 10 min (défaut), 5 min, 3 min ou 24 h ;
+  classique (défaut) ou Chess960. Chaque partie a les siens : une poule peut
+  mêler blitz et parties par correspondance.
 - **Joueurs réutilisables.** Une liste unique, hors des tournois : on inscrit un partant
   en le choisissant, plus en retapant son nom.
 
@@ -224,6 +227,27 @@ d'elles ne crée aucun tournoi et n'écrit rien. Un test s'en assure.
 servis avant le Worker, donc `public/joueurs.html` (servi sur `/joueurs`)
 masquerait une route d'API du même nom. `/state` et `/tournaments` restent
 acceptés pour les onglets restés sur une version antérieure.
+
+---
+
+## La cadence et le type d'une partie
+
+Chaque partie porte ses propres réglages, choisis sur sa carte :
+
+| Cadence | Type |
+|---|---|
+| **10 min** (défaut) · 5 min · 3 min · 24 h | **Classique** (défaut) · Chess960 |
+
+Ils valent pour **une partie**, pas pour le tournoi : rien n'empêche de jouer la
+poule en blitz et la finale en 24 h, ni d'intercaler un Chess960.
+
+Une **belle** reprend le format de la manche 1 du duel : elle le prolonge, elle
+ne change pas les règles en cours de route.
+
+Les parties créées **avant cet ajout** n'ont pas ces champs. Elles s'affichent
+avec les valeurs par défaut, et leur enregistrement n'est pas réécrit tant qu'on
+n'y touche pas — une valeur inconnue (page d'une autre version) est ignorée de la
+même façon, la partie gardant son réglage.
 
 ---
 

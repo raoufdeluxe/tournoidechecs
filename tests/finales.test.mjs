@@ -160,3 +160,47 @@ describe('Grande Finale', () => {
         assert.equal(app.ev('tournament.thirdId'), classement[2]);
     });
 });
+
+describe('cadence et type en phase finale', () => {
+    test('les manches de demi-finale naissent avec les valeurs par défaut', () => {
+        const { app } = pouleTerminee(6);
+        for (const demie of app.json('tournament.semifinalMatches')) {
+            assert.ok(demie.matches.every(m => m.cadence === '10' && m.variante === 'classique'));
+        }
+    });
+
+    test('régler une manche de demie n\'affecte pas l\'autre', () => {
+        const { app } = pouleTerminee(6);
+        app.appel('setSemifinalCadence', 0, 0, '5');
+        app.appel('setSemifinalVariante', 0, 0, '960');
+        const demie = app.json('tournament.semifinalMatches')[0];
+        assert.deepEqual([demie.matches[0].cadence, demie.matches[0].variante], ['5', '960']);
+        assert.deepEqual([demie.matches[1].cadence, demie.matches[1].variante], ['10', 'classique']);
+    });
+
+    test('la belle d\'une demie reprend le format de la manche 1', () => {
+        const { app } = pouleTerminee(6);
+        app.appel('setSemifinalCadence', 0, 0, '3');
+        app.appel('setSemifinalVariante', 0, 0, '960');
+        app.ev('setSemifinalResult(0, 0, "p1"); setSemifinalResult(0, 1, "p2");');
+        const manches = app.json('tournament.semifinalMatches')[0].matches;
+        assert.equal(manches.length, 3);
+        assert.deepEqual([manches[2].cadence, manches[2].variante], ['3', '960']);
+    });
+
+    test('la Grande Finale naît avec les valeurs par défaut, réglables', () => {
+        const { app } = finaleLancee();
+        assert.ok(app.json('tournament.finalMatches').every(m => m.cadence === '10' && m.variante === 'classique'));
+        app.appel('setFinalCadence', 1, '24h');
+        app.appel('setFinalVariante', 1, '960');
+        const finale = app.json('tournament.finalMatches');
+        assert.deepEqual([finale[1].cadence, finale[1].variante], ['24h', '960']);
+        assert.deepEqual([finale[0].cadence, finale[0].variante], ['10', 'classique']);
+    });
+
+    test('un réglage inconnu ne change rien', () => {
+        const { app } = finaleLancee();
+        app.appel('setFinalCadence', 0, 'blitz');
+        assert.equal(app.json('tournament.finalMatches')[0].cadence, '10');
+    });
+});

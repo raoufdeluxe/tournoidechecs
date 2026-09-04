@@ -118,6 +118,7 @@ describe('addDecider', () => {
         assert.equal(duel.length, 3);
         assert.deepEqual(duel[2], {
             player1: 0, player2: 1, player1Score: null, player2Score: null, played: false, num: 3,
+            cadence: '10', variante: 'classique',
         });
     });
 });
@@ -182,5 +183,86 @@ describe('silkColor — une casaque par partant', () => {
         const taille = app.ev('SILK_COLORS.length');
         assert.equal(app.appel('silkColor', 0), app.appel('silkColor', taille));
         assert.notEqual(app.appel('silkColor', 0), app.appel('silkColor', 1));
+    });
+});
+
+
+describe('cadence et variante d\'une partie', () => {
+    test('sans réglage, une partie est en 10 min et classique', () => {
+        const app = chargerApp();
+        app.set('globalThis.m', { player1: 0, player2: 1 });
+        assert.equal(app.ev('cadenceDe(m)'), '10');
+        assert.equal(app.ev('varianteDe(m)'), 'classique');
+        assert.equal(app.ev('libelleCadence(m)'), '10 min');
+        assert.equal(app.ev('libelleVariante(m)'), 'Classique');
+    });
+
+    test('les quatre cadences proposées', () => {
+        const app = chargerApp();
+        assert.deepEqual(app.json('CADENCES.map(c => c.valeur)'), ['10', '5', '3', '24h']);
+        assert.deepEqual(app.json('CADENCES.map(c => c.libelle)'), ['10 min', '5 min', '3 min', '24 h']);
+    });
+
+    test('les deux types de partie', () => {
+        const app = chargerApp();
+        assert.deepEqual(app.json('VARIANTES.map(v => v.valeur)'), ['classique', '960']);
+        assert.deepEqual(app.json('VARIANTES.map(v => v.libelle)'), ['Classique', 'Chess960']);
+    });
+
+    for (const valeur of ['10', '5', '3', '24h']) {
+        test(`la cadence « ${valeur} » est acceptée`, () => {
+            const app = chargerApp();
+            app.set('globalThis.m', {});
+            assert.equal(app.ev(`definirCadence(m, ${JSON.stringify(valeur)})`), true);
+            assert.equal(app.ev('m.cadence'), valeur);
+        });
+    }
+
+    for (const valeur of ['classique', '960']) {
+        test(`le type « ${valeur} » est accepté`, () => {
+            const app = chargerApp();
+            app.set('globalThis.m', {});
+            assert.equal(app.ev(`definirVariante(m, ${JSON.stringify(valeur)})`), true);
+            assert.equal(app.ev('m.variante'), valeur);
+        });
+    }
+
+    test('une valeur inconnue est ignorée, le réglage en place est gardé', () => {
+        const app = chargerApp();
+        app.set('globalThis.m', { cadence: '5', variante: '960' });
+        assert.equal(app.ev('definirCadence(m, "1h")'), false);
+        assert.equal(app.ev('definirVariante(m, "bughouse")'), false);
+        assert.deepEqual(app.json('m'), { cadence: '5', variante: '960' });
+    });
+
+    test('une valeur abîmée en base retombe sur le défaut sans être réécrite', () => {
+        const app = chargerApp();
+        app.set('globalThis.m', { cadence: 'n\'importe quoi', variante: 42 });
+        assert.equal(app.ev('cadenceDe(m)'), '10');
+        assert.equal(app.ev('varianteDe(m)'), 'classique');
+        assert.equal(app.ev('m.cadence'), 'n\'importe quoi', 'le champ n\'est pas touché');
+    });
+
+    test('les menus marquent le réglage courant', () => {
+        const app = chargerApp();
+        app.set('globalThis.m', { cadence: '3', variante: '960' });
+        const html = app.ev('reglagesPartieHtml(m, "a()", "b()")');
+        assert.match(html, /value="3" selected/);
+        assert.match(html, /value="960" selected/);
+        assert.doesNotMatch(html, /value="10" selected/);
+        assert.match(html, /onchange="a\(\)"/);
+        assert.match(html, /onchange="b\(\)"/);
+    });
+
+    test('la belle reprend le format du duel', () => {
+        const app = chargerApp();
+        app.set('globalThis.duel', [
+            { player1: 0, player2: 1, num: 1, cadence: '3', variante: '960', played: true, player1Score: 1, player2Score: 0 },
+            { player1: 0, player2: 1, num: 2, cadence: '3', variante: '960', played: true, player1Score: 0, player2Score: 1 },
+        ]);
+        app.ev('addDecider(duel)');
+        const belle = app.json('duel')[2];
+        assert.equal(belle.cadence, '3');
+        assert.equal(belle.variante, '960');
     });
 });

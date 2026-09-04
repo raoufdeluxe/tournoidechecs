@@ -14,6 +14,28 @@ const enveloppe = (nom, nbJoueurs = 2, version = 3) => ({
     },
 });
 
+// Un tournoi dont chaque partie a ses propres réglages, dans les trois phases.
+const enveloppeReglee = () => ({
+    version: 4,
+    updatedAt: '2026-09-01T10:00:00.000Z',
+    state: {
+        screen: 'screen-tournament',
+        tournament: {
+            name: 'Poule mixte',
+            players: [{ id: 0, name: 'A', elo: null }, { id: 1, name: 'B', elo: null }],
+            matches: [
+                { id: '0-1-leg1', player1: 0, player2: 1, played: false, round: 1, cadence: '3', variante: '960' },
+                { id: '0-1-leg2', player1: 0, player2: 1, played: false, round: 2, cadence: '24h', variante: 'classique' },
+            ],
+            semifinalMatches: [{
+                id: 'semi-1', players: [0, 1], winner: null,
+                matches: [{ player1: 0, player2: 1, num: 1, played: false, cadence: '5', variante: '960' }],
+            }],
+            finalMatches: [{ player1: 0, player2: 1, num: 1, played: false, cadence: '24h', variante: '960' }],
+        },
+    },
+});
+
 const enveloppeAvecRefs = (nom, refs) => ({
     version: 3,
     updatedAt: '2026-09-01T10:00:00.000Z',
@@ -180,6 +202,44 @@ describe('les fiches de joueurs voyagent avec la sauvegarde', () => {
         };
         app.set('globalThis.__texte', JSON.stringify(mauvais));
         assert.throws(() => app.ev('lireSauvegarde(__texte)'), /fiche de joueur est incomplète/);
+    });
+});
+
+describe('la cadence et le type des parties voyagent avec la sauvegarde', () => {
+    const reglages = (matches) => matches.map(m => [m.cadence, m.variante]);
+
+    test('l\'export les garde, dans les trois phases', async () => {
+        const app = await appServeur({ 'poule-mixte': enveloppeReglee() });
+        await app.ev('exporterTournois()');
+        const t = fichierProduit(app).contenu.tournois['poule-mixte'].state.tournament;
+
+        assert.deepEqual(reglages(t.matches), [['3', '960'], ['24h', 'classique']]);
+        assert.deepEqual(reglages(t.semifinalMatches[0].matches), [['5', '960']]);
+        assert.deepEqual(reglages(t.finalMatches), [['24h', '960']]);
+    });
+
+    test('la restauration les réécrit tels quels', async () => {
+        const app = await appServeur({});
+        app.set('globalThis.__s', {
+            format: 'grand-prix-des-echecs/sauvegarde', version: 2, exporteLe: '2026-09-04T09:00:00.000Z',
+            joueurs: [], tournois: { 'poule-mixte': enveloppeReglee() },
+        });
+        app.ev('sauvegardeEnAttente = __s; planEnCours = planifierRestauration(__s, []);');
+        app.definirElements('.restaure-tournoi', [{ checked: true, dataset: { id: 'poule-mixte' } }]);
+        app.definirElements('.restaure-joueur', []);
+        await app.ev('appliquerRestauration()');
+
+        const ecrit = app.ecritures[0].state.tournament;
+        assert.deepEqual(reglages(ecrit.matches), [['3', '960'], ['24h', 'classique']]);
+        assert.deepEqual(reglages(ecrit.semifinalMatches[0].matches), [['5', '960']]);
+        assert.deepEqual(reglages(ecrit.finalMatches), [['24h', '960']]);
+    });
+
+    test('un tournoi d\'avant cet ajout traverse l\'export sans gagner de champs', async () => {
+        const app = await appServeur({ ancien: enveloppe('Ancien', 4) });
+        await app.ev('exporterTournois()');
+        const t = fichierProduit(app).contenu.tournois.ancien.state.tournament;
+        assert.deepEqual(t.matches, [], 'rien n\'est inventé à l\'export');
     });
 });
 

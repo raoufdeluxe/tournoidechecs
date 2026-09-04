@@ -233,3 +233,52 @@ describe('computeProgressionData — le graphe journée après journée', () => 
         }
     });
 });
+
+describe('cadence et type des parties de la poule', () => {
+    test('chaque duel naît en 10 min et classique', () => {
+        const app = pouleGeneree(noms(4));
+        const matches = app.json('tournament.matches');
+        assert.ok(matches.every(m => m.cadence === '10' && m.variante === 'classique'));
+    });
+
+    test('le réglage d\'un duel n\'affecte pas les autres', () => {
+        const app = pouleGeneree(noms(4));
+        const [premier, second] = app.json('tournament.matches').map(m => m.id);
+        app.appel('setMatchCadence', premier, '3');
+        app.appel('setMatchVariante', premier, '960');
+
+        const matches = app.json('tournament.matches');
+        assert.deepEqual(
+            matches.filter(m => m.id === premier).map(m => [m.cadence, m.variante]),
+            [['3', '960']]);
+        assert.deepEqual(
+            matches.filter(m => m.id === second).map(m => [m.cadence, m.variante]),
+            [['10', 'classique']]);
+    });
+
+    test('un réglage inconnu ne change rien', () => {
+        const app = pouleGeneree(noms(4));
+        const id = app.json('tournament.matches')[0].id;
+        app.appel('setMatchCadence', id, '1h');
+        assert.equal(app.json('tournament.matches')[0].cadence, '10');
+    });
+
+    test('le réglage survit à la saisie d\'un résultat', () => {
+        const app = pouleGeneree(noms(4));
+        const id = app.json('tournament.matches')[0].id;
+        app.appel('setMatchCadence', id, '24h');
+        app.appel('setMatchResult', id, 'p1');
+        const match = app.json('tournament.matches').find(m => m.id === id);
+        assert.equal(match.cadence, '24h');
+        assert.equal(match.played, true);
+    });
+
+    test('un tournoi d\'avant cet ajout s\'affiche avec les valeurs par défaut', () => {
+        const app = pouleGeneree(noms(4));
+        app.ev('tournament.matches.forEach(m => { delete m.cadence; delete m.variante; });');
+        const matches = app.json('tournament.matches');
+        assert.ok(matches.every(m => m.cadence === undefined), 'rien n\'est réécrit en base');
+        assert.equal(app.ev('cadenceDe(tournament.matches[0])'), '10');
+        assert.equal(app.ev('varianteDe(tournament.matches[0])'), 'classique');
+    });
+});

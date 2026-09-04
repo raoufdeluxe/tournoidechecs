@@ -50,6 +50,70 @@ function resultIcon(match, isPlayer1) {
     return '';
 }
 
+// --- Réglages d'une partie : cadence et variante ---------------------------
+//
+// Chaque partie se joue à sa propre cadence et dans sa propre variante : une
+// poule peut mêler des blitz et des parties par correspondance. Les parties
+// créées avant cet ajout n'ont pas ces champs — les valeurs par défaut
+// s'appliquent alors, sans rien réécrire.
+
+const CADENCES = [
+    { valeur: '10', libelle: '10 min' },
+    { valeur: '5', libelle: '5 min' },
+    { valeur: '3', libelle: '3 min' },
+    { valeur: '24h', libelle: '24 h' }
+];
+const CADENCE_DEFAUT = '10';
+
+const VARIANTES = [
+    { valeur: 'classique', libelle: 'Classique' },
+    { valeur: '960', libelle: 'Chess960' }
+];
+const VARIANTE_DEFAUT = 'classique';
+
+const cadenceDe = (match) => (CADENCES.some(c => c.valeur === match.cadence) ? match.cadence : CADENCE_DEFAUT);
+const varianteDe = (match) => (VARIANTES.some(v => v.valeur === match.variante) ? match.variante : VARIANTE_DEFAUT);
+
+const libelleCadence = (match) => CADENCES.find(c => c.valeur === cadenceDe(match)).libelle;
+const libelleVariante = (match) => VARIANTES.find(v => v.valeur === varianteDe(match)).libelle;
+
+// Une valeur inconnue (page d'une autre version, saisie forcée) est ignorée :
+// la partie garde son réglage plutôt que d'en prendre un que rien ne définit.
+function definirCadence(match, valeur) {
+    if (!CADENCES.some(c => c.valeur === valeur)) return false;
+    match.cadence = valeur;
+    return true;
+}
+
+function definirVariante(match, valeur) {
+    if (!VARIANTES.some(v => v.valeur === valeur)) return false;
+    match.variante = valeur;
+    return true;
+}
+
+function optionsHtml(choix, courant) {
+    return choix.map(c =>
+        '<option value="' + c.valeur + '"' + (c.valeur === courant ? ' selected' : '') + '>' +
+        c.libelle + '</option>').join('');
+}
+
+// Les deux menus d'une partie. `onCadence` et `onVariante` sont le corps des
+// gestionnaires : chaque phase désigne sa partie à sa façon.
+function reglagesPartieHtml(match, onCadence, onVariante) {
+    return `
+        <div class="partie-reglages">
+            <label class="partie-reglage">
+                <span class="partie-reglage-titre">Cadence</span>
+                <select class="partie-cadence" onchange="${onCadence}">${optionsHtml(CADENCES, cadenceDe(match))}</select>
+            </label>
+            <label class="partie-reglage">
+                <span class="partie-reglage-titre">Type</span>
+                <select class="partie-variante" onchange="${onVariante}">${optionsHtml(VARIANTES, varianteDe(match))}</select>
+            </label>
+        </div>
+    `;
+}
+
 // Applique un résultat ('p1', 'draw', 'p2', ou '' pour effacer) à un match
 function applyResultToMatch(match, value) {
     if (value === 'p1') {
@@ -135,7 +199,10 @@ function addDecider(matches) {
         player1Score: null,
         player2Score: null,
         played: false,
-        num: matches.length + 1
+        num: matches.length + 1,
+        // La belle prolonge le duel : elle en reprend le format.
+        cadence: cadenceDe(first),
+        variante: varianteDe(first)
     });
 }
 
