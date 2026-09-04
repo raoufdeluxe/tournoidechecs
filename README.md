@@ -261,6 +261,22 @@ acceptés pour les onglets restés sur une version antérieure.
 
 ---
 
+## La liste des tournois
+
+Chaque ligne montre le **nom en titre** et, juste dessous, **l'adresse qui le
+porte** (`…/#coupe-du-dimanche`), alignée au pixel sur le nom. Le nom s'édite sur
+place : au repos il n'a ni cadre ni retrait — le cadre apparaît à l'approche,
+dessiné en `box-shadow` pour ne pas décaler le texte d'un pixel.
+
+**Le nom et l'adresse peuvent diverger** : un tournoi renommé avant que le
+déplacement existe garde son ancien lien. `Big Chief Cup` vit ainsi à
+`…/#red-indians-cup`, et `essai#1` à `…/#diag-restauration`. La ligne ne se
+contente pas de le constater : elle propose **⇢ aligner l'adresse**, qui déplace
+le tournoi vers l'adresse de son nom en un clic (avec confirmation, puisque
+l'ancien lien cesse alors de fonctionner).
+
+---
+
 ## Les statistiques
 
 `/stats` compare de **un à tous les joueurs**, sur les formats qu'on choisit :

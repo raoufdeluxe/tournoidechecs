@@ -1002,10 +1002,52 @@ a.menu-item { display: block; text-decoration: none; }
 
 /* Une ligne de la page Tournois : nom éditable + informations */
 .tournoi-edition { flex: 1 1 auto; min-width: 0; }
+
+/* Le nom se lit comme un titre et s'aligne au caractère près sur l'adresse
+   qui le suit : au repos, ni cadre ni retrait — ils n'apparaissent qu'à
+   l'approche, pour signaler qu'on peut écrire dedans. */
 .tournoi-edition .tournoi-nom {
     width: 100%;
-    margin-bottom: 4px;
-    font-weight: 600;
+    margin-bottom: 2px;
+    padding: 2px 0;
+    font-family: var(--font-sport, inherit);
+    font-size: 23px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--text-primary);
+    background: transparent;
+    /* Le cadre est dessiné en box-shadow : contrairement à une bordure, il ne
+       décale pas le texte, qui reste aligné au pixel sur l'adresse en dessous. */
+    border: none;
+    border-radius: 6px;
+    box-shadow: none;
+}
+.tournoi-edition .tournoi-nom:hover {
+    box-shadow: 0 0 0 1px var(--border), 0 0 0 6px var(--bg-secondary);
+}
+.tournoi-edition .tournoi-nom:focus {
+    outline: none;
+    background: var(--bg-primary, #FFFDF7);
+    box-shadow: 0 0 0 1px var(--accent), 0 0 0 6px var(--bg-primary, #FFFDF7);
+}
+.tournoi-adresse { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.tournoi-ecart {
+    width: auto;
+    min-width: 0;
+    margin-left: 8px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--warning, #B8860B);
+    background: var(--bg-secondary);
+    border: 1px dashed var(--warning, #B8860B);
+    cursor: pointer;
+}
+.tournoi-ecart:hover {
+    color: var(--bg-primary, #FFFDF7);
+    background: var(--warning, #B8860B);
+    border-style: solid;
 }
 
 /* Page Sauvegarde : la zone de suppression se distingue */

@@ -63,12 +63,23 @@ function buildLigneTournoi(t, courant) {
         ? new Date(t.updatedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })
         : null;
 
+    // Le nom sert d'adresse, mais les deux peuvent diverger : un tournoi renommé
+    // avant que le déplacement existe garde son ancien lien. On le dit, plutôt
+    // que de laisser deux libellés se contredire en silence.
+    const adresseSuitLeNom = !t.name || slugify(t.name) === t.id;
+    const lien = `<span class="tournoi-adresse">…/#${escapeHtml(t.id)}</span>` +
+        (adresseSuitLeNom ? '' : `
+            <button type="button" class="tournoi-ecart" onclick="renameTournoi('${escapeHtml(t.id)}')"
+                    title="L'adresse deviendra …/#${escapeHtml(slugify(t.name))}, pour suivre « ${escapeHtml(t.name)} ». L'ancien lien cessera de fonctionner.">
+                ⇢ aligner l'adresse
+            </button>`);
+
     return `
         <div class="tournament-row${estCourant ? ' is-current' : ''}">
             <div class="tournoi-edition">
                 <input type="text" class="tournoi-nom" maxlength="64" data-id="${escapeHtml(t.id)}"
-                       placeholder="Sans nom" value="${escapeHtml(t.name || '')}">
-                <div class="tournament-row-meta">${escapeHtml(t.id)}${estCourant ? '<span class="tournament-badge">en cours</span>' : ''} · ${etape} · ${t.players} partant${t.players > 1 ? 's' : ''}${quand ? ' · ' + quand : ''}</div>
+                       aria-label="Nom du tournoi" placeholder="Sans nom" value="${escapeHtml(t.name || '')}">
+                <div class="tournament-row-meta">${lien}${estCourant ? '<span class="tournament-badge">en cours</span>' : ''} · ${etape} · ${t.players} partant${t.players > 1 ? 's' : ''}${quand ? ' · ' + quand : ''}</div>
             </div>
             <div class="tournament-row-actions">
                 <button class="secondary" onclick="renameTournoi('${escapeHtml(t.id)}')">Renommer</button>

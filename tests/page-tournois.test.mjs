@@ -102,6 +102,49 @@ describe('affichage de la liste', () => {
         assert.match(liste(app), /indisponible/);
     });
 
+    test('le nom se lit comme un titre, l\'adresse le suit', async () => {
+        const app = await pageTournois({ 'coupe-du-dimanche': { version: 1, state: etatTournoi('Coupe du Dimanche') } });
+        const html = liste(app);
+        assert.match(html, /class="tournoi-nom"[^>]*value="Coupe du Dimanche"/);
+        assert.match(html, /class="tournoi-adresse">…\/#coupe-du-dimanche</);
+        assert.doesNotMatch(html, /tournoi-ecart/, 'ici le nom et l\'adresse concordent');
+    });
+
+    test('quand l\'adresse ne suit plus le nom, on propose de la corriger', async () => {
+        // Un tournoi renommé avant que le déplacement existe garde son ancien lien.
+        const app = await pageTournois({ 'red-indians-cup': { version: 1, state: etatTournoi('Big Chief Cup') } });
+        const html = liste(app);
+        assert.match(html, /class="tournoi-ecart"[^>]*onclick="renameTournoi\('red-indians-cup'\)"/);
+        assert.match(html, /aligner l'adresse/);
+        assert.match(html, /L'adresse deviendra …\/#big-chief-cup, pour suivre « Big Chief Cup »/,
+            'l\'adresse visée est dans l\'infobulle, pas dans le libellé');
+    });
+
+    test('cliquer sur le repère déplace le tournoi vers l\'adresse de son nom', async () => {
+        const app = await pageTournois({ 'red-indians-cup': { version: 2, state: etatTournoi('Big Chief Cup') } });
+        app.repondreConfirm(true);
+        // Le bouton lit le champ de la ligne, comme le ferait un clic réel.
+        app.ev(`__champ = { value: 'Big Chief Cup', dataset: { id: 'red-indians-cup' } };
+                document.querySelector = () => __champ;`);
+        await app.ev(`renameTournoi('red-indians-cup')`);
+
+        assert.ok(app.serveur.tournois['big-chief-cup'], 'écrit à la nouvelle adresse');
+        assert.ok(!app.serveur.tournois['red-indians-cup'], 'ancienne adresse supprimée');
+        assert.equal(app.serveur.tournois['big-chief-cup'].state.tournament.name, 'Big Chief Cup');
+    });
+
+    test('un nom long ne fait pas déborder la ligne', async () => {
+        // Le libellé du bouton est fixe : c'est l'infobulle qui porte le détail.
+        const app = await pageTournois({ court: { version: 1, state: etatTournoi('Un nom vraiment très long qui déborderait de partout') } });
+        const bouton = liste(app).match(/<button[^>]*class="tournoi-ecart"[\s\S]*?<\/button>/)[0];
+        assert.ok(bouton.replace(/<[^>]*>/g, '').trim().length < 25, 'libellé court');
+    });
+
+    test('un tournoi sans nom n\'est pas marqué comme divergent', async () => {
+        const app = await pageTournois({ xtzxfycn4h: { version: 1, state: etatTournoi(null) } });
+        assert.doesNotMatch(liste(app), /tournoi-ecart/);
+    });
+
     test('un nom piégé ne s\'injecte pas dans la page', async () => {
         const app = await pageTournois({ a: { version: 1, state: etatTournoi('<img src=x onerror="window.__XSS=1">') } });
         assert.doesNotMatch(liste(app), /<img/);
