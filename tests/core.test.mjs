@@ -207,23 +207,18 @@ describe('cadence et variante d\'une partie', () => {
         assert.deepEqual(app.json('VARIANTES.map(v => v.libelle)'), ['Classique', 'Chess960']);
     });
 
-    for (const valeur of ['10', '5', '3', '24h']) {
-        test(`la cadence « ${valeur} » est acceptée`, () => {
-            const app = chargerApp();
-            app.set('globalThis.m', {});
-            assert.equal(app.ev(`setCadence(m, ${JSON.stringify(valeur)})`), true);
+    test('les cadences et les types annoncés sont acceptés', () => {
+        const app = chargerApp();
+        app.set('globalThis.m', {});
+        for (const valeur of ['10', '5', '3', '24h']) {
+            assert.equal(app.ev(`setCadence(m, ${JSON.stringify(valeur)})`), true, valeur);
             assert.equal(app.ev('m.cadence'), valeur);
-        });
-    }
-
-    for (const valeur of ['classique', '960']) {
-        test(`le type « ${valeur} » est accepté`, () => {
-            const app = chargerApp();
-            app.set('globalThis.m', {});
-            assert.equal(app.ev(`setVariante(m, ${JSON.stringify(valeur)})`), true);
+        }
+        for (const valeur of ['classique', '960']) {
+            assert.equal(app.ev(`setVariante(m, ${JSON.stringify(valeur)})`), true, valeur);
             assert.equal(app.ev('m.variante'), valeur);
-        });
-    }
+        }
+    });
 
     test('une valeur inconnue est ignorée, le réglage en place est gardé', () => {
         const app = chargerApp();

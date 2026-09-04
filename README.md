@@ -390,6 +390,29 @@ et `applyEtat()`.
 
 ---
 
+## Ce que les tests disent — et ce qu'ils ne disent pas
+
+Ils décrivent **ce que fait l'application**, jamais la forme qu'elle a. Un test
+qui s'écrit « la classe CSS vaut `x` », « les `<script>` sont dans cet ordre » ou
+« ce fichier contient tel mot » ne documente rien : il interdit de changer le
+code sans rien garantir de plus. Il n'y en a pas ici — et quand il en apparaît un,
+il se supprime.
+
+Ce qu'ils couvrent, en revanche :
+
+- **les règles du tournoi** — méthode du cercle, barème, départages, belle, 3e
+  place, cadence et type d'une partie ;
+- **le contrat de l'API** — ce que le Worker accepte, ce qu'il refuse et avec
+  quel code, les écritures versionnées et leurs conflits ;
+- **ce qui est visible et cliquable** — les gestionnaires du HTML désignent des
+  fonctions qui existent, les identifiants visés sont dans la page, chaque page
+  ne charge que ce dont elle a besoin ;
+- **ce qui ne doit jamais arriver** — un nom de joueur injecté brut dans la page,
+  une visite qui crée un tournoi, un export sans les fiches, une restauration qui
+  écrit avant confirmation.
+
+---
+
 ## Les messages
 
 Aucun `alert()` : ils bloquent l'onglet, s'affichent hors de la page et ne

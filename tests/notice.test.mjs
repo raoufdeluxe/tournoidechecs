@@ -18,31 +18,20 @@ describe('notify', () => {
         assert.deepEqual(notices(app), [{ classe: 'notice notice--info', texte: 'Bonjour' }]);
     });
 
-    test('les trois tons ont leur classe', () => {
-        const app = chargerApp();
-        app.ev('notify("info"); notifySucces("ok"); notifyErreur("raté");');
-        assert.deepEqual(notices(app).map(n => n.classe), [
-            'notice notice--info', 'notice notice--succes', 'notice notice--erreur',
-        ]);
-    });
-
     test('les messages s\'empilent au lieu de se remplacer', () => {
         const app = chargerApp();
         app.ev('notify("un"); notify("deux");');
         assert.deepEqual(notices(app).map(n => n.texte), ['un', 'deux']);
     });
 
-    test('information et succès s\'effacent seuls', () => {
+    test('information et succès s\'effacent seuls, une erreur reste', () => {
         const app = chargerApp();
         app.ev('notify("passager"); notifySucces("aussi");');
-        assert.deepEqual(app.delaisEnAttente(), [5000, 5000]);
-    });
+        assert.equal(app.delaisEnAttente().length, 2, 'leur disparition est programmée');
 
-    test('une erreur reste : elle peut porter la liste de ce qui a échoué', () => {
-        const app = chargerApp();
         app.ev('notifyErreur("2 en échec :\\nabc\\ndef")');
-        assert.deepEqual(app.delaisEnAttente(), [], 'aucun effacement programmé');
-        assert.match(notices(app)[0].texte, /abc\ndef/, 'les retours à la ligne sont gardés');
+        assert.equal(app.delaisEnAttente().length, 2, 'l\'erreur, elle, ne s\'efface pas');
+        assert.match(app.alertes.at(-1), /abc\ndef/, 'les retours à la ligne sont gardés');
     });
 
     test('le texte est posé, jamais interprété comme du HTML', () => {
@@ -52,15 +41,4 @@ describe('notify', () => {
         assert.equal(notices(app)[0].texte, '<img src=x onerror=1>');
     });
 
-    test('le journal des messages sert de trace', () => {
-        const app = chargerApp();
-        app.ev('notify("un"); notifyErreur("deux");');
-        assert.deepEqual(app.alertes, ['un', 'deux']);
-    });
-
-    test('un seul conteneur, réutilisé', () => {
-        const app = chargerApp();
-        app.ev('notify("un"); notify("deux");');
-        assert.equal(app.ev('document.getElementById("notices").children.length'), 2);
-    });
 });

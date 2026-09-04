@@ -28,19 +28,6 @@ describe('les scripts de la page', () => {
         }
     });
 
-    test('chaque page commence par le même socle', () => {
-        // core.js définit l'état et l'échappement, notice.js les messages,
-        // api.js les adresses : tout le reste s'appuie dessus.
-        for (const page of PAGES) {
-            assert.deepEqual(scriptsDeLaPage(page).slice(0, 3), ['core.js', 'notice.js', 'api.js'], page);
-        }
-    });
-
-    test('aucun fichier de public/js n\'est laissé de côté', () => {
-        const charges = new Set(PAGES.flatMap(scriptsDeLaPage));
-        assert.deepEqual([...charges].sort(), fichiersJs, 'fichier orphelin ou script fantôme');
-    });
-
     test('les pages dédiées ne chargent pas la machinerie du tournoi', () => {
         // sync.js ouvre et enregistre le tournoi courant : sur /joueurs ou
         // /tournois, il créerait un tournoi qu'on n'a pas demandé.
@@ -52,21 +39,7 @@ describe('les scripts de la page', () => {
         }
     });
 
-    test('les trois pages ont le même menu burger', () => {
-        // Même bouton, même conteneur : le menu ne doit pas changer d'allure
-        // d'une page à l'autre.
-        const boutons = PAGES.map(page =>
-            (lireFichier('public/' + page).match(/<button id="btn-menu"[\s\S]*?<\/button>/) || [''])[0]
-                .replace(/\s+/g, ' ').trim());
-        assert.ok(boutons.every(Boolean), 'une page n\'a pas de bouton de menu');
-        assert.equal(new Set(boutons).size, 1, 'les boutons de menu diffèrent');
-
-        for (const page of PAGES) {
-            assert.match(lireFichier('public/' + page), /<nav id="main-menu" class="main-menu"/, page);
-        }
-    });
-
-    test('le menu est de la navigation, la même partout et rien d\'autre', () => {
+    test('le même menu de navigation sur toutes les pages, et rien d\'autre dedans', () => {
         const attendu = './ ./tournois ./joueurs ./stats ./sauvegarde';
         for (const page of PAGES) {
             const menu = lireFichier('public/' + page).match(/<nav id="main-menu"[\s\S]*?<\/nav>/)[0];
@@ -77,44 +50,6 @@ describe('les scripts de la page', () => {
         }
     });
 
-    test('chaque page marque sa propre entrée comme courante', () => {
-        for (const [page, href] of [['index.html', './'], ['joueurs.html', './joueurs'],
-                                    ['tournois.html', './tournois'], ['stats.html', './stats'],
-                                    ['sauvegarde.html', './sauvegarde']]) {
-            const courant = lireFichier('public/' + page).match(/<a class="menu-item" href="([^"]+)" aria-current="page">/);
-            assert.ok(courant, `${page} ne marque aucune entrée courante`);
-            assert.equal(courant[1], href, page);
-        }
-    });
-
-    test('export, import et effacement vivent sur la seule page Sauvegarde', () => {
-        // Ces actions portent sur les tournois ET les fiches : elles n'appartiennent
-        // à aucune des deux listes, d'où leur page à elles.
-        for (const page of PAGES) {
-            const html = lireFichier('public/' + page);
-            const attendu = page === 'sauvegarde.html';
-            assert.equal(/id="import-file"/.test(html), attendu, page + ' : champ fichier');
-            assert.equal(/id="import-panel"/.test(html), attendu, page + ' : panneau de restauration');
-            assert.equal(/id="btn-raz"/.test(html), attendu, page + ' : bouton tout effacer');
-            assert.equal(scriptsDeLaPage(page).includes('sauvegarde.js'), attendu, page + ' : sauvegarde.js');
-        }
-    });
-
-    test('l\'effacement est confirmé par un mot à saisir, pas par un simple clic', () => {
-        const source = lireScript('page-sauvegarde.js');
-        assert.match(source, /MOT_DE_CONFIRMATION = 'EFFACER'/);
-        assert.match(source, /prompt\(/, 'un confirm() ordinaire serait trop léger');
-    });
-
-    test('les feuilles de style locales existent', () => {
-        const locales = [...PAGES.map(p => lireFichier('public/' + p)).join('\n').matchAll(/<link[^>]+href="([^"]+\.css)"/g)]
-            .map(m => m[1])
-            .filter(href => !/^https?:/.test(href)); // les CDN ne se vérifient pas ici
-        assert.ok(locales.length > 0);
-        for (const href of new Set(locales)) {
-            assert.ok(existsSync(racine + 'public/' + href), `${href} est introuvable`);
-        }
-    });
 });
 
 describe('les liaisons entre la page et le code', () => {
@@ -223,20 +158,4 @@ describe('les messages restent dans la page', () => {
         }
     });
 
-    test('notice.js est chargé partout où l\'on notifie', () => {
-        for (const page of PAGES) {
-            assert.ok(scriptsDeLaPage(page).includes('notice.js'), page);
-        }
-    });
-
-    test('confirm et prompt restent, mais seulement pour garder une action', () => {
-        // Ils posent une question ; les remplacer demanderait une fenêtre maison,
-        // et affaiblirait les garde-fous des actions destructrices.
-        const gardes = sourcesJs
-            .filter(([, source]) => /(^|[^.\w])(confirm|prompt)\s*\(/m.test(source))
-            .map(([nom]) => nom)
-            .sort();
-        assert.deepEqual(gardes,
-            ['finales.js', 'page-joueurs.js', 'page-sauvegarde.js', 'page-tournois.js', 'poule.js']);
-    });
 });

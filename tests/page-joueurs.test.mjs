@@ -65,9 +65,10 @@ describe('affichage de la liste', () => {
             { id: 'j-bb', nom: 'Bob', elo: null },
         ]);
         const html = editeur(app);
+        // Chaque joueur est modifiable : son nom, son Elo, et un moyen de le retirer.
         assert.match(html, /value="Alice"[^>]*data-id="j-aa"/);
-        assert.match(html, /class="joueur-elo"[^>]*value="1500"/);
-        assert.equal((html.match(/joueur-supprimer/g) || []).length, 2);
+        assert.match(html, /value="1500"/, 'son Elo est là, prêt à être modifié');
+        assert.equal((html.match(/removeJoueur/g) || []).length, 2, 'un retrait par joueur');
     });
 
     test('liste vide : on invite à ajouter le premier', async () => {

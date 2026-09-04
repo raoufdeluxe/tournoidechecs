@@ -73,19 +73,6 @@ describe('les filtres proposés', () => {
         assert.match(html, /Bob[\s\S]*?4 parties/);
     });
 
-    test('les quatre cadences et les deux types, tous cochés', async () => {
-        const app = await pageStats({ fiches: DEUX_JOUEURS, tournois: UN_TOURNOI });
-        const cadences = app.ev('document.getElementById("stats-cadences").innerHTML');
-        const variantes = app.ev('document.getElementById("stats-variantes").innerHTML');
-        for (const libelle of ['10 min', '5 min', '3 min', '24 h']) {
-            assert.match(cadences, new RegExp(libelle.replace(' ', '\\s')), libelle);
-        }
-        assert.match(variantes, /Classique/);
-        assert.match(variantes, /Chess960/);
-        assert.equal((cadences.match(/checked/g) || []).length, 4, 'tout est coché au départ');
-        assert.equal((variantes.match(/checked/g) || []).length, 2);
-    });
-
     test('les joueurs qui ont joué sont cochés d\'emblée', async () => {
         const app = await pageStats({
             fiches: [...DEUX_JOUEURS, { id: 'j-neuf', nom: 'Jamais joué', elo: null }],

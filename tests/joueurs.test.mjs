@@ -413,9 +413,10 @@ describe('un partant dont la fiche a disparu est signalé', () => {
         ]);
         app.ev('resolveJoueursDuTournoi(); renderClassement();');
 
+        // Le classement doit dire que Bob n'a plus de fiche, et pourquoi ça compte.
         const html = app.ev('document.getElementById("standings-body").innerHTML');
-        assert.match(html, /Bob<span class="tag-absent"/, 'Bob n\'a plus de fiche');
-        assert.doesNotMatch(html, /Alice<span class="tag-absent"/, 'Alice en a toujours une');
+        assert.match(html, /Bob[\s\S]{0,200}fiche supprimée/, 'Bob est signalé');
+        assert.doesNotMatch(html, /Alice[\s\S]{0,200}fiche supprimée/, 'Alice en a toujours une');
         assert.match(html, /ne suivra plus les renommages/, 'et on explique pourquoi');
     });
 
@@ -423,6 +424,6 @@ describe('un partant dont la fiche a disparu est signalé', () => {
         const app = await appAvecFiches([]);
         app.set('tournoi.players', [{ id: 0, name: 'Ancien', elo: null }]);
         app.ev('resolveJoueursDuTournoi(); renderClassement();');
-        assert.doesNotMatch(app.ev('document.getElementById("standings-body").innerHTML'), /tag-absent/);
+        assert.doesNotMatch(app.ev('document.getElementById("standings-body").innerHTML'), /fiche supprimée/);
     });
 });
