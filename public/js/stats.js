@@ -17,13 +17,41 @@ function tauxVictoire(bilan) {
     return jouees ? bilan.victoires / jouees : null;
 }
 
+// Le bilan est tenu par couple (cadence, type) et non par axe séparé : c'est ce
+// qui permet ensuite de filtrer sur n'importe quelle combinaison — « 3 min et
+// 5 min, en Chess960 seulement » — sans avoir à relire toutes les parties.
+const cleFormat = (cadence, variante) => cadence + '|' + variante;
+
 function nouvellesStats() {
-    const parCadence = {};
-    for (const c of CADENCES) parCadence[c.valeur] = nouveauBilan();
-    const parVariante = {};
-    for (const v of VARIANTES) parVariante[v.valeur] = nouveauBilan();
-    return { total: nouveauBilan(), parCadence, parVariante };
+    const parFormat = {};
+    for (const c of CADENCES) {
+        for (const v of VARIANTES) parFormat[cleFormat(c.valeur, v.valeur)] = nouveauBilan();
+    }
+    return { parFormat };
 }
+
+/** Somme des bilans pour les cadences et les types retenus. */
+function bilanFiltre(stats, cadences, variantes) {
+    const total = nouveauBilan();
+    if (!stats) return total;
+
+    for (const cadence of cadences) {
+        for (const variante of variantes) {
+            const bilan = stats.parFormat[cleFormat(cadence, variante)];
+            if (!bilan) continue;
+            total.victoires += bilan.victoires;
+            total.nulles += bilan.nulles;
+            total.defaites += bilan.defaites;
+        }
+    }
+    return total;
+}
+
+const toutesCadences = () => CADENCES.map(c => c.valeur);
+const toutesVariantes = () => VARIANTES.map(v => v.valeur);
+
+/** Bilan toutes parties confondues. */
+const bilanTotal = (stats) => bilanFiltre(stats, toutesCadences(), toutesVariantes());
 
 // Toutes les parties d'un tournoi, poule et phases finales confondues.
 function partiesDuTournoi(etat) {
@@ -37,9 +65,7 @@ function partiesDuTournoi(etat) {
 
 function ajouterPartie(stats, partie, issue) {
     const champ = issue === 'victoire' ? 'victoires' : issue === 'nulle' ? 'nulles' : 'defaites';
-    stats.total[champ]++;
-    stats.parCadence[getCadence(partie)][champ]++;
-    stats.parVariante[getVariante(partie)][champ]++;
+    stats.parFormat[cleFormat(getCadence(partie), getVariante(partie))][champ]++;
 }
 
 /**

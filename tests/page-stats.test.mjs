@@ -43,7 +43,7 @@ async function pageStats({ fiches = [], tournois = {} } = {}) {
     return app;
 }
 
-const tableaux = (app) => app.ev('document.getElementById("stats-tables").innerHTML');
+const graphe = (app) => app.ev('document.getElementById("stats-graphe").innerHTML');
 const selecteur = (app) => app.ev('document.getElementById("stats-joueurs").innerHTML');
 
 const DEUX_JOUEURS = [{ id: 'j-a', nom: 'Alice', elo: null }, { id: 'j-b', nom: 'Bob', elo: null }];
@@ -56,12 +56,34 @@ const UN_TOURNOI = {
     ]),
 };
 
-describe('sélection des joueurs', () => {
+/** Coche les filtres comme le ferait l'utilisateur. */
+function filtrer(app, { joueurs = [], cadences = ['10', '5', '3', '24h'], variantes = ['classique', '960'] }) {
+    const cases = (liste) => liste.map(valeur => ({ checked: true, dataset: { valeur } }));
+    app.definirElements('.stats-case-joueur', cases(joueurs));
+    app.definirElements('.stats-case-cadence', cases(cadences));
+    app.definirElements('.stats-case-variante', cases(variantes));
+    app.ev('renderGrapheStats()');
+}
+
+describe('les filtres proposés', () => {
     test('une case par joueur, avec son nombre de parties', async () => {
         const app = await pageStats({ fiches: DEUX_JOUEURS, tournois: UN_TOURNOI });
         const html = selecteur(app);
         assert.match(html, /Alice[\s\S]*?4 parties/);
         assert.match(html, /Bob[\s\S]*?4 parties/);
+    });
+
+    test('les quatre cadences et les deux types, tous cochés', async () => {
+        const app = await pageStats({ fiches: DEUX_JOUEURS, tournois: UN_TOURNOI });
+        const cadences = app.ev('document.getElementById("stats-cadences").innerHTML');
+        const variantes = app.ev('document.getElementById("stats-variantes").innerHTML');
+        for (const libelle of ['10 min', '5 min', '3 min', '24 h']) {
+            assert.match(cadences, new RegExp(libelle.replace(' ', '\\s')), libelle);
+        }
+        assert.match(variantes, /Classique/);
+        assert.match(variantes, /Chess960/);
+        assert.equal((cadences.match(/checked/g) || []).length, 4, 'tout est coché au départ');
+        assert.equal((variantes.match(/checked/g) || []).length, 2);
     });
 
     test('les joueurs qui ont joué sont cochés d\'emblée', async () => {
@@ -70,8 +92,8 @@ describe('sélection des joueurs', () => {
             tournois: UN_TOURNOI,
         });
         const html = selecteur(app);
-        assert.match(html, /data-id="j-a"[^>]*checked/);
-        assert.doesNotMatch(html, /data-id="j-neuf"[^>]*checked/, 'celui sans partie reste décoché');
+        assert.match(html, /data-valeur="j-a"[^>]*checked/);
+        assert.doesNotMatch(html, /data-valeur="j-neuf"[^>]*checked/);
         assert.match(html, /Jamais joué/, 'mais reste proposé');
     });
 
@@ -91,74 +113,94 @@ describe('sélection des joueurs', () => {
     });
 });
 
-describe('tableaux comparatifs', () => {
-    function cocher(app, ids) {
-        app.definirElements('.stats-case', ids.map(id => ({ checked: true, dataset: { id } })));
-        app.ev('renderStats()');
-    }
-
-    test('un tableau par axe : total, cadence, type', async () => {
+describe('le graphe', () => {
+    test('une barre par joueur coché, avec son taux et son nombre de parties', async () => {
         const app = await pageStats({ fiches: DEUX_JOUEURS, tournois: UN_TOURNOI });
-        cocher(app, ['j-a', 'j-b']);
-        const html = tableaux(app);
-        assert.match(html, /Toutes parties confondues/);
-        assert.match(html, /Par cadence/);
-        assert.match(html, /Par type de partie/);
-        for (const libelle of ['10 min', '5 min', '3 min', '24 h', 'Classique', 'Chess960']) {
-            assert.match(html, new RegExp(libelle.replace(' ', '\\s')), libelle);
-        }
-    });
+        filtrer(app, { joueurs: ['j-a'] });
+        const html = graphe(app);
 
-    test('le pourcentage et le nombre de parties, avec le bilan en infobulle', async () => {
-        const app = await pageStats({ fiches: DEUX_JOUEURS, tournois: UN_TOURNOI });
-        cocher(app, ['j-a']);
-        const html = tableaux(app);
+        assert.match(html, /<svg/);
+        assert.equal((html.match(/<rect/g) || []).length, 1, 'une barre');
         // Alice : 2 victoires, 1 nulle, 1 défaite sur 4 parties -> 50 %
-        assert.match(html, /<strong>50 %<\/strong>/);
-        assert.match(html, /4 parties/);
-        assert.match(html, /title="2 victoires, 1 nulle, 1 défaite"/);
+        assert.match(html, />50 %</);
+        assert.match(html, />4 parties</);
+        assert.match(html, /<title>Alice — 2 V, 1 N, 1 D sur 4 parties<\/title>/);
     });
 
-    test('un format jamais joué affiche un tiret, pas 0 %', async () => {
+    test('filtrer sur une cadence ne garde que ces parties', async () => {
         const app = await pageStats({ fiches: DEUX_JOUEURS, tournois: UN_TOURNOI });
-        cocher(app, ['j-a']);
-        const html = tableaux(app);
-        assert.match(html, /class="stats-vide"[^>]*>—</);
-        assert.match(html, /Aucune partie à ce format/);
+        filtrer(app, { joueurs: ['j-a'], cadences: ['3'] });
+        // 3 min : 1 victoire, 1 défaite, 1 nulle -> 33 %
+        assert.match(graphe(app), />33 %</);
+        assert.match(graphe(app), />3 parties</);
+    });
+
+    test('filtrer sur un type croise avec la cadence', async () => {
+        const app = await pageStats({ fiches: DEUX_JOUEURS, tournois: UN_TOURNOI });
+        filtrer(app, { joueurs: ['j-a'], cadences: ['10'], variantes: ['classique'] });
+        assert.match(graphe(app), />100 %</);
+        assert.match(graphe(app), />1 partie</);
+    });
+
+    test('le filtre actif est rappelé en toutes lettres', async () => {
+        const app = await pageStats({ fiches: DEUX_JOUEURS, tournois: UN_TOURNOI });
+        filtrer(app, { joueurs: ['j-a'] });
+        assert.match(graphe(app), /Cadences : toutes · Types : toutes/);
+
+        filtrer(app, { joueurs: ['j-a'], cadences: ['3', '5'], variantes: ['960'] });
+        assert.match(graphe(app), /Cadences : 3 min, 5 min · Types : Chess960/);
+    });
+
+    test('un joueur sans partie à ce format est dit tel quel, sans barre', async () => {
+        const app = await pageStats({ fiches: DEUX_JOUEURS, tournois: UN_TOURNOI });
+        filtrer(app, { joueurs: ['j-a'], cadences: ['5'] });
+        assert.match(graphe(app), /aucune partie à ce format/);
+        assert.equal((graphe(app).match(/<rect/g) || []).length, 0);
+    });
+
+    test('les joueurs sont classés du meilleur au moins bon', async () => {
+        const app = await pageStats({ fiches: DEUX_JOUEURS, tournois: UN_TOURNOI });
+        filtrer(app, { joueurs: ['j-a', 'j-b'], cadences: ['10'] });
+        const html = graphe(app);
+        // Alice a gagné la partie en 10 min, Bob l'a perdue.
+        assert.ok(html.indexOf('>Alice<') < html.indexOf('>Bob<'));
     });
 
     test('comparer un seul joueur, ou plusieurs', async () => {
         const app = await pageStats({ fiches: DEUX_JOUEURS, tournois: UN_TOURNOI });
-
-        cocher(app, ['j-a']);
-        assert.equal((tableaux(app).match(/<th>Alice<\/th>/g) || []).length, 3, 'une colonne par tableau');
-        assert.doesNotMatch(tableaux(app), /<th>Bob<\/th>/);
-
-        cocher(app, ['j-a', 'j-b']);
-        assert.match(tableaux(app), /<th>Alice<\/th><th>Bob<\/th>/);
+        filtrer(app, { joueurs: ['j-a'] });
+        assert.doesNotMatch(graphe(app), />Bob</);
+        filtrer(app, { joueurs: ['j-a', 'j-b'] });
+        assert.match(graphe(app), />Bob</);
     });
 
     test('rien de coché : on le dit', async () => {
         const app = await pageStats({ fiches: DEUX_JOUEURS, tournois: UN_TOURNOI });
-        cocher(app, []);
-        assert.match(tableaux(app), /Coche au moins un joueur/);
+        filtrer(app, { joueurs: [] });
+        assert.match(graphe(app), /Coche au moins un joueur/);
+    });
+
+    test('aucune cadence ou aucun type : on le dit aussi', async () => {
+        const app = await pageStats({ fiches: DEUX_JOUEURS, tournois: UN_TOURNOI });
+        filtrer(app, { joueurs: ['j-a'], cadences: [] });
+        assert.match(graphe(app), /au moins une cadence et un type/);
+
+        filtrer(app, { joueurs: ['j-a'], variantes: [] });
+        assert.match(graphe(app), /au moins une cadence et un type/);
     });
 
     test('les parties non attribuables sont signalées, pas cachées', async () => {
         const app = await pageStats({
             fiches: DEUX_JOUEURS,
-            tournois: {
-                coupe: etatTournoi(['j-a', undefined], [partie(0, 1, 'p1')]),
-            },
+            tournois: { coupe: etatTournoi(['j-a', undefined], [partie(0, 1, 'p1')]) },
         });
-        app.definirElements('.stats-case', [{ checked: true, dataset: { id: 'j-a' } }]);
-        app.ev('renderStats()');
-        assert.match(tableaux(app), /1 partie\(s\) ne sont pas comptées/);
+        filtrer(app, { joueurs: ['j-a'] });
+        assert.match(graphe(app), /1 partie\(s\) ne sont pas comptées/);
     });
 
     test('serveur injoignable : message, pas de page blanche', async () => {
         const app = chargerApp({ page: 'stats.html', fetch: async () => { throw new Error('hors ligne'); } });
         await app.pret();
-        assert.match(tableaux(app), /indisponibles/);
+        assert.match(graphe(app), /indisponibles/);
     });
 });

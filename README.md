@@ -263,15 +263,27 @@ acceptés pour les onglets restés sur une version antérieure.
 
 ## Les statistiques
 
-`/stats` compare de **un à tous les joueurs** sur trois axes : toutes parties
-confondues, par cadence, par type de partie. Chaque cellule donne le pourcentage
-de victoire, le nombre de parties dessous, et le bilan complet au survol
-(« 2 victoires, 1 nulle, 1 défaite »).
+`/stats` compare de **un à tous les joueurs**, sur les formats qu'on choisit :
 
-- Le taux porte sur les **parties jouées**, nulles comprises : deux victoires sur
-  quatre parties dont une nulle font 50 %.
-- Un format jamais joué affiche **—**, pas « 0 % » : l'absence de partie n'est pas
-  un échec.
+```
+JOUEURS    ☑ Alice  ☑ Bob  ☑ Chloé  ☑ David
+CADENCES   ☐ 10 min ☐ 5 min ☑ 3 min ☐ 24 h
+TYPES      ☐ Classique  ☑ Chess960
+```
+
+Un **graphe à barres** — SVG en ligne, sans bibliothèque, comme le graphe de
+progression de la poule — donne le pourcentage de victoire de chaque joueur sur
+les parties retenues, le meilleur en haut. Chaque barre porte son taux, son
+nombre de parties, et le bilan complet au survol (« 2 V, 1 N, 1 D sur 4 parties »).
+
+Les cases se croisent : cocher `3 min` et `Chess960` ne garde que les parties qui
+sont **à la fois** en trois minutes et en Chess960. C'est pour cela que le bilan
+est tenu par couple (cadence, type) et non par axe séparé — sans quoi ce
+croisement demanderait de relire toutes les parties à chaque clic.
+
+- Le taux porte sur les **parties jouées**, nulles comprises.
+- Un joueur qui n'a rien joué à ce format est **dit tel quel**, sans barre : zéro
+  pour cent serait un mensonge.
 - Les joueurs sont cochés d'emblée **s'ils ont joué** ; les autres restent
   proposés, décochés.
 
@@ -279,7 +291,6 @@ de victoire, le nombre de parties dessous, et le bilan complet au survol
 confondus, et un renommage effacerait un historique. Les parties dont un partant
 n'a pas de fiche — les tournois d'avant leur existence — ne sont donc pas
 attribuables : la page en donne le nombre plutôt que de les passer sous silence.
-Les rattacher à des fiches les fait entrer dans les comptes.
 
 ---
 

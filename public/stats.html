@@ -53,12 +53,23 @@
         <div class="card">
             <h2 class="card-title">📊 Stats</h2>
             <p class="card-intro">Pourcentage de victoire par cadence et par type de partie.
-               Coche les joueurs à comparer — de un à tous.</p>
-            <div id="stats-joueurs" class="stats-joueurs"></div>
+               Coche les joueurs à comparer, et les formats à prendre en compte.</p>
+            <div class="stats-groupe">
+                <div class="stats-groupe-titre">Joueurs</div>
+                <div id="stats-joueurs" class="stats-filtres"></div>
+            </div>
+            <div class="stats-groupe">
+                <div class="stats-groupe-titre">Cadences</div>
+                <div id="stats-cadences" class="stats-filtres"></div>
+            </div>
+            <div class="stats-groupe">
+                <div class="stats-groupe-titre">Types de partie</div>
+                <div id="stats-variantes" class="stats-filtres"></div>
+            </div>
         </div>
 
         <div class="card">
-            <div id="stats-tables"></div>
+            <div id="stats-graphe"></div>
         </div>
     </div>
 
