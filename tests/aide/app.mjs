@@ -15,7 +15,7 @@ const racine = fileURLToPath(new URL('../..', import.meta.url));
 
 
 // Les trois pages de l'application.
-export const PAGES = ['index.html', 'joueurs.html', 'tournois.html'];
+export const PAGES = ['index.html', 'joueurs.html', 'tournois.html', 'sauvegarde.html'];
 
 /** Les scripts que charge une page, dans son ordre à elle. */
 export function scriptsDeLaPage(page = 'index.html') {

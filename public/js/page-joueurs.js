@@ -83,6 +83,12 @@ function statut(message) {
     statut.timer = setTimeout(() => { el.textContent = ''; }, 3000);
 }
 
+// Après une restauration : les fiches ont pu changer.
+async function rafraichirApresRestauration() {
+    await chargerJoueurs();
+    renderJoueurs();
+}
+
 async function demarrerPageJoueurs() {
     const conteneur = document.getElementById('joueurs-editor');
     conteneur.innerHTML = '<div class="tournaments-empty">Chargement…</div>';

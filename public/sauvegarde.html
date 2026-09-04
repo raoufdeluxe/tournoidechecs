@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tournois — Grand Prix des Échecs</title>
+    <title>Sauvegarde — Grand Prix des Échecs</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -43,28 +43,56 @@
             </button>
             <nav id="main-menu" class="main-menu" aria-labelledby="btn-menu" hidden>
                 <a class="menu-item" href="./">♟️ Accueil</a>
-                <a class="menu-item" href="./tournois" aria-current="page">📋 Tournois</a>
+                <a class="menu-item" href="./tournois">📋 Tournois</a>
                 <a class="menu-item" href="./joueurs">👥 Joueurs</a>
-                <a class="menu-item" href="./sauvegarde">💾 Sauvegarde</a>
+                <a class="menu-item" href="./sauvegarde" aria-current="page">💾 Sauvegarde</a>
             </nav>
         </header>
 
         <div class="card">
-            <h2 class="card-title">📋 Tournois</h2>
-            <p class="card-intro">Le nom d'un tournoi lui sert d'adresse : le renommer change son lien.</p>
+            <h2 class="card-title">💾 Sauvegarde</h2>
+            <p class="card-intro">Une sauvegarde contient <strong>tous les tournois et toutes les fiches
+               de joueurs</strong> : c'est l'état complet de l'application, en un fichier JSON.</p>
 
-            <div id="tournois-liste"></div>
+            <div id="sauvegarde-resume" class="tournaments-empty" role="status" aria-live="polite">Chargement…</div>
 
+            <div class="players-actions">
+                <button id="btn-export" onclick="exporterTournois()">⬇️ Tout exporter</button>
+                <button id="btn-import" class="secondary" onclick="declencherImport()">⬆️ Importer une sauvegarde</button>
+            </div>
+            <input type="file" id="import-file" accept="application/json,.json" hidden
+                   onchange="preparerRestauration(this.files[0])">
         </div>
 
+        <div id="import-panel" class="tournaments-panel" hidden>
+            <div class="tournaments-head">
+                <strong>⬆️ Restaurer une sauvegarde</strong>
+                <button class="secondary" onclick="fermerImport()">Fermer</button>
+            </div>
+            <div id="import-plan"></div>
+            <div id="import-progress" class="tournaments-empty"></div>
+            <div class="players-actions">
+                <button id="btn-import-confirm" onclick="appliquerRestauration()">Restaurer</button>
+            </div>
+        </div>
 
-
+        <div class="card zone-danger">
+            <h2 class="card-title">🧨 Tout effacer</h2>
+            <p class="card-intro">Supprime <strong>tous les tournois et toutes les fiches</strong>, pour tout
+               le monde et définitivement. Les liens déjà partagés cesseront de fonctionner.
+               Exporte d'abord si tu veux pouvoir revenir en arrière.</p>
+            <div id="raz-progress" class="tournaments-empty"></div>
+            <div class="players-actions">
+                <button class="danger" id="btn-raz" onclick="toutEffacer()">🧨 Tout effacer</button>
+            </div>
+        </div>
     </div>
 
     <script src="js/core.js"></script>
     <script src="js/api.js"></script>
     <script src="js/menu.js"></script>
     <script src="js/joueurs.js"></script>
-    <script src="js/page-tournois.js"></script>
+    <script src="js/sauvegarde.js"></script>
+    <script src="js/page-sauvegarde.js"></script>
 </body>
 </html>

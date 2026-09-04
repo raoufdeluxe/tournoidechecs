@@ -177,6 +177,12 @@ async function supprimerTournoi(id) {
     await chargerListe();
 }
 
+// Après une restauration : la liste des tournois a changé.
+async function rafraichirApresRestauration() {
+    await chargerJoueurs();
+    await chargerListe();
+}
+
 // La liste des joueurs est nécessaire à l'export : une sauvegarde embarque les
 // fiches, sans quoi les tournois qui n'ont que des renvois seraient illisibles.
 async function demarrerPageTournois() {

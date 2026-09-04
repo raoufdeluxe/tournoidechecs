@@ -982,31 +982,17 @@ button.success:hover {
 }
 
 
-/* Navigation entre les trois pages */
-.nav-pages {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-top: 14px;
+/* Séparateur entre la navigation et les actions, dans le menu */
+.menu-separateur {
+    height: 1px;
+    margin: 6px 0;
+    background: var(--border);
 }
-.nav-lien {
-    display: inline-block;
-    padding: 8px 16px;
-    border-radius: 999px;
-    font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    color: var(--text-primary);
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
+.main-menu .menu-item[aria-current="page"] {
+    font-weight: 700;
+    color: var(--accent);
 }
-.nav-lien:hover { border-color: var(--accent); }
-.nav-lien[aria-current="page"] {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-}
+a.menu-item { display: block; text-decoration: none; }
 
 .card-intro {
     margin: -6px 0 16px;
@@ -1022,5 +1008,6 @@ button.success:hover {
     font-weight: 600;
 }
 
-/* Le menu de l'accueil mêle boutons et liens */
-a.menu-item { display: block; text-decoration: none; }
+/* Page Sauvegarde : la zone de suppression se distingue */
+.zone-danger { border: 1px solid var(--danger, #C1272D); }
+.zone-danger .card-title { color: var(--danger, #C1272D); }

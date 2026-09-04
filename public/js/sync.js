@@ -218,5 +218,10 @@ async function loadState() {
     }
 }
 
+// Après une restauration : le tournoi ouvert vient peut-être d'être remplacé.
+async function rafraichirApresRestauration() {
+    await loadState();
+}
+
 // Au chargement de la page, on tente de reprendre là où le tournoi en était
 loadState();

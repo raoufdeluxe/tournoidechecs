@@ -135,9 +135,10 @@ async function collecterTournois() {
     return tournois;
 }
 
+// Le fichier contient les tournois ET les fiches des joueurs : son nom le dit.
 function nomFichierSauvegarde(date) {
     const horodatage = (date || new Date()).toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    return 'tournois-' + horodatage + '.json';
+    return 'sauvegarde-' + horodatage + '.json';
 }
 
 function telechargerFichier(nom, texte) {
@@ -158,8 +159,8 @@ async function exporterTournois() {
 
     try {
         const tournois = await collecterTournois();
-        if (!tournois.length) {
-            alert('Aucun tournoi à exporter.');
+        if (!tournois.length && !joueurs.length) {
+            alert('Rien à exporter : ni tournoi, ni joueur.');
             return;
         }
         const sauvegarde = construireSauvegarde(tournois, null, joueurs);
@@ -193,32 +194,48 @@ async function preparerRestauration(fichier) {
     }
 
     let idsDistants = [];
+    let listeLue = false;
     try {
         const res = await fetch(URL_TOURNOIS);
-        if (res.ok) {
-            const data = await res.json();
-            idsDistants = ((data && data.tournaments) || []).map(t => t.id);
-        }
+        if (!res.ok) throw new Error(res.status);
+        const data = await res.json();
+        idsDistants = ((data && data.tournaments) || []).map(t => t.id);
+        listeLue = true;
     } catch (e) {
-        // Liste injoignable : tout sera présenté comme une création. L'écriture
-        // reste correcte, elle se cale sur la version lue tournoi par tournoi.
+        // Liste injoignable : on ne peut plus distinguer création et écrasement.
+        // L'écriture, elle, reste correcte : elle se cale sur la version lue
+        // tournoi par tournoi au moment de l'envoi.
         console.warn('Liste des tournois indisponible :', e);
     }
 
     sauvegardeEnAttente = sauvegarde;
-    afficherPlanRestauration(planifierRestauration(sauvegarde, idsDistants), sauvegarde);
+    afficherPlanRestauration(planifierRestauration(sauvegarde, idsDistants), sauvegarde, listeLue);
 }
 
-function afficherPlanRestauration(plan, sauvegarde) {
-    const ligne = (e, signe) =>
-        '<div class="tournament-row"><div class="tournament-row-name">' + signe + ' ' +
-        escapeHtml(e.nom) + '</div><div class="tournament-row-meta">' +
-        escapeHtml(e.id) + ' · ' + e.partants + ' partants</div></div>';
+function afficherPlanRestauration(plan, sauvegarde, listeLue) {
+    // Le nom et l'identifiant sur la même ligne : séparés, on les lisait comme
+    // deux tournois différents.
+    const ligne = (e, etat) =>
+        '<div class="tournament-row"><div>' +
+        '<div class="tournament-row-name">' + escapeHtml(e.nom) +
+        '<span class="tournament-badge">' + etat + '</span></div>' +
+        '<div class="tournament-row-meta">' +
+        (e.nom === e.id ? '' : escapeHtml(e.id) + ' · ') + e.partants + ' partants</div>' +
+        '</div></div>';
 
     let html = '<div class="tournaments-empty">Sauvegarde du ' +
         escapeHtml(new Date(sauvegarde.exporteLe).toLocaleString('fr-FR')) + '</div>';
-    html += plan.creations.map(e => ligne(e, '+')).join('');
-    html += plan.ecrasements.map(e => ligne(e, '↻')).join('');
+
+    // Sans la liste du serveur, impossible de savoir ce qui existe déjà : on le
+    // dit, plutôt que de laisser croire que tout est nouveau.
+    if (!listeLue) {
+        html += '<div class="tournaments-empty">⚠ La liste des tournois n\'a pas pu être lue : ' +
+            'impossible de dire lesquels existent déjà. Un tournoi portant le même identifiant ' +
+            'sera remplacé.</div>';
+    }
+
+    html += plan.creations.map(e => ligne(e, listeLue ? 'nouveau' : 'à écrire')).join('');
+    html += plan.ecrasements.map(e => ligne(e, 'remplacé')).join('');
     if (plan.ecrasements.length) {
         html += '<div class="tournaments-empty">↻ : ces tournois existent déjà et seront' +
             ' remplacés par la version du fichier. Leur contenu actuel sera perdu.</div>';
@@ -226,9 +243,13 @@ function afficherPlanRestauration(plan, sauvegarde) {
 
     const fiches = plan.joueursNouveaux.length + plan.joueursMisAJour.length;
     html += '<div class="tournaments-empty">' + (fiches
-        ? 'Joueurs : ' + plan.joueursNouveaux.length + ' ajouté(s), ' +
-          plan.joueursMisAJour.length + ' mis à jour. Les fiches absentes du fichier sont conservées.'
+        ? 'Joueurs : ' + plan.joueursNouveaux.length + ' à ajouter, ' +
+          plan.joueursMisAJour.length + ' à mettre à jour. Les fiches absentes du fichier sont conservées.'
         : 'Aucun changement dans la liste des joueurs.') + '</div>';
+
+    // Le panneau n'écrit rien : le bouton « Restaurer » reste à cliquer.
+    html += '<div class="tournaments-empty">Rien n\'est encore écrit — ' +
+        '« Restaurer » applique ce plan.</div>';
 
     document.getElementById('import-plan').innerHTML = html;
     document.getElementById('btn-import-confirm').disabled =
@@ -250,7 +271,8 @@ async function appliquerRestauration() {
     // Les fiches d'abord : un tournoi restauré avant elles afficherait
     // « Joueur supprimé » le temps que la liste suive.
     const fusion = fusionnerJoueurs(sauvegardeEnAttente.joueurs, joueurs);
-    if (fusion.nouveaux.length || fusion.misAJour.length) {
+    const fichesTouchees = fusion.nouveaux.length + fusion.misAJour.length;
+    if (fichesTouchees) {
         if (!await remplacerJoueurs(fusion.fusion)) {
             alert('La liste des joueurs n\'a pas pu être enregistrée : restauration abandonnée.');
             return;
@@ -287,12 +309,16 @@ async function appliquerRestauration() {
     avancement.textContent = '';
     fermerImport();
 
-    if (echecs.length) {
-        alert(faits + ' tournoi(s) restauré(s), ' + echecs.length + ' en échec :\n' + echecs.join('\n'));
-    } else {
-        alert(faits + ' tournoi(s) restauré(s).');
-    }
+    // Une sauvegarde porte les deux : le compte rendu doit parler des deux.
+    const compte = faits + ' tournoi(s) et ' + fichesTouchees + ' fiche(s) de joueur restaurés';
+    alert(echecs.length
+        ? compte + ', ' + echecs.length + ' en échec :\n' + echecs.join('\n')
+        : compte + '.');
 
-    // La liste vient de changer sous nos pieds : on la relit.
-    await chargerListe();
+    // Le contenu de la page vient de changer sous ses pieds : chaque page dit
+    // comment se relire (la liste des tournois, celle des joueurs, le tournoi
+    // ouvert). Sans ce point d'accroche, la sauvegarde serait liée à une page.
+    if (typeof rafraichirApresRestauration === 'function') {
+        await rafraichirApresRestauration();
+    }
 }

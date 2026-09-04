@@ -52,6 +52,58 @@ describe('les scripts de la page', () => {
         }
     });
 
+    test('les trois pages ont le même menu burger', () => {
+        // Même bouton, même conteneur : le menu ne doit pas changer d'allure
+        // d'une page à l'autre.
+        const boutons = PAGES.map(page =>
+            (lireFichier('public/' + page).match(/<button id="btn-menu"[\s\S]*?<\/button>/) || [''])[0]
+                .replace(/\s+/g, ' ').trim());
+        assert.ok(boutons.every(Boolean), 'une page n\'a pas de bouton de menu');
+        assert.equal(new Set(boutons).size, 1, 'les boutons de menu diffèrent');
+
+        for (const page of PAGES) {
+            assert.match(lireFichier('public/' + page), /<nav id="main-menu" class="main-menu"/, page);
+        }
+    });
+
+    test('le menu est de la navigation, la même partout et rien d\'autre', () => {
+        const attendu = './ ./tournois ./joueurs ./sauvegarde';
+        for (const page of PAGES) {
+            const menu = lireFichier('public/' + page).match(/<nav id="main-menu"[\s\S]*?<\/nav>/)[0];
+            const liens = [...menu.matchAll(/<a class="menu-item" href="([^"]+)"/g)].map(m => m[1]).join(' ');
+            assert.equal(liens, attendu, page);
+            assert.doesNotMatch(menu, /<button[^>]*class="menu-item"/,
+                `${page} : le menu ne porte que la navigation`);
+        }
+    });
+
+    test('chaque page marque sa propre entrée comme courante', () => {
+        for (const [page, href] of [['index.html', './'], ['joueurs.html', './joueurs'], ['tournois.html', './tournois']]) {
+            const courant = lireFichier('public/' + page).match(/<a class="menu-item" href="([^"]+)" aria-current="page">/);
+            assert.ok(courant, `${page} ne marque aucune entrée courante`);
+            assert.equal(courant[1], href, page);
+        }
+    });
+
+    test('export, import et effacement vivent sur la seule page Sauvegarde', () => {
+        // Ces actions portent sur les tournois ET les fiches : elles n'appartiennent
+        // à aucune des deux listes, d'où leur page à elles.
+        for (const page of PAGES) {
+            const html = lireFichier('public/' + page);
+            const attendu = page === 'sauvegarde.html';
+            assert.equal(/id="import-file"/.test(html), attendu, page + ' : champ fichier');
+            assert.equal(/id="import-panel"/.test(html), attendu, page + ' : panneau de restauration');
+            assert.equal(/id="btn-raz"/.test(html), attendu, page + ' : bouton tout effacer');
+            assert.equal(scriptsDeLaPage(page).includes('sauvegarde.js'), attendu, page + ' : sauvegarde.js');
+        }
+    });
+
+    test('l\'effacement est confirmé par un mot à saisir, pas par un simple clic', () => {
+        const source = lireScript('page-sauvegarde.js');
+        assert.match(source, /MOT_DE_CONFIRMATION = 'EFFACER'/);
+        assert.match(source, /prompt\(/, 'un confirm() ordinaire serait trop léger');
+    });
+
     test('les feuilles de style locales existent', () => {
         const locales = [...PAGES.map(p => lireFichier('public/' + p)).join('\n').matchAll(/<link[^>]+href="([^"]+\.css)"/g)]
             .map(m => m[1])

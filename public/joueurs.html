@@ -37,10 +37,15 @@
                 </svg>
             </h1>
             <p>Poule qualificative · Demi-finales · Grande Finale</p>
-            <nav class="nav-pages">
-                <a class="nav-lien" href="./">♟️ Accueil</a>
-                <a class="nav-lien" href="./tournois">📋 Tournois</a>
-                <a class="nav-lien" href="./joueurs" aria-current="page">👥 Joueurs</a>
+            <button id="btn-menu" class="menu-toggle" type="button" aria-label="Ouvrir le menu"
+                    aria-expanded="false" aria-controls="main-menu" onclick="toggleMainMenu()">
+                <span></span><span></span><span></span>
+            </button>
+            <nav id="main-menu" class="main-menu" aria-labelledby="btn-menu" hidden>
+                <a class="menu-item" href="./">♟️ Accueil</a>
+                <a class="menu-item" href="./tournois">📋 Tournois</a>
+                <a class="menu-item" href="./joueurs" aria-current="page">👥 Joueurs</a>
+                <a class="menu-item" href="./sauvegarde">💾 Sauvegarde</a>
             </nav>
         </header>
 
@@ -62,10 +67,13 @@
                 <button onclick="enregistrerJoueursDepuisPage()">Enregistrer les modifications</button>
             </div>
         </div>
+
+
     </div>
 
     <script src="js/core.js"></script>
     <script src="js/api.js"></script>
+    <script src="js/menu.js"></script>
     <script src="js/joueurs.js"></script>
     <script src="js/page-joueurs.js"></script>
 </body>

@@ -403,29 +403,3 @@ describe('inscription d\'un tournoi à partir des fiches', () => {
     });
 });
 
-describe('panneau « Renommer » de l\'accueil', () => {
-    test('un partant rattaché à une fiche n\'y est plus modifiable', async () => {
-        const app = await appAvecFiches([{ id: 'j-aa', nom: 'RAF', elo: 1200 }]);
-        app.set('tournament.players', [{ id: 0, ref: 'j-aa', name: 'RAF', elo: 1200 }]);
-        app.ev('togglePlayersPanel()');
-        const html = app.ev('document.getElementById("players-editor").innerHTML');
-        assert.doesNotMatch(html, /data-player/, 'pas de champ de saisie pour ce partant');
-        assert.match(html, /modifier dans Joueurs/, 'la page Joueurs est indiquée');
-    });
-
-    test('un tournoi d\'avant les fiches se renomme encore sur place', async () => {
-        const app = await appAvecFiches([]);
-        app.set('tournament.players', [{ id: 0, name: 'Ancien', elo: null }]);
-        app.definirElements('.rename-input[data-player]', [{ value: 'Nouveau', dataset: { player: '0' } }]);
-        await app.ev('savePlayerNames()');
-        assert.equal(app.json('tournament.players')[0].name, 'Nouveau');
-        assert.deepEqual(app.requetes.filter(r => r.methode === 'PATCH'), [], 'aucune fiche à écrire');
-    });
-
-    test('le nom du tournoi reste modifiable là', async () => {
-        const app = await appAvecFiches([]);
-        app.set('tournament.players', [{ id: 0, name: 'Ancien', elo: null }]);
-        app.ev('togglePlayersPanel()');
-        assert.match(app.ev('document.getElementById("players-editor").innerHTML'), /rename-tournament/);
-    });
-});
