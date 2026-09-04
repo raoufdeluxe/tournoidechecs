@@ -12,7 +12,7 @@ import vm from 'node:vm';
 const racine = fileURLToPath(new URL('../..', import.meta.url));
 
 // Ordre de chargement de public/index.html
-export const SCRIPTS = ['core.js', 'poule.js', 'finales.js', 'tournois.js', 'sync.js'];
+export const SCRIPTS = ['core.js', 'poule.js', 'finales.js', 'tournois.js', 'sauvegarde.js', 'sync.js'];
 
 export function lireScript(nom) {
     return readFileSync(racine + 'public/js/' + nom, 'utf8');
@@ -22,8 +22,18 @@ export function lireFichier(chemin) {
     return readFileSync(racine + chemin, 'utf8');
 }
 
+// Éléments qui portent l'attribut `hidden` dans index.html : le faux DOM doit
+// partir du même état, sinon un test croit un panneau ouvert alors que la page
+// le montre fermé.
+const IDS_CACHES = new Set(
+    [...readFileSync(racine + 'public/index.html', 'utf8').matchAll(/<[a-z][^>]*>/gi)]
+        .map(m => m[0])
+        .filter(balise => /\shidden(\s|>|=)/.test(balise))
+        .map(balise => (balise.match(/\bid="([^"]+)"/) || [])[1])
+        .filter(Boolean));
+
 // Élément DOM factice : accepte tout ce que le code de rendu lui demande.
-function element() {
+function element(id) {
     const el = {
         style: {},
         dataset: {},
@@ -33,7 +43,7 @@ function element() {
         textContent: '',
         value: '',
         checked: false,
-        hidden: false,
+        hidden: IDS_CACHES.has(id),
         disabled: false,
         appendChild(enfant) { this.children.push(enfant); return enfant; },
         insertBefore(enfant) { this.children.push(enfant); return enfant; },
@@ -102,6 +112,8 @@ export function chargerApp(options = {}) {
         clearInterval(id) { minuteries.delete(id); },
         requestAnimationFrame: () => 0,
         crypto: globalThis.crypto,
+        Blob: class { constructor(parties) { this.parties = parties; } },
+        URL: { createObjectURL: () => 'blob:sauvegarde', revokeObjectURL() {} },
         JSON, Math, Date, Object, Array, String, Number, Boolean, RegExp, Error, Promise, Set, Map,
         Uint8Array, Intl, encodeURIComponent, decodeURIComponent, parseInt, parseFloat, isNaN,
         alert(message) { bac.__alerts.push(message); },
@@ -150,7 +162,7 @@ export function chargerApp(options = {}) {
     const cacheElements = new Map();
     bac.document = {
         getElementById(id) {
-            if (!cacheElements.has(id)) cacheElements.set(id, element());
+            if (!cacheElements.has(id)) cacheElements.set(id, element(id));
             return cacheElements.get(id);
         },
         createElement: () => element(),

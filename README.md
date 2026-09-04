@@ -64,6 +64,7 @@ public/
     poule.js      calendrier aller/retour, classement, cartes de duel
     finales.js    demi-finales, grande finale, podium
     tournois.js   identité du tournoi (lien, nom), liste, renommage
+    sauvegarde.js export/import de tous les tournois, en un fichier JSON
     sync.js       sauvegarde versionnée : envois sérialisés, réessai, conflits
 worker.js         API + service des fichiers statiques
 wrangler.toml     config Cloudflare (Worker + binding KV + [assets])
@@ -140,6 +141,7 @@ tests/
   tournois.test.mjs  slug du nom, identifiant du lien, échappement HTML
   worker.test.mjs    routes, versionnage, liste des tournois
   statique.test.mjs  cohérence page ↔ code ↔ wrangler.toml
+  sauvegarde.test.mjs  export/import : format, plan, écriture, échecs partiels
 ```
 
 **Comment le front est testé sans navigateur.** Les scripts de `public/js/` sont
@@ -158,6 +160,57 @@ ajouté dans `public/js/` mais oublié dans `index.html`, un binding absent de
 La CI GitHub Actions (`.github/workflows/ci.yml`) rejoue tout cela à chaque
 push et chaque pull request, et vérifie en plus que le Worker se compile
 (`wrangler deploy --dry-run`, sans jeton Cloudflare ni déploiement).
+
+---
+
+## Sauvegarde et restauration
+
+Tout se fait depuis le menu de la page, sans rien installer :
+
+- **⬇️ Exporter tous les tournois** — télécharge un fichier
+  `tournois-<horodatage>.json` contenant l'état complet de chaque tournoi.
+- **⬆️ Importer une sauvegarde** — ouvre un fichier, **affiche d'abord ce qu'il
+  ferait** (`+` nouveau tournoi, `↻` tournoi existant qui sera remplacé), et
+  n'écrit qu'après confirmation.
+
+Aucune route d'export ou d'import n'a été ajoutée au Worker : la page se sert de
+`/tournaments` et `/state?id=…`, qu'elle utilise déjà. Rien de nouveau n'est donc
+exposé — l'import reste, comme le reste de l'app, à la portée de qui a le lien.
+
+Chaque tournoi est réécrit avec la version que le serveur annonce à l'instant :
+la restauration n'entre pas en conflit (409) avec l'état en place, elle le
+remplace franchement. Si un tournoi échoue, les autres passent quand même et la
+liste des échecs est affichée.
+
+**Ce que l'export ne contient pas** : les tournois sans aucun partant inscrit
+(l'API ne les liste pas) et l'ancienne clé sans identifiant, vestige des
+premières versions.
+
+### Le format
+
+Un seul fichier JSON indenté, tournois triés par identifiant, états décodés :
+
+```json
+{
+  "format": "grand-prix-des-echecs/sauvegarde",
+  "version": 1,
+  "exporteLe": "2026-09-04T09:10:49.142Z",
+  "tournois": {
+    "tournoi-des-potes": { "version": 3, "updatedAt": "…", "state": { … } }
+  }
+}
+```
+
+Les états sont écrits décodés plutôt qu'en chaînes échappées : une sauvegarde se
+lit, se compare et se corrige à la main. Le tri rend l'export déterministe — deux
+sauvegardes d'un contenu inchangé donnent le même fichier, donc aucun diff
+parasite si on les archive.
+
+Pourquoi JSON et pas autre chose : à cette échelle (quelques tournois de quelques
+Ko), NDJSON mettrait chaque tournoi sur une ligne unique — pire en diff ; CBOR ou
+MessagePack échangeraient la lisibilité contre des Ko ; SQLite serait un moteur de
+base pour une poignée de clés. Si le volume devenait un problème, `gzip` sur le
+même fichier.
 
 ---
 
