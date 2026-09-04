@@ -72,7 +72,7 @@ describe('tout effacer', () => {
     test('annuler la saisie ne touche à rien', async () => {
         const app = await pageSauvegarde(contenu);
         app.repondrePrompt(null);
-        await app.ev('toutEffacer()');
+        await app.ev('eraseTout()');
         assert.deepEqual(app.serveur.tournois, ['abc', 'def']);
         assert.equal(app.serveur.joueurs.length, 1);
     });
@@ -80,7 +80,7 @@ describe('tout effacer', () => {
     test('un mot approximatif ne suffit pas', async () => {
         const app = await pageSauvegarde(contenu);
         app.repondrePrompt('oui');
-        await app.ev('toutEffacer()');
+        await app.ev('eraseTout()');
         assert.match(app.alertes.at(-1), /Rien n'a été effacé/);
         assert.deepEqual(app.serveur.tournois, ['abc', 'def']);
     });
@@ -88,7 +88,7 @@ describe('tout effacer', () => {
     test('le mot exact efface tournois et fiches', async () => {
         const app = await pageSauvegarde(contenu);
         app.repondrePrompt('EFFACER');
-        await app.ev('toutEffacer()');
+        await app.ev('eraseTout()');
         assert.deepEqual(app.serveur.tournois, []);
         assert.deepEqual(app.serveur.joueurs, []);
         assert.match(app.alertes.at(-1), /2 tournoi\(s\) et 1 fiche\(s\) effacés/);
@@ -97,14 +97,14 @@ describe('tout effacer', () => {
     test('le mot est accepté en minuscules et avec des espaces', async () => {
         const app = await pageSauvegarde(contenu);
         app.repondrePrompt('  effacer ');
-        await app.ev('toutEffacer()');
+        await app.ev('eraseTout()');
         assert.deepEqual(app.serveur.tournois, []);
     });
 
     test('chaque tournoi part par une suppression distincte', async () => {
         const app = await pageSauvegarde(contenu);
         app.repondrePrompt('EFFACER');
-        await app.ev('toutEffacer()');
+        await app.ev('eraseTout()');
         const suppressions = app.requetes.filter(r => r.methode === 'DELETE').map(r => r.chemin);
         assert.equal(suppressions.length, 2);
         assert.ok(suppressions.every(c => c.startsWith('/api/etat?id=')));
@@ -115,7 +115,7 @@ describe('tout effacer', () => {
         app.stockage.set('tournoi_echecs_state_v1:abc', '{}');
         app.stockage.set('tournoi_echecs_courant', 'abc');
         app.repondrePrompt('EFFACER');
-        await app.ev('toutEffacer()');
+        await app.ev('eraseTout()');
         assert.equal(app.stockage.has('tournoi_echecs_state_v1:abc'), false);
         assert.equal(app.stockage.has('tournoi_echecs_courant'), false);
     });
@@ -123,7 +123,7 @@ describe('tout effacer', () => {
     test('un tournoi récalcitrant n\'empêche pas les autres, et est signalé', async () => {
         const app = await pageSauvegarde({ ...contenu, panne: 'abc' });
         app.repondrePrompt('EFFACER');
-        await app.ev('toutEffacer()');
+        await app.ev('eraseTout()');
         assert.deepEqual(app.serveur.tournois, ['abc'], 'seul celui en échec reste');
         assert.match(app.alertes.at(-1), /1 tournoi\(s\) et 1 fiche\(s\) effacés/);
         assert.match(app.alertes.at(-1), /En échec[\s\S]*abc/);
@@ -132,14 +132,14 @@ describe('tout effacer', () => {
     test('un échec sur les fiches est signalé sans être compté', async () => {
         const app = await pageSauvegarde({ ...contenu, panne: 'joueurs' });
         app.repondrePrompt('EFFACER');
-        await app.ev('toutEffacer()');
+        await app.ev('eraseTout()');
         assert.match(app.alertes.at(-1), /2 tournoi\(s\) et 0 fiche\(s\) effacés/);
         assert.match(app.alertes.at(-1), /liste des joueurs/);
     });
 
     test('rien à effacer : on le dit sans rien demander', async () => {
         const app = await pageSauvegarde({ tournois: [], fiches: [] });
-        await app.ev('toutEffacer()');
+        await app.ev('eraseTout()');
         assert.match(app.alertes.at(-1), /rien à effacer/i);
         assert.deepEqual(app.requetes.filter(r => r.methode === 'DELETE'), []);
     });
@@ -147,14 +147,14 @@ describe('tout effacer', () => {
     test('le résumé est remis à jour après coup', async () => {
         const app = await pageSauvegarde(contenu);
         app.repondrePrompt('EFFACER');
-        await app.ev('toutEffacer()');
+        await app.ev('eraseTout()');
         assert.match(resume(app), /0 tournoi et 0 fiche/);
     });
 
     test('le bouton est rendu, même après un échec', async () => {
         const app = await pageSauvegarde({ ...contenu, panne: 'abc' });
         app.repondrePrompt('EFFACER');
-        await app.ev('toutEffacer()');
+        await app.ev('eraseTout()');
         assert.equal(app.ev('document.getElementById("btn-raz").disabled'), false);
     });
 });

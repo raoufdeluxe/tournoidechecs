@@ -40,7 +40,7 @@
             <p>Poule qualificative · Demi-finales · Grande Finale</p>
             <div id="tournament-name-display" class="tournament-name-display" hidden></div>
             <button id="btn-menu" class="menu-toggle" type="button" aria-label="Ouvrir le menu"
-                    aria-expanded="false" aria-controls="main-menu" onclick="toggleMainMenu()">
+                    aria-expanded="false" aria-controls="main-menu" onclick="toggleMenu()">
                 <span></span><span></span><span></span>
             </button>
             <nav id="main-menu" class="main-menu" aria-labelledby="btn-menu" hidden>
@@ -79,7 +79,7 @@
                 <div id="player-inputs"></div>
 
                 <div class="button-group">
-                    <button onclick="startTournament()">🏁 Donner le départ</button>
+                    <button onclick="startTournoi()">🏁 Donner le départ</button>
                 </div>
             </div>
         </div>
@@ -89,7 +89,7 @@
             <div class="card">
                 <div class="card-head">
                     <h2 class="card-title">🏇 Phase de Poule</h2>
-                    <select id="round-select-top" class="result-select round-picker" onchange="goToRound(this.value)"></select>
+                    <select id="round-select-top" class="result-select round-picker" onchange="goToJournee(this.value)"></select>
                 </div>
 
                 <h3 id="standings-title" style="margin-top: 10px; margin-bottom: 20px; color: var(--text-primary); font-family: var(--font-sport); font-weight: 700;">Classement</h3>
@@ -134,13 +134,13 @@
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
                     <h3 id="round-label" style="color: var(--text-primary); font-family: var(--font-sport); font-weight: 700;">Journée</h3>
-                    <select id="round-select" class="result-select" style="width: auto;" onchange="goToRound(this.value)"></select>
+                    <select id="round-select" class="result-select" style="width: auto;" onchange="goToJournee(this.value)"></select>
                 </div>
                 <div id="matches-container"></div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; flex-wrap: wrap; gap: 12px;">
-                    <button class="secondary" id="prev-round-btn" onclick="prevRound()" style="flex: none; width: auto; white-space: nowrap; padding: 10px 18px;">← Précédente</button>
-                    <button class="success" id="next-round-btn" onclick="nextRound()" style="flex: none; width: auto; white-space: nowrap; padding: 10px 18px;">Suivante →</button>
+                    <button class="secondary" id="prev-round-btn" onclick="prevJournee()" style="flex: none; width: auto; white-space: nowrap; padding: 10px 18px;">← Précédente</button>
+                    <button class="success" id="next-round-btn" onclick="nextJournee()" style="flex: none; width: auto; white-space: nowrap; padding: 10px 18px;">Suivante →</button>
                 </div>
 
                 <h3 style="margin-top: 40px; margin-bottom: 16px; color: var(--text-primary); font-family: var(--font-sport); font-weight: 700;">Progression journée après journée</h3>
@@ -186,8 +186,8 @@
                 </div>
 
                 <div class="button-group" style="margin-top: 40px;">
-                    <button class="secondary" onclick="backToTournament()">← Retour à la poule</button>
-                    <button class="success" onclick="startFinals()" id="start-finals-btn" disabled>🏆 Vers la Grande Finale →</button>
+                    <button class="secondary" onclick="backToPoule()">← Retour à la poule</button>
+                    <button class="success" onclick="startFinale()" id="start-finals-btn" disabled>🏆 Vers la Grande Finale →</button>
                 </div>
             </div>
         </div>
@@ -222,8 +222,8 @@
                 <div id="final-matches-container" style="margin-top: 40px;"></div>
 
                 <div class="button-group" style="margin-top: 40px;">
-                    <button class="secondary" onclick="backToSemifinals()">← Retour aux demies</button>
-                    <button class="success" onclick="finalizeFinals()" id="finalize-finals-btn" disabled>🏆 Proclamer le vainqueur →</button>
+                    <button class="secondary" onclick="backToDemies()">← Retour aux demies</button>
+                    <button class="success" onclick="finalizeFinale()" id="finalize-finals-btn" disabled>🏆 Proclamer le vainqueur →</button>
                 </div>
             </div>
         </div>
@@ -251,7 +251,7 @@
                 </div>
 
                 <div class="button-group" style="margin-top: 30px;">
-                    <button class="secondary" onclick="startNewTournament()">🏁 Nouveau tournoi</button>
+                    <button class="secondary" onclick="startNouveauTournoi()">🏁 Nouveau tournoi</button>
                 </div>
             </div>
         </div>

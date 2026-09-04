@@ -108,10 +108,25 @@ describe('affichage de la liste', () => {
         assert.match(liste(app), /&lt;img/);
     });
 
+    test('au-delà de 100 tournois, on ne prétend pas montrer les plus récents', async () => {
+        const app = await pageTournois({ a: { version: 1, state: etatTournoi('A') } });
+        // `complete: false` signale que le serveur en a laissé de côté.
+        app.ev(`__vraiFetch = fetch; fetch = async (url, init) => {
+            const res = await __vraiFetch(url, init);
+            if (!String(url).includes('/api/tournois')) return res;
+            const data = await res.json();
+            return { ok: true, status: 200, json: async () => ({ ...data, complete: false }) };
+        };`);
+        await app.ev('loadListeTournois()');
+        const html = liste(app);
+        assert.match(html, /plus de 100 tournois/);
+        assert.doesNotMatch(html, /plus récents/, 'ce serait faux : list() rend les clés par ordre alphabétique');
+    });
+
     test('la page n\'ouvre aucun tournoi au chargement', async () => {
         const app = await pageTournois({ a: { version: 1, state: etatTournoi('A') } });
         assert.deepEqual(app.requetes.filter(r => r.chemin.startsWith('/api/etat')), []);
-        assert.equal(app.ev('typeof saveState'), 'undefined');
+        assert.equal(app.ev('typeof saveEtat'), 'undefined');
     });
 });
 
@@ -124,7 +139,7 @@ describe('renommer un tournoi', () => {
     test('renommer met à jour le nom, et l\'adresse suit le nom', async () => {
         const app = await pageTournois({ 'coupe-du-dimanche': { version: 3, state: etatTournoi('Coupe du Dimanche') } });
         saisir(app, 'coupe-du-dimanche', 'Coupe du Dimanche 2026');
-        await app.ev('renommerTournoi("coupe-du-dimanche")');
+        await app.ev('renameTournoi("coupe-du-dimanche")');
 
         // Le slug « coupe-du-dimanche-2026 » diffère : c'est un déplacement.
         assert.ok(app.serveur.tournois['coupe-du-dimanche-2026']);
@@ -135,7 +150,7 @@ describe('renommer un tournoi', () => {
         const app = await pageTournois({ ancien: { version: 2, state: etatTournoi('Ancien') } });
         app.repondreConfirm(true);
         saisir(app, 'ancien', 'Tout neuf');
-        await app.ev('renommerTournoi("ancien")');
+        await app.ev('renameTournoi("ancien")');
 
         assert.ok(app.serveur.tournois['tout-neuf'], 'écrit à la nouvelle adresse');
         assert.ok(!app.serveur.tournois.ancien, 'ancienne adresse supprimée');
@@ -147,7 +162,7 @@ describe('renommer un tournoi', () => {
         const app = await pageTournois({ ancien: { version: 2, state: etatTournoi('Ancien') } });
         app.repondreConfirm(false);
         saisir(app, 'ancien', 'Tout neuf');
-        await app.ev('renommerTournoi("ancien")');
+        await app.ev('renameTournoi("ancien")');
         assert.ok(app.serveur.tournois.ancien);
         assert.ok(!app.serveur.tournois['tout-neuf']);
     });
@@ -159,7 +174,7 @@ describe('renommer un tournoi', () => {
         });
         app.repondreConfirm(true);
         saisir(app, 'ancien', 'Tout neuf');
-        await app.ev('renommerTournoi("ancien")');
+        await app.ev('renameTournoi("ancien")');
         assert.match(app.alertes.at(-1), /existe déjà/);
         assert.ok(app.serveur.tournois.ancien, 'rien n\'a bougé');
     });
@@ -167,7 +182,7 @@ describe('renommer un tournoi', () => {
     test('vider le nom garde l\'adresse actuelle', async () => {
         const app = await pageTournois({ abc: { version: 2, state: etatTournoi('Un nom') } });
         saisir(app, 'abc', '');
-        await app.ev('renommerTournoi("abc")');
+        await app.ev('renameTournoi("abc")');
         assert.equal(app.serveur.tournois.abc.state.tournament.name, null);
         assert.equal(app.serveur.tournois.abc.version, 3, 'écrit sur la version lue');
     });
@@ -176,7 +191,7 @@ describe('renommer un tournoi', () => {
         const app = await pageTournois({ abc: { version: 1, state: etatTournoi('Un nom') } });
         delete app.serveur.tournois.abc;
         saisir(app, 'abc', 'Autre');
-        await app.ev('renommerTournoi("abc")');
+        await app.ev('renameTournoi("abc")');
         assert.match(app.alertes.at(-1), /n'existe plus/);
     });
 });
@@ -185,7 +200,7 @@ describe('supprimer un tournoi', () => {
     test('la confirmation refusée n\'appelle pas le serveur', async () => {
         const app = await pageTournois({ abc: { version: 1, state: etatTournoi('A') } });
         app.repondreConfirm(false);
-        await app.ev('supprimerTournoi("abc")');
+        await app.ev('removeTournoi("abc")');
         assert.ok(app.serveur.tournois.abc);
     });
 
@@ -195,7 +210,7 @@ describe('supprimer un tournoi', () => {
             def: { version: 1, state: etatTournoi('B') },
         });
         app.repondreConfirm(true);
-        await app.ev('supprimerTournoi("abc")');
+        await app.ev('removeTournoi("abc")');
         assert.deepEqual(Object.keys(app.serveur.tournois), ['def']);
         assert.doesNotMatch(liste(app), /data-id="abc"/);
     });
@@ -204,7 +219,7 @@ describe('supprimer un tournoi', () => {
         const app = await pageTournois({ abc: { version: 1, state: etatTournoi('A') } });
         app.stockage.set('tournoi_echecs_state_v1:abc', '{}');
         app.repondreConfirm(true);
-        await app.ev('supprimerTournoi("abc")');
+        await app.ev('removeTournoi("abc")');
         assert.equal(app.stockage.has('tournoi_echecs_state_v1:abc'), false);
     });
 });
@@ -212,7 +227,7 @@ describe('supprimer un tournoi', () => {
 describe('ouvrir un tournoi', () => {
     test('renvoie à l\'accueil, sur le lien du tournoi', async () => {
         const app = await pageTournois({ abc: { version: 1, state: etatTournoi('A') } });
-        app.ev('ouvrirTournoi("abc")');
+        app.ev('openTournoi("abc")');
         assert.match(app.ev('location.href'), /#abc$/);
     });
 });

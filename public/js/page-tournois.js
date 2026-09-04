@@ -12,11 +12,11 @@ const SCREEN_LABELS = {
 // L'index du serveur met quelques secondes à refléter une suppression : on
 // masque en attendant ce qu'on vient de supprimer, pour que la liste
 // corresponde à ce qu'on vient de faire.
-const supprimesCetteSession = new Set();
+const tournoisSupprimes = new Set();
 
 // L'accueil note le tournoi qu'il fait tourner : c'est le seul moyen, depuis
 // cette page, de savoir lequel est en cours.
-function tournoiCourant() {
+function getTournoiCourant() {
     try {
         return localStorage.getItem(CLE_TOURNOI_COURANT);
     } catch (e) {
@@ -24,7 +24,7 @@ function tournoiCourant() {
     }
 }
 
-async function chargerListe() {
+async function loadListeTournois() {
     const liste = document.getElementById('tournois-liste');
     liste.innerHTML = '<div class="tournaments-empty">Chargement…</div>';
 
@@ -38,7 +38,7 @@ async function chargerListe() {
         return;
     }
 
-    const items = ((data && data.tournaments) || []).filter(t => !supprimesCetteSession.has(t.id));
+    const items = ((data && data.tournaments) || []).filter(t => !tournoisSupprimes.has(t.id));
 
     if (!items.length) {
         liste.innerHTML = '<div class="tournaments-empty">Aucun tournoi enregistré pour l\'instant. ' +
@@ -46,14 +46,17 @@ async function chargerListe() {
         return;
     }
 
-    const courant = tournoiCourant();
-    liste.innerHTML = items.map(t => ligneTournoi(t, courant)).join('') +
+    const courant = getTournoiCourant();
+    liste.innerHTML = items.map(t => buildLigneTournoi(t, courant)).join('') +
         (data.complete === false
-            ? '<div class="tournaments-empty">Seuls les 100 tournois les plus récents sont affichés.</div>'
+            // list() renvoie les 100 premières clés par ordre alphabétique ; le
+            // tri par date ne porte que sur celles-là. Dire « les plus récents »
+            // serait faux dès qu'il y en a davantage.
+            ? '<div class="tournaments-empty">Il y a plus de 100 tournois : seuls 100 d\'entre eux sont affichés.</div>'
             : '');
 }
 
-function ligneTournoi(t, courant) {
+function buildLigneTournoi(t, courant) {
     const estCourant = t.id === courant;
     const etape = SCREEN_LABELS[t.screen] || '—';
     const quand = t.updatedAt
@@ -68,22 +71,22 @@ function ligneTournoi(t, courant) {
                 <div class="tournament-row-meta">${escapeHtml(t.id)}${estCourant ? '<span class="tournament-badge">en cours</span>' : ''} · ${etape} · ${t.players} partant${t.players > 1 ? 's' : ''}${quand ? ' · ' + quand : ''}</div>
             </div>
             <div class="tournament-row-actions">
-                <button class="secondary" onclick="renommerTournoi('${escapeHtml(t.id)}')">Renommer</button>
-                <button class="secondary" onclick="ouvrirTournoi('${escapeHtml(t.id)}')">Ouvrir</button>
-                <button class="danger" onclick="supprimerTournoi('${escapeHtml(t.id)}')">Supprimer</button>
+                <button class="secondary" onclick="renameTournoi('${escapeHtml(t.id)}')">Renommer</button>
+                <button class="secondary" onclick="openTournoi('${escapeHtml(t.id)}')">Ouvrir</button>
+                <button class="danger" onclick="removeTournoi('${escapeHtml(t.id)}')">Supprimer</button>
             </div>
         </div>
     `;
 }
 
-function ouvrirTournoi(id) {
+function openTournoi(id) {
     location.href = PAGE_ACCUEIL + '#' + encodeURIComponent(id);
 }
 
 // Le nom du tournoi lui sert d'adresse : le changer déplace le tournoi vers un
 // nouveau lien. On écrit à la nouvelle adresse avant d'effacer l'ancienne —
 // jamais l'inverse, sous peine de perdre le tournoi si l'écriture échoue.
-async function renommerTournoi(id) {
+async function renameTournoi(id) {
     const champ = document.querySelector('.tournoi-nom[data-id="' + id + '"]');
     if (!champ) return;
 
@@ -97,18 +100,18 @@ async function renommerTournoi(id) {
         if (!res.ok) throw new Error(res.status);
         enveloppe = await res.json();
     } catch (e) {
-        notifierErreur('Tournoi illisible : ' + e.message);
+        notifyErreur('Tournoi illisible : ' + e.message);
         return;
     }
     if (!enveloppe.state) {
-        notifierErreur('Ce tournoi n\'existe plus.');
-        chargerListe();
+        notifyErreur('Ce tournoi n\'existe plus.');
+        loadListeTournois();
         return;
     }
 
     if (deplacement) {
         if (await isIdTaken(slug)) {
-            notifierErreur('Un tournoi nommé « ' + nouveauNom + ' » existe déjà.');
+            notifyErreur('Un tournoi nommé « ' + nouveauNom + ' » existe déjà.');
             return;
         }
         if (!confirm('Le lien du tournoi va devenir :\n…/#' + slug + '\n\n' +
@@ -130,7 +133,7 @@ async function renommerTournoi(id) {
         });
         if (!res.ok) throw new Error('réponse ' + res.status);
     } catch (e) {
-        notifierErreur('Renommage impossible : ' + e.message);
+        notifyErreur('Renommage impossible : ' + e.message);
         return;
     }
 
@@ -140,25 +143,17 @@ async function renommerTournoi(id) {
         } catch (e) {
             console.warn('Ancienne adresse non supprimée :', e);
         }
-        supprimesCetteSession.add(id);
-        oublierCopieLocale(id);
-        if (tournoiCourant() === id) {
+        tournoisSupprimes.add(id);
+        removeCopieLocale(id);
+        if (getTournoiCourant() === id) {
             try { localStorage.setItem(CLE_TOURNOI_COURANT, slug); } catch (e) { /* stockage refusé */ }
         }
     }
 
-    await chargerListe();
+    await loadListeTournois();
 }
 
-function oublierCopieLocale(id) {
-    try {
-        localStorage.removeItem(storageKey(id));
-    } catch (e) {
-        console.warn('Copie locale non effacée :', e);
-    }
-}
-
-async function supprimerTournoi(id) {
+async function removeTournoi(id) {
     if (!confirm('Supprimer définitivement ce tournoi ?\n\n' +
                  'Son lien (…/#' + id + ') cessera de fonctionner, pour tout le monde.')) {
         return;
@@ -168,26 +163,20 @@ async function supprimerTournoi(id) {
         const res = await fetch(urlEtat(id), { method: 'DELETE' });
         if (!res.ok) throw new Error('réponse ' + res.status);
     } catch (e) {
-        notifierErreur('Suppression impossible : ' + e.message);
+        notifyErreur('Suppression impossible : ' + e.message);
         return;
     }
 
-    supprimesCetteSession.add(id);
-    oublierCopieLocale(id);
-    await chargerListe();
-}
-
-// Après une restauration : la liste des tournois a changé.
-async function rafraichirApresRestauration() {
-    await chargerJoueurs();
-    await chargerListe();
+    tournoisSupprimes.add(id);
+    removeCopieLocale(id);
+    await loadListeTournois();
 }
 
 // La liste des joueurs est nécessaire à l'export : une sauvegarde embarque les
 // fiches, sans quoi les tournois qui n'ont que des renvois seraient illisibles.
-async function demarrerPageTournois() {
-    await chargerJoueurs();
-    await chargerListe();
+async function startPageTournois() {
+    await loadJoueurs();
+    await loadListeTournois();
 }
 
-demarrerPageTournois();
+startPageTournois();

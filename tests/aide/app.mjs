@@ -1,7 +1,7 @@
 // Charge les scripts de public/js/ dans un contexte isolé, comme le ferait le navigateur.
 //
 // Les scripts sont écrits pour la page : variables globales, pas d'export, effets de
-// bord au chargement (écouteurs, premier rendu, loadState()). Plutôt que de les
+// bord au chargement (écouteurs, premier rendu, loadEtat()). Plutôt que de les
 // refactorer pour les tester, on leur fournit un faux DOM : ils s'exécutent tels
 // quels et on interroge ensuite leurs fonctions.
 
@@ -170,7 +170,7 @@ export function chargerApp(options = {}) {
 
     bac.history = {
         replaceState(_a, _b, url) { if (url) bac.location.hash = String(url); },
-        pushState() {},
+        pushEtat() {},
     };
 
     bac.navigator = { clipboard: { writeText: async () => {} }, onLine: true };
@@ -220,7 +220,7 @@ export function chargerApp(options = {}) {
             const brut = vm.runInContext(`JSON.stringify(${expression})`, contexte);
             return brut === undefined ? undefined : JSON.parse(brut);
         },
-        /** Injecte une valeur dans l'app : app.set('tournament.players', [...]). */
+        /** Injecte une valeur dans l'app : app.set('tournoi.players', [...]). */
         set(cible, valeur) {
             bac.__transfert = JSON.parse(JSON.stringify(valeur));
             vm.runInContext(`${cible} = __transfert;`, contexte);
@@ -241,7 +241,7 @@ export function chargerApp(options = {}) {
             vm.runInContext(`__selecteurs[${JSON.stringify(selecteur)}] = __transfert;`, contexte);
         },
         /**
-         * Attend que le chargement initial (loadState au bas de sync.js) soit retombé.
+         * Attend que le chargement initial (loadEtat au bas de sync.js) soit retombé.
          * À appeler avant d'agir, sinon cette lecture asynchrone vient se mêler
          * aux envois déclenchés par le test.
          */

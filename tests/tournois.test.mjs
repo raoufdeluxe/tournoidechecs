@@ -46,11 +46,11 @@ describe('slugify — « Tournoi des potes » devient une adresse', () => {
     });
 });
 
-describe('newTournamentId', () => {
+describe('newIdTournoi', () => {
     test('identifiant accepté par le Worker, sans caractères ambigus', () => {
         const app = chargerApp();
         for (let i = 0; i < 50; i++) {
-            const id = app.appel('newTournamentId');
+            const id = app.appel('newIdTournoi');
             assert.match(id, MOTIF_ID);
             assert.equal(id.length, 10);
             assert.doesNotMatch(id, /[lo01]/, 'ni l, ni o, ni 0, ni 1');
@@ -59,7 +59,7 @@ describe('newTournamentId', () => {
 
     test('deux appels ne donnent pas le même identifiant', () => {
         const app = chargerApp();
-        const ids = new Set(Array.from({ length: 200 }, () => app.appel('newTournamentId')));
+        const ids = new Set(Array.from({ length: 200 }, () => app.appel('newIdTournoi')));
         assert.equal(ids.size, 200);
     });
 });
@@ -67,26 +67,26 @@ describe('newTournamentId', () => {
 describe('identifiant porté par l\'URL', () => {
     test('un lien partagé ouvre le tournoi correspondant', () => {
         const app = chargerApp({ hash: '#tournoi-des-potes' });
-        assert.equal(app.ev('tournamentId'), 'tournoi-des-potes');
-        assert.match(app.ev('stateUrl()'), /\?id=tournoi-des-potes$/);
+        assert.equal(app.ev('idTournoi'), 'tournoi-des-potes');
+        assert.match(app.ev('urlEtatCourant()'), /\?id=tournoi-des-potes$/);
     });
 
     test('sans identifiant dans l\'URL, un nouveau est tiré et inscrit dans le lien', () => {
         const app = chargerApp({ hash: '' });
-        assert.match(app.ev('tournamentId'), MOTIF_ID);
-        assert.equal(app.ev('location.hash'), '#' + app.ev('tournamentId'));
+        assert.match(app.ev('idTournoi'), MOTIF_ID);
+        assert.equal(app.ev('location.hash'), '#' + app.ev('idTournoi'));
     });
 
     test('un identifiant invalide dans l\'URL est remplacé, jamais transmis tel quel', () => {
         const app = chargerApp({ hash: '#PAS/VALIDE' });
-        assert.match(app.ev('tournamentId'), MOTIF_ID);
-        assert.notEqual(app.ev('tournamentId'), 'PAS/VALIDE');
+        assert.match(app.ev('idTournoi'), MOTIF_ID);
+        assert.notEqual(app.ev('idTournoi'), 'PAS/VALIDE');
     });
 
     test('la clé locale est propre à chaque tournoi', () => {
         const a = chargerApp({ hash: '#un' });
         const b = chargerApp({ hash: '#deux' });
-        assert.notEqual(a.ev('storageKey(tournamentId)'), b.ev('storageKey(tournamentId)'));
+        assert.notEqual(a.ev('storageKey(idTournoi)'), b.ev('storageKey(idTournoi)'));
         assert.equal(a.ev('storageKey("autre")'), b.ev('storageKey("autre")'));
     });
 });
@@ -99,7 +99,7 @@ describe('le tournoi courant est noté pour la page /tournois', () => {
 
     test('et quand le tournoi change d\'adresse', () => {
         const app = chargerApp({ hash: '#avant' });
-        app.ev('tournamentId = "apres"; noterTournoiCourant();');
+        app.ev('idTournoi = "apres"; saveTournoiCourant();');
         assert.equal(app.stockage.get('tournoi_echecs_courant'), 'apres');
     });
 });

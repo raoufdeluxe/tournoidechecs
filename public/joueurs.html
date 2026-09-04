@@ -38,7 +38,7 @@
             </h1>
             <p>Poule qualificative · Demi-finales · Grande Finale</p>
             <button id="btn-menu" class="menu-toggle" type="button" aria-label="Ouvrir le menu"
-                    aria-expanded="false" aria-controls="main-menu" onclick="toggleMainMenu()">
+                    aria-expanded="false" aria-controls="main-menu" onclick="toggleMenu()">
                 <span></span><span></span><span></span>
             </button>
             <nav id="main-menu" class="main-menu" aria-labelledby="btn-menu" hidden>
@@ -58,11 +58,11 @@
             <div class="joueur-row joueur-row--nouveau">
                 <input type="text" id="joueur-nouveau-nom" class="joueur-nom" maxlength="64" placeholder="Nom du joueur">
                 <input type="number" id="joueur-nouveau-elo" class="joueur-elo" placeholder="Elo" min="0" step="1">
-                <button class="secondary" onclick="ajouterJoueurDepuisPage()">Ajouter</button>
+                <button class="secondary" onclick="addJoueurFromForm()">Ajouter</button>
             </div>
 
             <div class="players-actions">
-                <button onclick="enregistrerJoueursDepuisPage()">Enregistrer les modifications</button>
+                <button onclick="saveJoueursFromForm()">Enregistrer les modifications</button>
             </div>
         </div>
 

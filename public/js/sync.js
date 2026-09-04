@@ -28,18 +28,18 @@ function setSyncStatus(state) {
     el.textContent = SYNC_LABELS[state] || '';
 }
 
-function currentState() {
+function getEtatCourant() {
     const activeScreen = document.querySelector('.screen.active');
     return {
-        tournament: tournament,
+        tournament: tournoi,
         screen: activeScreen ? activeScreen.id : 'screen-config'
     };
 }
 
-function saveState() {
+function saveEtat() {
     // Copie locale immédiate (fonctionne même hors-ligne)
     try {
-        localStorage.setItem(storageKey(tournamentId), JSON.stringify(currentState()));
+        localStorage.setItem(storageKey(idTournoi), JSON.stringify(getEtatCourant()));
     } catch (e) {
         console.warn('Sauvegarde locale impossible :', e);
     }
@@ -53,7 +53,7 @@ function queueSync() {
         try {
             while (syncPending) {
                 syncPending = false;
-                await pushState();
+                await pushEtat();
             }
         } finally {
             syncInFlight = null;
@@ -61,16 +61,16 @@ function queueSync() {
     })();
 }
 
-async function pushState() {
+async function pushEtat() {
     setSyncStatus('saving');
 
     let res;
     try {
-        res = await fetch(stateUrl(), {
+        res = await fetch(urlEtatCourant(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             // L'état est relu au moment de l'envoi : on pousse toujours le plus récent.
-            body: JSON.stringify({ baseVersion: remoteVersion, state: currentState() })
+            body: JSON.stringify({ baseVersion: remoteVersion, state: getEtatCourant() })
         });
     } catch (e) {
         scheduleRetry(); // hors ligne ou Worker injoignable
@@ -79,7 +79,7 @@ async function pushState() {
 
     if (res.status === 409) {
         const remote = await res.json().catch(() => null);
-        showConflict(remote);
+        showConflit(remote);
         return;
     }
 
@@ -108,7 +108,7 @@ window.addEventListener('online', () => { retryDelay = 1000; queueSync(); });
 
 // Un autre appareil a modifié le tournoi : on ne tranche pas à sa place,
 // les deux versions sont légitimes et l'une va disparaître.
-function showConflict(remote) {
+function showConflit(remote) {
     setSyncStatus('conflict');
     const banner = document.getElementById('sync-conflict');
     if (!banner) return;
@@ -118,7 +118,7 @@ function showConflict(remote) {
         banner.hidden = true;
         if (remote && typeof remote.version === 'number' && remote.state) {
             remoteVersion = remote.version;
-            applyState(remote.state);
+            applyEtat(remote.state);
         } else {
             location.reload();
         }
@@ -140,38 +140,38 @@ window.addEventListener('beforeunload', (e) => {
     }
 });
 
-function applyState(state) {
+function applyEtat(state) {
     if (!state || !state.tournament || !Array.isArray(state.tournament.players) || state.tournament.players.length === 0) {
         return false;
     }
 
-    tournament = state.tournament;
+    tournoi = state.tournament;
     // Les noms viennent des fiches : un renommage fait ailleurs apparaît ici.
-    resoudreJoueursDuTournoi();
-    updateTournamentTitle();
-    document.getElementById('tournament-name').value = tournament.name || '';
+    resolveJoueursDuTournoi();
+    renderTitreTournoi();
+    document.getElementById('tournament-name').value = tournoi.name || '';
 
     try {
         if (state.screen === 'screen-tournament') {
-            document.getElementById('player-count').value = tournament.players.length;
-            renderTournament();
-            switchScreen('screen-tournament');
-        } else if (state.screen === 'screen-semifinals' && tournament.semifinalMatches.length) {
-            // checkSemifinalsComplete (et non renderSemifinals) : lui seul reactive
+            document.getElementById('player-count').value = tournoi.players.length;
+            renderPoule();
+            showEcran('screen-tournament');
+        } else if (state.screen === 'screen-semifinals' && tournoi.semifinalMatches.length) {
+            // checkDemiesTerminees (et non renderDemies) : lui seul reactive
             // le bouton « Vers la Grande Finale » apres un rechargement de page.
-            checkSemifinalsComplete();
-            switchScreen('screen-semifinals');
-        } else if (state.screen === 'screen-finals' && tournament.finalMatches.length) {
-            checkFinalsComplete();
-            switchScreen('screen-finals');
-        } else if (state.screen === 'screen-results' && tournament.championId != null && tournament.runnerId != null) {
-            const champion = tournament.players[tournament.championId];
-            const runner = tournament.players[tournament.runnerId];
-            displayResults(champion, runner);
-            switchScreen('screen-results');
+            checkDemiesTerminees();
+            showEcran('screen-semifinals');
+        } else if (state.screen === 'screen-finals' && tournoi.finalMatches.length) {
+            checkFinaleTerminee();
+            showEcran('screen-finals');
+        } else if (state.screen === 'screen-results' && tournoi.championId != null && tournoi.runnerId != null) {
+            const champion = tournoi.players[tournoi.championId];
+            const runner = tournoi.players[tournoi.runnerId];
+            showResultats(champion, runner);
+            showEcran('screen-results');
         } else {
-            document.getElementById('player-count').value = tournament.players.length;
-            switchScreen('screen-config');
+            document.getElementById('player-count').value = tournoi.players.length;
+            showEcran('screen-config');
         }
         return true;
     } catch (e) {
@@ -180,25 +180,25 @@ function applyState(state) {
     }
 }
 
-async function loadState() {
+async function loadEtat() {
     // Les fiches d'abord : sans elles, un tournoi s'afficherait avec les noms
     // recopiés lors de son inscription, pas avec les noms à jour.
-    await chargerJoueurs();
+    await loadJoueurs();
 
     // L'écran d'inscription a été dessiné avant l'arrivée des fiches : ses
     // menus déroulants seraient vides. On les redessine, choix conservés.
-    updatePlayerInputs();
+    renderPartants();
 
     // 1) On tente d'abord la version partagée sur Cloudflare (la plus à jour, tous appareils confondus)
     try {
-        const res = await fetch(stateUrl());
+        const res = await fetch(urlEtatCourant());
         if (res.ok) {
             const remote = await res.json();
             // Nouveau format : { version, updatedAt, state }
             if (remote && typeof remote.version === 'number') {
                 remoteVersion = remote.version;
-                if (remote.state && applyState(remote.state)) return true;
-            } else if (remote && applyState(remote)) {
+                if (remote.state && applyEtat(remote.state)) return true;
+            } else if (remote && applyEtat(remote)) {
                 return true; // ancien format, si le Worker n'est pas encore à jour
             }
         }
@@ -209,19 +209,14 @@ async function loadState() {
 
     // 2) Repli sur la copie locale (mode hors-ligne, ou Worker injoignable)
     try {
-        const raw = localStorage.getItem(storageKey(tournamentId));
+        const raw = localStorage.getItem(storageKey(idTournoi));
         if (!raw) return false;
-        return applyState(JSON.parse(raw));
+        return applyEtat(JSON.parse(raw));
     } catch (e) {
         console.warn('Lecture de la sauvegarde locale impossible :', e);
         return false;
     }
 }
 
-// Après une restauration : le tournoi ouvert vient peut-être d'être remplacé.
-async function rafraichirApresRestauration() {
-    await loadState();
-}
-
 // Au chargement de la page, on tente de reprendre là où le tournoi en était
-loadState();
+loadEtat();

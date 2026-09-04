@@ -14,7 +14,7 @@ let joueursCharges = false;
 const REF_NOUVEAU = '__nouveau__';
 const NOM_JOUEUR_ABSENT = 'Joueur supprimé';
 
-function joueurParId(ref) {
+function getJoueur(ref) {
     return joueurs.find(j => j.id === ref) || null;
 }
 
@@ -23,11 +23,11 @@ function joueurParId(ref) {
 // Recopie nom et Elo depuis les fiches dans les partants du tournoi courant.
 // Les tournois d'avant cette version n'ont pas de `ref` : on les laisse tels
 // quels, leurs noms sont la seule source qui existe pour eux.
-function resoudreJoueursDuTournoi() {
+function resolveJoueursDuTournoi() {
     let change = false;
-    for (const partant of tournament.players || []) {
+    for (const partant of tournoi.players || []) {
         if (!partant.ref) continue;
-        const fiche = joueurParId(partant.ref);
+        const fiche = getJoueur(partant.ref);
         if (fiche) {
             if (partant.name !== fiche.nom || partant.elo !== fiche.elo) change = true;
             partant.name = fiche.nom;
@@ -46,7 +46,7 @@ function resoudreJoueursDuTournoi() {
 
 // --- Serveur -----------------------------------------------------------------
 
-async function chargerJoueurs() {
+async function loadJoueurs() {
     try {
         const res = await fetch(URL_JOUEURS);
         if (!res.ok) throw new Error(res.status);
@@ -62,7 +62,7 @@ async function chargerJoueurs() {
 }
 
 // Le corps d'erreur du Worker porte un message utilisable tel quel.
-async function messageErreur(res, defaut) {
+async function readMessageErreur(res, defaut) {
     const data = await res.json().catch(() => null);
     return (data && data.error) || defaut;
 }
@@ -71,7 +71,7 @@ async function messageErreur(res, defaut) {
 
 // Le serveur attribue l'identifiant et refuse les homonymes : deux appareils
 // qui ajoutent en même temps ne peuvent ni se marcher dessus ni créer un doublon.
-async function ajouterJoueur(nom, elo) {
+async function addJoueur(nom, elo) {
     const propre = String(nom || '').trim();
     if (!propre) return null;
 
@@ -83,17 +83,17 @@ async function ajouterJoueur(nom, elo) {
             body: JSON.stringify({ nom: propre, elo: elo == null ? null : elo })
         });
     } catch (e) {
-        notifierErreur('Ajout impossible : le serveur est injoignable.');
+        notifyErreur('Ajout impossible : le serveur est injoignable.');
         return null;
     }
 
     if (res.status === 409) {
-        notifier('« ' + propre + ' » est déjà dans la liste.');
-        await chargerJoueurs();
+        notify('« ' + propre + ' » est déjà dans la liste.');
+        await loadJoueurs();
         return null;
     }
     if (!res.ok) {
-        notifierErreur('Ajout refusé : ' + await messageErreur(res, 'erreur ' + res.status));
+        notifyErreur('Ajout refusé : ' + await readMessageErreur(res, 'erreur ' + res.status));
         return null;
     }
 
@@ -104,7 +104,7 @@ async function ajouterJoueur(nom, elo) {
 }
 
 // Modifie une fiche. `champs` peut porter `nom`, `elo`, ou les deux.
-async function modifierJoueur(id, champs) {
+async function updateJoueur(id, champs) {
     let res;
     try {
         res = await fetch(urlJoueur(id), {
@@ -113,17 +113,17 @@ async function modifierJoueur(id, champs) {
             body: JSON.stringify(champs)
         });
     } catch (e) {
-        notifierErreur('Modification impossible : le serveur est injoignable.');
+        notifyErreur('Modification impossible : le serveur est injoignable.');
         return null;
     }
 
     if (res.status === 404) {
-        notifierErreur('Ce joueur n\'existe plus : la liste vient d\'être rechargée.');
-        await chargerJoueurs();
+        notifyErreur('Ce joueur n\'existe plus : la liste vient d\'être rechargée.');
+        await loadJoueurs();
         return null;
     }
     if (!res.ok) {
-        notifierErreur('Modification refusée : ' + await messageErreur(res, 'erreur ' + res.status));
+        notifyErreur('Modification refusée : ' + await readMessageErreur(res, 'erreur ' + res.status));
         return null;
     }
 
@@ -135,20 +135,20 @@ async function modifierJoueur(id, champs) {
 }
 
 // Supprime une fiche. La confirmation appartient à la page qui appelle.
-async function supprimerFiche(id) {
-    const fiche = joueurParId(id);
+async function removeFiche(id) {
+    const fiche = getJoueur(id);
     if (!fiche) return false;
 
     let res;
     try {
         res = await fetch(urlJoueur(id), { method: 'DELETE' });
     } catch (e) {
-        notifierErreur('Suppression impossible : le serveur est injoignable.');
+        notifyErreur('Suppression impossible : le serveur est injoignable.');
         return false;
     }
 
     if (!res.ok && res.status !== 404) {
-        notifierErreur('Suppression refusée : ' + await messageErreur(res, 'erreur ' + res.status));
+        notifyErreur('Suppression refusée : ' + await readMessageErreur(res, 'erreur ' + res.status));
         return false;
     }
 
@@ -160,22 +160,22 @@ async function supprimerFiche(id) {
 
 // Applique plusieurs modifications d'un coup (le bouton « Enregistrer » du
 // panneau). Seules les fiches réellement changées partent au serveur.
-async function enregistrerFiches(modifications) {
+async function saveFiches(modifications) {
     let touche = false;
 
     for (const { id, nom, elo } of modifications) {
-        const fiche = joueurParId(id);
+        const fiche = getJoueur(id);
         if (!fiche) continue;
         const nouveauNom = nom == null ? fiche.nom : nom;
         if (fiche.nom === nouveauNom && fiche.elo === elo) continue;
-        if (!await modifierJoueur(id, { nom: nouveauNom, elo })) return false;
+        if (!await updateJoueur(id, { nom: nouveauNom, elo })) return false;
         touche = true;
     }
     return touche ? 'modifie' : 'inchange';
 }
 
 // Remplace toute la liste : sert à la restauration d'une sauvegarde.
-async function remplacerJoueurs(liste) {
+async function replaceJoueurs(liste) {
     let res;
     try {
         res = await fetch(URL_JOUEURS, {
@@ -184,18 +184,18 @@ async function remplacerJoueurs(liste) {
             body: JSON.stringify({ baseVersion: joueursVersion, joueurs: liste })
         });
     } catch (e) {
-        notifierErreur('Enregistrement impossible : le serveur est injoignable.');
+        notifyErreur('Enregistrement impossible : le serveur est injoignable.');
         return false;
     }
 
     if (res.status === 409) {
-        await chargerJoueurs();
-        notifierErreur('La liste des joueurs a été modifiée sur un autre appareil.\n\n' +
+        await loadJoueurs();
+        notifyErreur('La liste des joueurs a été modifiée sur un autre appareil.\n\n' +
               'Elle vient d\'être rechargée — recommence.');
         return false;
     }
     if (!res.ok) {
-        notifierErreur('Enregistrement refusé : ' + await messageErreur(res, 'erreur ' + res.status));
+        notifyErreur('Enregistrement refusé : ' + await readMessageErreur(res, 'erreur ' + res.status));
         return false;
     }
 

@@ -1,6 +1,6 @@
-// Messages affichés dans la page, à la place des notifier() du navigateur.
+// Messages affichés dans la page, à la place des notify() du navigateur.
 //
-// Une boîte notifier() bloque l'onglet, se place hors de la page et ne peut rien
+// Une boîte notify() bloque l'onglet, se place hors de la page et ne peut rien
 // montrer de long. Ici, un bandeau s'empile en haut à droite : les messages
 // courts s'effacent seuls, les erreurs restent jusqu'à ce qu'on les ferme —
 // elles portent parfois la liste de ce qui a échoué.
@@ -10,7 +10,7 @@ const DUREE_NOTICE = 5000;
 // Les tests, et le code qui veut savoir ce qui a été dit, lisent ce journal.
 let noticesEmises = [];
 
-function conteneurNotices() {
+function getConteneurNotices() {
     let conteneur = document.getElementById('notices');
     if (!conteneur) {
         conteneur = document.createElement('div');
@@ -27,10 +27,10 @@ function conteneurNotices() {
  * @param {string} message  texte à afficher (les retours à la ligne sont gardés)
  * @param {'info'|'succes'|'erreur'} type  une erreur reste jusqu'à fermeture
  */
-function notifier(message, type = 'info') {
+function notify(message, type = 'info') {
     noticesEmises.push(String(message));
 
-    const conteneur = conteneurNotices();
+    const conteneur = getConteneurNotices();
     const notice = document.createElement('div');
     notice.className = 'notice notice--' + type;
 
@@ -56,5 +56,5 @@ function notifier(message, type = 'info') {
     return notice;
 }
 
-const notifierErreur = (message) => notifier(message, 'erreur');
-const notifierSucces = (message) => notifier(message, 'succes');
+const notifyErreur = (message) => notify(message, 'erreur');
+const notifySucces = (message) => notify(message, 'succes');

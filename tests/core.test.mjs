@@ -9,7 +9,7 @@ const manche = (num, p1, p2, joue = true) => ({
     player1: 0, player2: 1, player1Score: p1, player2Score: p2, played: joue, num,
 });
 
-describe('applyResultToMatch', () => {
+describe('applyResultat', () => {
     for (const [valeur, attendu] of [
         ['p1', { player1Score: 1, player2Score: 0, played: true }],
         ['p2', { player1Score: 0, player2Score: 1, played: true }],
@@ -19,13 +19,13 @@ describe('applyResultToMatch', () => {
         test(`« ${valeur || 'vide'} » donne ${JSON.stringify(attendu)}`, () => {
             const app = chargerApp();
             app.set('globalThis.m', { player1Score: 9, player2Score: 9, played: true });
-            app.ev(`applyResultToMatch(m, ${JSON.stringify(valeur)})`);
+            app.ev(`applyResultat(m, ${JSON.stringify(valeur)})`);
             assert.deepEqual(app.json('m'), attendu);
         });
     }
 });
 
-describe('resolveEloWinner — le plus bas Elo l\'emporte', () => {
+describe('resolveVainqueurElo — le plus bas Elo l\'emporte', () => {
     const cas = [
         ['Elo plus bas côté p1', 1200, 1800, 'p1'],
         ['Elo plus bas côté p2', 1800, 1200, 'p2'],
@@ -37,13 +37,13 @@ describe('resolveEloWinner — le plus bas Elo l\'emporte', () => {
     for (const [nom, e1, e2, attendu] of cas) {
         test(nom, () => {
             const app = chargerApp();
-            assert.equal(app.appel('resolveEloWinner', { id: 0, elo: e1 }, { id: 1, elo: e2 }), attendu);
+            assert.equal(app.appel('resolveVainqueurElo', { id: 0, elo: e1 }, { id: 1, elo: e2 }), attendu);
         });
     }
 
     test('un Elo de 0 est une valeur, pas une absence', () => {
         const app = chargerApp();
-        assert.equal(app.appel('resolveEloWinner', { id: 0, elo: 0 }, { id: 1, elo: 1500 }), 'p1');
+        assert.equal(app.appel('resolveVainqueurElo', { id: 0, elo: 0 }, { id: 1, elo: 1500 }), 'p1');
     });
 });
 
@@ -109,11 +109,11 @@ describe('resolveDuel — départage d\'un duel en 2 manches', () => {
     });
 });
 
-describe('addDecider', () => {
+describe('addBelle', () => {
     test('ajoute une 3e manche entre les mêmes joueurs, non jouée', () => {
         const app = chargerApp();
         app.set('globalThis.duel', [manche(1, 1, 0), manche(2, 0, 1)]);
-        app.ev('addDecider(duel)');
+        app.ev('addBelle(duel)');
         const duel = app.json('duel');
         assert.equal(duel.length, 3);
         assert.deepEqual(duel[2], {
@@ -123,16 +123,16 @@ describe('addDecider', () => {
     });
 });
 
-describe('resolveThirdPlace — la 3e place ne se joue pas', () => {
+describe('resolveTroisiemePlace — la 3e place ne se joue pas', () => {
     function appAvecDemies(app, demies) {
-        app.set('tournament.semifinalMatches', demies);
-        return app.appel('resolveThirdPlace');
+        app.set('tournoi.semifinalMatches', demies);
+        return app.appel('resolveTroisiemePlace');
     }
 
     test('le mieux classé en poule des deux perdants prend le bronze', () => {
         const app = pouleGeneree(['A', 'B', 'C', 'D']);
         completerPoule(app);
-        const classement = app.json('calculateStandings().map(p => p.id)');
+        const classement = app.json('computeClassement().map(p => p.id)');
         const [, second, troisieme] = classement;
         // Les deux perdants des demies : 2e et 3e de la poule -> le 2e est bronze.
         const bronze = appAvecDemies(app, [
@@ -161,28 +161,28 @@ describe('resolveThirdPlace — la 3e place ne se joue pas', () => {
     });
 });
 
-describe('resultClass / resultIcon', () => {
+describe('getClasseResultat / getIconeResultat', () => {
     test('un match non joué n\'affiche rien', () => {
         const app = chargerApp();
-        assert.equal(app.appel('resultClass', manche(1, null, null, false), true), '');
-        assert.equal(app.appel('resultIcon', manche(1, null, null, false), true), '');
+        assert.equal(app.appel('getClasseResultat', manche(1, null, null, false), true), '');
+        assert.equal(app.appel('getIconeResultat', manche(1, null, null, false), true), '');
     });
 
     test('victoire, défaite et nulle vues des deux côtés', () => {
         const app = chargerApp();
         const m = manche(1, 1, 0);
-        assert.equal(app.appel('resultClass', m, true), 'winner');
-        assert.equal(app.appel('resultClass', m, false), 'loser');
-        assert.equal(app.appel('resultClass', manche(1, 0.5, 0.5), true), 'draw');
+        assert.equal(app.appel('getClasseResultat', m, true), 'winner');
+        assert.equal(app.appel('getClasseResultat', m, false), 'loser');
+        assert.equal(app.appel('getClasseResultat', manche(1, 0.5, 0.5), true), 'draw');
     });
 });
 
-describe('silkColor — une casaque par partant', () => {
+describe('getCouleurCasaque — une casaque par partant', () => {
     test('la couleur est stable et la palette boucle', () => {
         const app = chargerApp();
-        const taille = app.ev('SILK_COLORS.length');
-        assert.equal(app.appel('silkColor', 0), app.appel('silkColor', taille));
-        assert.notEqual(app.appel('silkColor', 0), app.appel('silkColor', 1));
+        const taille = app.ev('COULEURS_CASAQUE.length');
+        assert.equal(app.appel('getCouleurCasaque', 0), app.appel('getCouleurCasaque', taille));
+        assert.notEqual(app.appel('getCouleurCasaque', 0), app.appel('getCouleurCasaque', 1));
     });
 });
 
@@ -191,10 +191,8 @@ describe('cadence et variante d\'une partie', () => {
     test('sans réglage, une partie est en 10 min et classique', () => {
         const app = chargerApp();
         app.set('globalThis.m', { player1: 0, player2: 1 });
-        assert.equal(app.ev('cadenceDe(m)'), '10');
-        assert.equal(app.ev('varianteDe(m)'), 'classique');
-        assert.equal(app.ev('libelleCadence(m)'), '10 min');
-        assert.equal(app.ev('libelleVariante(m)'), 'Classique');
+        assert.equal(app.ev('getCadence(m)'), '10');
+        assert.equal(app.ev('getVariante(m)'), 'classique');
     });
 
     test('les quatre cadences proposées', () => {
@@ -213,7 +211,7 @@ describe('cadence et variante d\'une partie', () => {
         test(`la cadence « ${valeur} » est acceptée`, () => {
             const app = chargerApp();
             app.set('globalThis.m', {});
-            assert.equal(app.ev(`definirCadence(m, ${JSON.stringify(valeur)})`), true);
+            assert.equal(app.ev(`setCadence(m, ${JSON.stringify(valeur)})`), true);
             assert.equal(app.ev('m.cadence'), valeur);
         });
     }
@@ -222,7 +220,7 @@ describe('cadence et variante d\'une partie', () => {
         test(`le type « ${valeur} » est accepté`, () => {
             const app = chargerApp();
             app.set('globalThis.m', {});
-            assert.equal(app.ev(`definirVariante(m, ${JSON.stringify(valeur)})`), true);
+            assert.equal(app.ev(`setVariante(m, ${JSON.stringify(valeur)})`), true);
             assert.equal(app.ev('m.variante'), valeur);
         });
     }
@@ -230,23 +228,23 @@ describe('cadence et variante d\'une partie', () => {
     test('une valeur inconnue est ignorée, le réglage en place est gardé', () => {
         const app = chargerApp();
         app.set('globalThis.m', { cadence: '5', variante: '960' });
-        assert.equal(app.ev('definirCadence(m, "1h")'), false);
-        assert.equal(app.ev('definirVariante(m, "bughouse")'), false);
+        assert.equal(app.ev('setCadence(m, "1h")'), false);
+        assert.equal(app.ev('setVariante(m, "bughouse")'), false);
         assert.deepEqual(app.json('m'), { cadence: '5', variante: '960' });
     });
 
     test('une valeur abîmée en base retombe sur le défaut sans être réécrite', () => {
         const app = chargerApp();
         app.set('globalThis.m', { cadence: 'n\'importe quoi', variante: 42 });
-        assert.equal(app.ev('cadenceDe(m)'), '10');
-        assert.equal(app.ev('varianteDe(m)'), 'classique');
+        assert.equal(app.ev('getCadence(m)'), '10');
+        assert.equal(app.ev('getVariante(m)'), 'classique');
         assert.equal(app.ev('m.cadence'), 'n\'importe quoi', 'le champ n\'est pas touché');
     });
 
     test('les menus marquent le réglage courant', () => {
         const app = chargerApp();
         app.set('globalThis.m', { cadence: '3', variante: '960' });
-        const html = app.ev('reglagesPartieHtml(m, "a()", "b()")');
+        const html = app.ev('buildReglagesPartie(m, "a()", "b()")');
         assert.match(html, /value="3" selected/);
         assert.match(html, /value="960" selected/);
         assert.doesNotMatch(html, /value="10" selected/);
@@ -260,7 +258,7 @@ describe('cadence et variante d\'une partie', () => {
             { player1: 0, player2: 1, num: 1, cadence: '3', variante: '960', played: true, player1Score: 1, player2Score: 0 },
             { player1: 0, player2: 1, num: 2, cadence: '3', variante: '960', played: true, player1Score: 0, player2Score: 1 },
         ]);
-        app.ev('addDecider(duel)');
+        app.ev('addBelle(duel)');
         const belle = app.json('duel')[2];
         assert.equal(belle.cadence, '3');
         assert.equal(belle.variante, '960');

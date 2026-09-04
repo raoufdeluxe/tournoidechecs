@@ -38,7 +38,7 @@
             </h1>
             <p>Poule qualificative · Demi-finales · Grande Finale</p>
             <button id="btn-menu" class="menu-toggle" type="button" aria-label="Ouvrir le menu"
-                    aria-expanded="false" aria-controls="main-menu" onclick="toggleMainMenu()">
+                    aria-expanded="false" aria-controls="main-menu" onclick="toggleMenu()">
                 <span></span><span></span><span></span>
             </button>
             <nav id="main-menu" class="main-menu" aria-labelledby="btn-menu" hidden>
@@ -57,22 +57,22 @@
             <div id="sauvegarde-resume" class="tournaments-empty" role="status" aria-live="polite">Chargement…</div>
 
             <div class="players-actions">
-                <button id="btn-export" onclick="exporterTournois()">⬇️ Tout exporter</button>
-                <button id="btn-import" class="secondary" onclick="declencherImport()">⬆️ Importer une sauvegarde</button>
+                <button id="btn-export" onclick="exportTout()">⬇️ Tout exporter</button>
+                <button id="btn-import" class="secondary" onclick="openImport()">⬆️ Importer une sauvegarde</button>
             </div>
             <input type="file" id="import-file" accept="application/json,.json" hidden
-                   onchange="preparerRestauration(this.files[0])">
+                   onchange="prepareRestauration(this.files[0])">
         </div>
 
         <div id="import-panel" class="tournaments-panel" hidden>
             <div class="tournaments-head">
                 <strong>⬆️ Restaurer une sauvegarde</strong>
-                <button class="secondary" onclick="fermerImport()">Fermer</button>
+                <button class="secondary" onclick="closeImport()">Fermer</button>
             </div>
             <div id="import-plan"></div>
             <div id="import-progress" class="tournaments-empty"></div>
             <div class="players-actions">
-                <button id="btn-import-confirm" onclick="appliquerRestauration()">Restaurer</button>
+                <button id="btn-import-confirm" onclick="applyRestauration()">Restaurer</button>
             </div>
         </div>
 
@@ -83,7 +83,7 @@
                Exporte d'abord si tu veux pouvoir revenir en arrière.</p>
             <div id="raz-progress" class="tournaments-empty"></div>
             <div class="players-actions">
-                <button class="danger" id="btn-raz" onclick="toutEffacer()">🧨 Tout effacer</button>
+                <button class="danger" id="btn-raz" onclick="eraseTout()">🧨 Tout effacer</button>
             </div>
         </div>
     </div>

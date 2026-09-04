@@ -150,8 +150,8 @@ describe('les liaisons entre la page et le code', () => {
         }
     });
 
-    test('chaque écran visé par switchScreen existe dans la page', () => {
-        const ecrans = new Set([...sources.matchAll(/switchScreen\(['"]([^'"]+)['"]\)/g)].map(m => m[1]));
+    test('chaque écran visé par showEcran existe dans la page', () => {
+        const ecrans = new Set([...sources.matchAll(/showEcran\(['"]([^'"]+)['"]\)/g)].map(m => m[1]));
         const idsHtml = new Set(PAGES.flatMap(page =>
             [...lireFichier('public/' + page).matchAll(/\bid="([^"]+)"/g)].map(m => m[1])));
         assert.equal(ecrans.size, 5, 'les 5 écrans du tournoi');

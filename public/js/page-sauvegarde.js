@@ -5,7 +5,7 @@
 
 const MOT_DE_CONFIRMATION = 'EFFACER';
 
-async function chargerResume() {
+async function loadResume() {
     const el = document.getElementById('sauvegarde-resume');
 
     let nbTournois;
@@ -19,20 +19,20 @@ async function chargerResume() {
         return;
     }
 
-    await chargerJoueurs();
+    await loadJoueurs();
     const pluriel = (n, mot) => n + ' ' + mot + (n > 1 ? 's' : '');
     el.textContent = 'Actuellement : ' + pluriel(nbTournois, 'tournoi') +
         ' et ' + pluriel(joueurs.length, 'fiche') + ' de joueur.';
 }
 
 // Après une restauration : les compteurs ont bougé.
-async function rafraichirApresRestauration() {
-    await chargerResume();
+async function refreshAfterRestauration() {
+    await loadResume();
 }
 
 // Suppression de masse : irréversible, et visible par tous ceux qui ont un lien.
 // Une confirmation ordinaire ne suffit pas — on fait écrire le mot.
-async function toutEffacer() {
+async function eraseTout() {
     const bouton = document.getElementById('btn-raz');
     const avancement = document.getElementById('raz-progress');
 
@@ -43,12 +43,12 @@ async function toutEffacer() {
         const data = await res.json();
         ids = ((data && data.tournaments) || []).map(t => t.id);
     } catch (e) {
-        notifierErreur('Impossible de lire la liste des tournois : ' + e.message);
+        notifyErreur('Impossible de lire la liste des tournois : ' + e.message);
         return;
     }
 
     if (!ids.length && !joueurs.length) {
-        notifier('Il n\'y a rien à effacer.');
+        notify('Il n\'y a rien à effacer.');
         return;
     }
 
@@ -60,7 +60,7 @@ async function toutEffacer() {
 
     if (reponse == null) return;
     if (reponse.trim().toUpperCase() !== MOT_DE_CONFIRMATION) {
-        notifier('Rien n\'a été effacé.');
+        notify('Rien n\'a été effacé.');
         return;
     }
 
@@ -74,7 +74,7 @@ async function toutEffacer() {
             const res = await fetch(urlEtat(id), { method: 'DELETE' });
             if (!res.ok) throw new Error('réponse ' + res.status);
             effaces++;
-            oublierCopieLocale(id);
+            removeCopieLocale(id);
         } catch (e) {
             echecs.push(id + ' (' + e.message + ')');
         }
@@ -84,7 +84,7 @@ async function toutEffacer() {
     if (joueurs.length) {
         avancement.textContent = 'Suppression des fiches…';
         fiches = joueurs.length;
-        if (!await remplacerJoueurs([])) {
+        if (!await replaceJoueurs([])) {
             echecs.push('la liste des joueurs');
             fiches = 0;
         }
@@ -98,23 +98,14 @@ async function toutEffacer() {
 
     avancement.textContent = '';
     bouton.disabled = false;
-    await chargerResume();
+    await loadResume();
 
     const compte = effaces + ' tournoi(s) et ' + fiches + ' fiche(s) effacés';
     if (echecs.length) {
-        notifierErreur(compte + '.\n\nEn échec :\n' + echecs.join('\n'));
+        notifyErreur(compte + '.\n\nEn échec :\n' + echecs.join('\n'));
     } else {
-        notifierSucces(compte + '.');
+        notifySucces(compte + '.');
     }
 }
 
-// La copie locale d'un tournoi supprimé n'a plus de raison d'être.
-function oublierCopieLocale(id) {
-    try {
-        localStorage.removeItem(storageKey(id));
-    } catch (e) {
-        console.warn('Copie locale non effacée :', e);
-    }
-}
-
-chargerResume();
+loadResume();

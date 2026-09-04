@@ -268,6 +268,9 @@ export default {
 
     // /tournaments reste accepté : un onglet resté sur une ancienne page l'appelle.
     if ((url.pathname === "/api/tournois" || url.pathname === "/tournaments") && request.method === "GET") {
+      // list() rend les clés par ordre alphabétique : au-delà de 100 tournois,
+      // ce sont les 100 premiers noms, pas les 100 plus récents. Le tri par date
+      // qui suit ne réordonne que ce lot — `complete` dit s'il en manque.
       const listing = await env.CHESS_TOURNAMENT.list({ prefix: "tournament:", limit: 100 });
       const tournaments = [];
 

@@ -17,23 +17,23 @@ function renderJoueurs() {
         <div class="joueur-row">
             <input type="text" class="joueur-nom" maxlength="64" value="${escapeHtml(j.nom)}" data-id="${escapeHtml(j.id)}">
             <input type="number" class="joueur-elo" placeholder="Elo" min="0" step="1" value="${j.elo == null ? '' : j.elo}">
-            <button class="danger joueur-supprimer" onclick="supprimerJoueur('${escapeHtml(j.id)}')">Supprimer</button>
+            <button class="danger joueur-supprimer" onclick="removeJoueur('${escapeHtml(j.id)}')">Supprimer</button>
         </div>
     `).join('');
 }
 
-function eloSaisi(champ) {
+function readElo(champ) {
     const brut = champ.value.trim();
     if (brut === '') return null;
     const valeur = parseInt(brut, 10);
     return Number.isFinite(valeur) ? valeur : null;
 }
 
-async function ajouterJoueurDepuisPage() {
+async function addJoueurFromForm() {
     const champNom = document.getElementById('joueur-nouveau-nom');
     const champElo = document.getElementById('joueur-nouveau-elo');
 
-    const fiche = await ajouterJoueur(champNom.value, eloSaisi(champElo));
+    const fiche = await addJoueur(champNom.value, readElo(champElo));
     if (!fiche) return;
 
     champNom.value = '';
@@ -42,7 +42,7 @@ async function ajouterJoueurDepuisPage() {
     champNom.focus();
 }
 
-async function enregistrerJoueursDepuisPage() {
+async function saveJoueursFromForm() {
     const noms = Array.from(document.querySelectorAll('.joueur-nom'));
     const elos = Array.from(document.querySelectorAll('.joueur-elo'));
 
@@ -50,39 +50,39 @@ async function enregistrerJoueursDepuisPage() {
     for (let i = 0; i < noms.length; i++) {
         const nom = noms[i].value.trim();
         if (!nom) {
-            notifierErreur('Tous les noms doivent être remplis.');
+            notifyErreur('Tous les noms doivent être remplis.');
             return;
         }
-        modifications.push({ id: noms[i].dataset.id, nom, elo: eloSaisi(elos[i]) });
+        modifications.push({ id: noms[i].dataset.id, nom, elo: readElo(elos[i]) });
     }
 
-    const resultat = await enregistrerFiches(modifications);
+    const resultat = await saveFiches(modifications);
     renderJoueurs();
-    if (resultat === 'modifie') notifierSucces('Modifications enregistrées.');
-    else if (resultat === 'inchange') notifier('Rien à enregistrer.');
+    if (resultat === 'modifie') notifySucces('Modifications enregistrées.');
+    else if (resultat === 'inchange') notify('Rien à enregistrer.');
 }
 
-async function supprimerJoueur(id) {
-    const fiche = joueurParId(id);
+async function removeJoueur(id) {
+    const fiche = getJoueur(id);
     if (!fiche) return;
     if (!confirm('Supprimer « ' + fiche.nom + ' » de la liste ?\n\n' +
                  'Les tournois où il a joué gardent son nom, mais il ne sera plus proposé à l\'inscription.')) {
         return;
     }
-    if (!await supprimerFiche(id)) return;
+    if (!await removeFiche(id)) return;
     renderJoueurs();
-    notifierSucces('« ' + fiche.nom + ' » supprimé de la liste.');
+    notifySucces('« ' + fiche.nom + ' » supprimé de la liste.');
 }
 
-async function demarrerPageJoueurs() {
+async function startPageJoueurs() {
     const conteneur = document.getElementById('joueurs-editor');
     conteneur.innerHTML = '<div class="tournaments-empty">Chargement…</div>';
 
-    if (!await chargerJoueurs()) {
+    if (!await loadJoueurs()) {
         conteneur.innerHTML = '<div class="tournaments-empty">Liste indisponible — hors ligne ?</div>';
         return;
     }
     renderJoueurs();
 }
 
-demarrerPageJoueurs();
+startPageJoueurs();

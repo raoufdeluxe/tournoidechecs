@@ -91,7 +91,7 @@ describe('affichage de la liste', () => {
         const app = await pageJoueurs([]);
         // Aucun appel à l'état d'un tournoi : cette page n'en ouvre aucun.
         assert.deepEqual(app.requetes.filter(r => r.chemin.startsWith('/api/etat')), []);
-        assert.equal(app.ev('typeof saveState'), 'undefined');
+        assert.equal(app.ev('typeof saveEtat'), 'undefined');
     });
 });
 
@@ -99,7 +99,7 @@ describe('ajouter un joueur', () => {
     async function avecChamps(app, nom, elo) {
         app.ev(`document.getElementById('joueur-nouveau-nom').value = ${JSON.stringify(nom)};`);
         app.ev(`document.getElementById('joueur-nouveau-elo').value = ${JSON.stringify(elo)};`);
-        await app.ev('ajouterJoueurDepuisPage()');
+        await app.ev('addJoueurFromForm()');
     }
 
     test('la fiche est créée et la liste réaffichée', async () => {
@@ -150,7 +150,7 @@ describe('enregistrer les modifications', () => {
             { id: 'j-bb', nom: 'Bob', elo: null },
         ]);
         champs(app, [{ id: 'j-aa', nom: 'Alice', elo: '1500' }, { id: 'j-bb', nom: 'Robert', elo: '1200' }]);
-        await app.ev('enregistrerJoueursDepuisPage()');
+        await app.ev('saveJoueursFromForm()');
 
         const patchs = app.requetes.filter(r => r.methode === 'PATCH');
         assert.deepEqual(patchs.map(r => r.chemin), ['/api/joueurs/j-bb']);
@@ -161,14 +161,14 @@ describe('enregistrer les modifications', () => {
     test('effacer le champ Elo enlève le classement', async () => {
         const app = await pageJoueurs([{ id: 'j-aa', nom: 'Alice', elo: 1500 }]);
         champs(app, [{ id: 'j-aa', nom: 'Alice', elo: '' }]);
-        await app.ev('enregistrerJoueursDepuisPage()');
+        await app.ev('saveJoueursFromForm()');
         assert.equal(app.serveur.joueurs[0].elo, null);
     });
 
     test('un nom vidé bloque tout l\'enregistrement', async () => {
         const app = await pageJoueurs([{ id: 'j-aa', nom: 'Alice', elo: null }]);
         champs(app, [{ id: 'j-aa', nom: '  ', elo: '' }]);
-        await app.ev('enregistrerJoueursDepuisPage()');
+        await app.ev('saveJoueursFromForm()');
         assert.match(app.alertes.at(-1), /noms doivent être remplis/);
         assert.deepEqual(app.requetes.filter(r => r.methode === 'PATCH'), []);
     });
@@ -176,7 +176,7 @@ describe('enregistrer les modifications', () => {
     test('rien à enregistrer : on le dit sans appeler le serveur', async () => {
         const app = await pageJoueurs([{ id: 'j-aa', nom: 'Alice', elo: 1500 }]);
         champs(app, [{ id: 'j-aa', nom: 'Alice', elo: '1500' }]);
-        await app.ev('enregistrerJoueursDepuisPage()');
+        await app.ev('saveJoueursFromForm()');
         assert.deepEqual(app.requetes.filter(r => r.methode === 'PATCH'), []);
         assert.match(app.alertes.at(-1), /Rien à enregistrer/);
     });
@@ -186,14 +186,14 @@ describe('supprimer un joueur', () => {
     test('la confirmation refusée n\'appelle pas le serveur', async () => {
         const app = await pageJoueurs([{ id: 'j-aa', nom: 'Alice', elo: null }]);
         app.repondreConfirm(false);
-        await app.ev('supprimerJoueur("j-aa")');
+        await app.ev('removeJoueur("j-aa")');
         assert.equal(app.serveur.joueurs.length, 1);
     });
 
     test('confirmée, la fiche disparaît de la liste affichée', async () => {
         const app = await pageJoueurs([{ id: 'j-aa', nom: 'Alice', elo: null }, { id: 'j-bb', nom: 'Bob', elo: null }]);
         app.repondreConfirm(true);
-        await app.ev('supprimerJoueur("j-aa")');
+        await app.ev('removeJoueur("j-aa")');
         assert.deepEqual(app.serveur.joueurs.map(j => j.nom), ['Bob']);
         assert.doesNotMatch(editeur(app), /value="Alice"/);
         assert.match(app.alertes.at(-1), /Alice.*supprimé/);

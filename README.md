@@ -68,7 +68,8 @@ public/
   sauvegarde.html /sauvegarde : export, import, effacement total
   styles.css      thème « hippodrome » : casaques colorées, typo sport
   js/
-    core.js       état partagé, couleurs, échappement, règles de départage
+    core.js       état partagé, couleurs, échappement, règles de départage,
+                  réglages d'une partie, copie locale
     notice.js     les messages affichés dans la page (à la place des alert)
     api.js        adresses de l'API, motif d'identifiant, slug d'un nom
     joueurs.js    les fiches : chargement et modifications (aucun rendu)
@@ -288,6 +289,26 @@ toute la liste d'un coup, et celle-là est refusée si la liste a bougé entre-t
 
 ---
 
+## Comment les choses s'appellent
+
+**Verbe technique en anglais, terme métier en français** : `renderClassement`,
+`addJoueur`, `loadJoueurs`, `setResultatPartie`, `computeClassement`,
+`buildOptionsJoueurs`, `eraseTout`. Le geste se lit en anglais, ce sur quoi il
+porte se lit en français.
+
+| Métier (français) | Technique (anglais) |
+|---|---|
+| joueur, fiche, tournoi, poule, journée, partie, manche, belle, duel, classement, demie, finale, cadence, variante, casaque, partant | get, set, is, build, render, show, add, remove, update, save, load, read, start, check, compute, generate, resolve, apply, merge, fetch, export |
+
+**Les clés enregistrées ne suivent pas cette règle** et ne doivent pas changer :
+`tournament`, `players`, `matches`, `played`, `semifinalMatches`, `finalMatches`,
+`round`, `num`… Elles sont dans le KV de tous les tournois existants ; les
+renommer les rendrait illisibles. La variable du navigateur s'appelle `tournoi`,
+la clé qu'elle produit reste `tournament` — la frontière est dans `getEtatCourant()`
+et `applyEtat()`.
+
+---
+
 ## Les messages
 
 Aucun `alert()` : ils bloquent l'onglet, s'affichent hors de la page et ne
@@ -382,6 +403,15 @@ même fichier.
   lire *et* modifier. C'est voulu — c'est un tournoi entre amis, pas un coffre-fort.
 - **CORS grand ouvert** (`Access-Control-Allow-Origin: *`), à restreindre au domaine
   le jour où ça compte.
+- **Les noms viennent d'autrui.** Une fiche de joueur est modifiable par quiconque
+  a le lien : son nom n'est jamais injecté brut dans la page. Un test le vérifie
+  sur chaque écran — classement, cartes de duel, menus de résultat, demies,
+  finale, podium, listes.
+- **Au-delà de 100 tournois**, `list()` en rend 100, dans l'ordre alphabétique
+  des clés : ce ne sont pas « les plus récents », et la page le dit ainsi.
+- **Un partant dont la fiche a été supprimée** garde le nom recopié à son
+  inscription et porte la mention « fiche supprimée » au classement : sans elle,
+  on ne comprendrait pas pourquoi le renommer reste sans effet.
 - **« Donner le départ » régénère tout le calendrier** et efface les résultats.
   L'app demande confirmation dès qu'une manche a été jouée.
 - Les tournois **sans aucun partant inscrit** n'apparaissent pas dans la liste.

@@ -9,13 +9,13 @@ export function joueurs(noms, elos = []) {
 
 /**
  * Monte une app avec une poule déjà générée (calendrier aller/retour complet).
- * @returns l'app, avec `tournament.players` et `tournament.matches` remplis.
+ * @returns l'app, avec `tournoi.players` et `tournoi.matches` remplis.
  */
 export function pouleGeneree(noms, elos = []) {
     const app = chargerApp();
-    app.set('tournament.players', joueurs(noms, elos));
-    app.ev('generateMatches()');
-    app.ev('tournament.currentRound = tournament.totalRounds');
+    app.set('tournoi.players', joueurs(noms, elos));
+    app.ev('generateCalendrier()');
+    app.ev('tournoi.currentRound = tournoi.totalRounds');
     return app;
 }
 
@@ -26,12 +26,12 @@ export function pouleGeneree(noms, elos = []) {
 export function jouerPoule(app, resultats) {
     for (const [cle, valeur] of Object.entries(resultats)) {
         const ids = /leg[12]$/.test(cle) ? [cle] : [`${cle}-leg1`, `${cle}-leg2`];
-        for (const id of ids) app.appel('setMatchResult', id, valeur);
+        for (const id of ids) app.appel('setResultatPartie', id, valeur);
     }
 }
 
 /** Joue tout ce qui reste de la poule en victoire du premier nommé. */
 export function completerPoule(app) {
-    const restants = app.json('tournament.matches.filter(m => !m.played).map(m => m.id)');
-    for (const id of restants) app.appel('setMatchResult', id, 'p1');
+    const restants = app.json('tournoi.matches.filter(m => !m.played).map(m => m.id)');
+    for (const id of restants) app.appel('setResultatPartie', id, 'p1');
 }

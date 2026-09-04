@@ -25,8 +25,6 @@ const ID_PATTERN = /^[a-z0-9-]{1,64}$/;
 
 // Une page ouverte ailleurs (menu, lien) : les trois pages se répondent.
 const PAGE_ACCUEIL = './';
-const PAGE_JOUEURS = './joueurs';
-const PAGE_TOURNOIS = './tournois';
 
 // « Tournoi des potes » -> « tournoi-des-potes », pour servir d'adresse lisible.
 function slugify(name) {
@@ -51,12 +49,3 @@ async function isIdTaken(id) {
         return false; // hors ligne : on ne bloque pas la création
     }
 }
-
-
-// Dernière liste affichée : évite de faire transiter les noms par des attributs HTML.
-let lastTournamentsList = [];
-
-// Tournois supprimés depuis cet onglet. L'index du serveur peut mettre
-// quelques secondes à refléter une suppression : on les masque en attendant,
-// pour que la liste corresponde à ce que l'on vient de faire.
-const deletedThisSession = new Set();

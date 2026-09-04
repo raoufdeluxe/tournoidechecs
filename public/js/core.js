@@ -3,11 +3,20 @@
 // Copie locale d'un tournoi, par identifiant : elle sert de repli hors ligne.
 const storageKey = (id) => 'tournoi_echecs_state_v1:' + id;
 
+// La copie locale d'un tournoi supprimé n'a plus de raison d'être.
+function removeCopieLocale(id) {
+    try {
+        localStorage.removeItem(storageKey(id));
+    } catch (e) {
+        console.warn('Copie locale non effacée :', e);
+    }
+}
+
 // Dernier tournoi ouvert sur l'accueil : la page /tournois s'en sert pour
 // marquer lequel est « en cours », qu'elle n'a aucun autre moyen de connaître.
 const CLE_TOURNOI_COURANT = 'tournoi_echecs_courant';
 
-let tournament = {
+let tournoi = {
     players: [],
     matches: [],
     semifinalMatches: [],
@@ -24,16 +33,16 @@ function escapeHtml(value) {
 }
 
 // Palette des "casaques" (couleurs de course) attribuées à chaque partant
-const SILK_COLORS = ['#6B2D8C', '#1B8A5A', '#D4A017', '#C1272D', '#B8860B', '#8E44AD', '#2E8B57', '#A0522D'];
-function silkColor(id) {
-    return SILK_COLORS[id % SILK_COLORS.length];
+const COULEURS_CASAQUE = ['#6B2D8C', '#1B8A5A', '#D4A017', '#C1272D', '#B8860B', '#8E44AD', '#2E8B57', '#A0522D'];
+function getCouleurCasaque(id) {
+    return COULEURS_CASAQUE[id % COULEURS_CASAQUE.length];
 }
-function silkDot(id) {
-    return `<span class="silk-dot" style="background:${silkColor(id)};"></span>`;
+function buildCasaque(id) {
+    return `<span class="silk-dot" style="background:${getCouleurCasaque(id)};"></span>`;
 }
 
 // Classe et icône à appliquer à un joueur pour un match donné : victoire, défaite ou match nul
-function resultClass(match, isPlayer1) {
+function getClasseResultat(match, isPlayer1) {
     if (!match.played) return '';
     const won = isPlayer1 ? match.player1Score > match.player2Score : match.player2Score > match.player1Score;
     const lost = isPlayer1 ? match.player1Score < match.player2Score : match.player2Score < match.player1Score;
@@ -42,8 +51,8 @@ function resultClass(match, isPlayer1) {
     return 'draw';
 }
 
-function resultIcon(match, isPlayer1) {
-    const cls = resultClass(match, isPlayer1);
+function getIconeResultat(match, isPlayer1) {
+    const cls = getClasseResultat(match, isPlayer1);
     if (cls === 'winner') return '<span class="result-icon">👍</span>';
     if (cls === 'loser') return '<span class="result-icon">👎</span>';
     if (cls === 'draw') return '<span class="result-icon">🤝</span>';
@@ -71,27 +80,24 @@ const VARIANTES = [
 ];
 const VARIANTE_DEFAUT = 'classique';
 
-const cadenceDe = (match) => (CADENCES.some(c => c.valeur === match.cadence) ? match.cadence : CADENCE_DEFAUT);
-const varianteDe = (match) => (VARIANTES.some(v => v.valeur === match.variante) ? match.variante : VARIANTE_DEFAUT);
-
-const libelleCadence = (match) => CADENCES.find(c => c.valeur === cadenceDe(match)).libelle;
-const libelleVariante = (match) => VARIANTES.find(v => v.valeur === varianteDe(match)).libelle;
+const getCadence = (match) => (CADENCES.some(c => c.valeur === match.cadence) ? match.cadence : CADENCE_DEFAUT);
+const getVariante = (match) => (VARIANTES.some(v => v.valeur === match.variante) ? match.variante : VARIANTE_DEFAUT);
 
 // Une valeur inconnue (page d'une autre version, saisie forcée) est ignorée :
 // la partie garde son réglage plutôt que d'en prendre un que rien ne définit.
-function definirCadence(match, valeur) {
+function setCadence(match, valeur) {
     if (!CADENCES.some(c => c.valeur === valeur)) return false;
     match.cadence = valeur;
     return true;
 }
 
-function definirVariante(match, valeur) {
+function setVariante(match, valeur) {
     if (!VARIANTES.some(v => v.valeur === valeur)) return false;
     match.variante = valeur;
     return true;
 }
 
-function optionsHtml(choix, courant) {
+function buildOptions(choix, courant) {
     return choix.map(c =>
         '<option value="' + c.valeur + '"' + (c.valeur === courant ? ' selected' : '') + '>' +
         c.libelle + '</option>').join('');
@@ -99,23 +105,30 @@ function optionsHtml(choix, courant) {
 
 // Les deux menus d'une partie. `onCadence` et `onVariante` sont le corps des
 // gestionnaires : chaque phase désigne sa partie à sa façon.
-function reglagesPartieHtml(match, onCadence, onVariante) {
+function buildReglagesPartie(match, onCadence, onVariante) {
     return `
         <div class="partie-reglages">
             <label class="partie-reglage">
                 <span class="partie-reglage-titre">Cadence</span>
-                <select class="partie-cadence" onchange="${onCadence}">${optionsHtml(CADENCES, cadenceDe(match))}</select>
+                <select class="partie-cadence" onchange="${onCadence}">${buildOptions(CADENCES, getCadence(match))}</select>
             </label>
             <label class="partie-reglage">
                 <span class="partie-reglage-titre">Type</span>
-                <select class="partie-variante" onchange="${onVariante}">${optionsHtml(VARIANTES, varianteDe(match))}</select>
+                <select class="partie-variante" onchange="${onVariante}">${buildOptions(VARIANTES, getVariante(match))}</select>
             </label>
         </div>
     `;
 }
 
+// Un partant dont la fiche a été supprimée garde le nom recopié à son
+// inscription, mais il n'est plus rattaché à rien : le renommer depuis la page
+// Joueurs n'aurait aucun effet sur lui. Autant le dire.
+function buildTagFicheAbsente() {
+    return '<span class="tag-absent" title="Ce joueur n\'est plus dans la liste : son nom ne suivra plus les renommages.">fiche supprimée</span>';
+}
+
 // Applique un résultat ('p1', 'draw', 'p2', ou '' pour effacer) à un match
-function applyResultToMatch(match, value) {
+function applyResultat(match, value) {
     if (value === 'p1') {
         match.player1Score = 1;
         match.player2Score = 0;
@@ -137,7 +150,7 @@ function applyResultToMatch(match, value) {
 
 // En cas d'égalité, le partant au plus bas Elo l'emporte (pas de replay nécessaire).
 // Retourne 'p1', 'p2', ou null si le départage est impossible (Elo manquant ou identique).
-function resolveEloWinner(p1, p2) {
+function resolveVainqueurElo(p1, p2) {
     if (p1.elo == null || p2.elo == null || p1.elo === p2.elo) return null;
     return p1.elo < p2.elo ? 'p1' : 'p2';
 }
@@ -162,7 +175,7 @@ function resolveDuel(matches, p1Obj, p2Obj) {
         return { ...base, winner: s1 > s2 ? p1Obj.id : p2Obj.id };
     }
 
-    const eloWinner = resolveEloWinner(p1Obj, p2Obj);
+    const eloWinner = resolveVainqueurElo(p1Obj, p2Obj);
     if (eloWinner) {
         return { ...base, winner: eloWinner === 'p1' ? p1Obj.id : p2Obj.id, reason: 'Elo le plus bas' };
     }
@@ -171,7 +184,7 @@ function resolveDuel(matches, p1Obj, p2Obj) {
         return { ...base, needsDecider: true };
     }
 
-    const standings = calculateStandings();
+    const standings = computeClassement();
     const r1 = standings.findIndex(x => x.id === p1Obj.id);
     const r2 = standings.findIndex(x => x.id === p2Obj.id);
     return { ...base, winner: r1 < r2 ? p1Obj.id : p2Obj.id, reason: 'meilleur classement en poule' };
@@ -179,19 +192,19 @@ function resolveDuel(matches, p1Obj, p2Obj) {
 
 // 3e place : le mieux classé en poule parmi les deux perdants des demi-finales.
 // Pas de petite finale — le bronze se déduit du classement de la poule.
-function resolveThirdPlace() {
-    const losers = tournament.semifinalMatches
+function resolveTroisiemePlace() {
+    const losers = tournoi.semifinalMatches
         .map(s => s.winner == null ? null : s.players.find(id => id !== s.winner))
         .filter(id => id != null);
     if (losers.length === 0) return null;
     if (losers.length === 1) return losers[0];
-    const standings = calculateStandings();
+    const standings = computeClassement();
     const rank = id => standings.findIndex(p => p.id === id);
     return rank(losers[0]) < rank(losers[1]) ? losers[0] : losers[1];
 }
 
 // Ajoute une manche décisive (belle) à un duel resté à égalité.
-function addDecider(matches) {
+function addBelle(matches) {
     const first = matches[0];
     matches.push({
         player1: first.player1,
@@ -201,13 +214,15 @@ function addDecider(matches) {
         played: false,
         num: matches.length + 1,
         // La belle prolonge le duel : elle en reprend le format.
-        cadence: cadenceDe(first),
-        variante: varianteDe(first)
+        cadence: getCadence(first),
+        variante: getVariante(first)
     });
 }
 
-// Génère les <option> du menu déroulant de résultat, avec la sélection courante
-function resultOptionsHtml(match, p1Name, p2Name) {
+// Génère les <option> du menu déroulant de résultat, avec la sélection courante.
+// `p1Name` et `p2Name` sont insérés tels quels : à l'appelant de les échapper,
+// comme il le fait déjà pour les afficher ailleurs dans la même carte.
+function buildOptionsResultat(match, p1Name, p2Name) {
     let selected = '';
     if (match.played) {
         if (match.player1Score > match.player2Score) selected = 'p1';
