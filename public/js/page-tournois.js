@@ -56,27 +56,6 @@ async function loadListeTournois() {
             : '');
 }
 
-// Pictogrammes tracés dans la page : ni police d'icônes à charger, ni image à
-// aller chercher. Ils prennent la couleur du bouton (`currentColor`) et suivent
-// sa taille, donc ils ne peuvent pas se désaccorder de lui.
-const PICTOS = {
-    renommer: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
-    ouvrir:   '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
-    supprimer:'<path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/>'
-              + '<path d="M19 6v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6"/><path d="M10 11v6"/><path d="M14 11v6"/>'
-};
-
-// Un bouton sans texte doit se nommer autrement : `aria-label` pour qui écoute,
-// `title` pour l'infobulle de qui survole.
-function buildBoutonPicto(picto, libelle, action, classe) {
-    return `<button type="button" class="bouton-picto ${classe}" onclick="${action}"
-                aria-label="${escapeHtml(libelle)}" title="${escapeHtml(libelle)}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
-                     focusable="false">${PICTOS[picto]}</svg>
-            </button>`;
-}
-
 function buildLigneTournoi(t, courant) {
     const estCourant = t.id === courant;
     const etape = SCREEN_LABELS[t.screen] || '—';

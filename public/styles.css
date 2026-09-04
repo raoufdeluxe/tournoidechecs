@@ -1025,6 +1025,7 @@ input.journee-numero::-webkit-outer-spin-button { appearance: none; margin: 0; }
 .joueur-row .joueur-nom { flex: 1 1 auto; min-width: 0; }
 .joueur-row .joueur-elo { flex: 0 0 110px; }
 .joueur-row button { flex: none; width: auto; min-width: 0; padding: 8px 14px; font-size: 13px; }
+.joueur-row button.bouton-picto { width: 40px; padding: 0; }
 
 @media (max-width: 600px) {
     .joueur-row { flex-wrap: wrap; }

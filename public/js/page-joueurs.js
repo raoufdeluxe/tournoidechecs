@@ -17,7 +17,7 @@ function renderJoueurs() {
         <div class="joueur-row">
             <input type="text" class="joueur-nom" maxlength="64" value="${escapeHtml(j.nom)}" data-id="${escapeHtml(j.id)}">
             <input type="number" class="joueur-elo" placeholder="Elo" min="0" step="1" value="${j.elo == null ? '' : j.elo}">
-            <button class="danger joueur-supprimer" onclick="removeJoueur('${escapeHtml(j.id)}')">Supprimer</button>
+            ${buildBoutonPicto('supprimer', 'Supprimer', `removeJoueur('${escapeHtml(j.id)}')`, 'danger joueur-supprimer')}
         </div>
     `).join('');
 }
