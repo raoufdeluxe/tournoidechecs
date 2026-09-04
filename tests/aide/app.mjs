@@ -129,7 +129,7 @@ export function chargerApp(options = {}) {
         URL: { createObjectURL: () => 'blob:sauvegarde', revokeObjectURL() {} },
         JSON, Math, Date, Object, Array, String, Number, Boolean, RegExp, Error, Promise, Set, Map,
         Uint8Array, Intl, encodeURIComponent, decodeURIComponent, parseInt, parseFloat, isNaN,
-        alert(message) { bac.__alerts.push(message); },
+
         confirm() { return bac.__confirmReponse; },
         prompt() { return bac.__promptReponse; },
         __promptReponse: null,
@@ -139,7 +139,7 @@ export function chargerApp(options = {}) {
         addEventListener(type, handler) { (bac.__ecouteurs[type] ||= []).push(handler); },
         removeEventListener() {},
         dispatchEvent() { return true; },
-        __alerts: [],
+
         __confirmReponse: true,
         __appelsFetch: appelsFetch,
         __stockage: stockage,
@@ -206,7 +206,11 @@ export function chargerApp(options = {}) {
         bac,
         appelsFetch,
         stockage,
-        alertes: bac.__alerts,
+        /** Messages affichés dans la page (ce que remplaçaient les alert()). */
+        get alertes() {
+            return JSON.parse(vm.runInContext(
+                'JSON.stringify(typeof noticesEmises !== "undefined" ? noticesEmises : [])', contexte));
+        },
         /** Évalue une expression dans l'app et renvoie la valeur telle quelle (objet du contexte). */
         ev(expression) {
             return vm.runInContext(expression, contexte);

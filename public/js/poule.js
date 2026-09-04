@@ -89,14 +89,14 @@ async function startTournament() {
     const refs = Array.from(document.querySelectorAll('.player-ref')).map(el => el.value);
 
     if (refs.some(ref => !ref)) {
-        alert('Choisis un joueur pour chaque partant.');
+        notifierErreur('Choisis un joueur pour chaque partant.');
         return;
     }
 
     const doublon = refs.find((ref, i) => refs.indexOf(ref) !== i);
     if (doublon) {
         const fiche = joueurParId(doublon);
-        alert('« ' + (fiche ? fiche.nom : doublon) + ' » occupe deux places : chaque partant doit être un joueur différent.');
+        notifierErreur('« ' + (fiche ? fiche.nom : doublon) + ' » occupe deux places : chaque partant doit être un joueur différent.');
         return;
     }
 
@@ -126,7 +126,7 @@ async function startTournament() {
 
     if (slug && slug !== tournamentId) {
         if (await isIdTaken(slug)) {
-            alert('Un tournoi nommé « ' + rawName + ' » existe déjà.\n\n' +
+            notifierErreur('Un tournoi nommé « ' + rawName + ' » existe déjà.\n\n' +
                   'Ouvre-le avec son lien (…/#' + slug + '), ou choisis un autre nom.');
             return;
         }
@@ -517,7 +517,7 @@ function goToRound(value) {
 
 function finalizeTournament() {
     if (tournament.matches.some(m => !m.played)) {
-        alert('Tous les matches doivent être joués');
+        notifierErreur('Tous les matches doivent être joués');
         return;
     }
     

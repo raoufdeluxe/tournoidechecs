@@ -97,18 +97,18 @@ async function renommerTournoi(id) {
         if (!res.ok) throw new Error(res.status);
         enveloppe = await res.json();
     } catch (e) {
-        alert('Tournoi illisible : ' + e.message);
+        notifierErreur('Tournoi illisible : ' + e.message);
         return;
     }
     if (!enveloppe.state) {
-        alert('Ce tournoi n\'existe plus.');
+        notifierErreur('Ce tournoi n\'existe plus.');
         chargerListe();
         return;
     }
 
     if (deplacement) {
         if (await isIdTaken(slug)) {
-            alert('Un tournoi nommé « ' + nouveauNom + ' » existe déjà.');
+            notifierErreur('Un tournoi nommé « ' + nouveauNom + ' » existe déjà.');
             return;
         }
         if (!confirm('Le lien du tournoi va devenir :\n…/#' + slug + '\n\n' +
@@ -130,7 +130,7 @@ async function renommerTournoi(id) {
         });
         if (!res.ok) throw new Error('réponse ' + res.status);
     } catch (e) {
-        alert('Renommage impossible : ' + e.message);
+        notifierErreur('Renommage impossible : ' + e.message);
         return;
     }
 
@@ -168,7 +168,7 @@ async function supprimerTournoi(id) {
         const res = await fetch(urlEtat(id), { method: 'DELETE' });
         if (!res.ok) throw new Error('réponse ' + res.status);
     } catch (e) {
-        alert('Suppression impossible : ' + e.message);
+        notifierErreur('Suppression impossible : ' + e.message);
         return;
     }
 

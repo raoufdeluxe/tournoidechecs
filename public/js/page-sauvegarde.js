@@ -43,12 +43,12 @@ async function toutEffacer() {
         const data = await res.json();
         ids = ((data && data.tournaments) || []).map(t => t.id);
     } catch (e) {
-        alert('Impossible de lire la liste des tournois : ' + e.message);
+        notifierErreur('Impossible de lire la liste des tournois : ' + e.message);
         return;
     }
 
     if (!ids.length && !joueurs.length) {
-        alert('Il n\'y a rien à effacer.');
+        notifier('Il n\'y a rien à effacer.');
         return;
     }
 
@@ -60,7 +60,7 @@ async function toutEffacer() {
 
     if (reponse == null) return;
     if (reponse.trim().toUpperCase() !== MOT_DE_CONFIRMATION) {
-        alert('Rien n\'a été effacé.');
+        notifier('Rien n\'a été effacé.');
         return;
     }
 
@@ -100,8 +100,12 @@ async function toutEffacer() {
     bouton.disabled = false;
     await chargerResume();
 
-    alert(effaces + ' tournoi(s) et ' + fiches + ' fiche(s) effacés' +
-        (echecs.length ? '.\n\nEn échec :\n' + echecs.join('\n') : '.'));
+    const compte = effaces + ' tournoi(s) et ' + fiches + ' fiche(s) effacés';
+    if (echecs.length) {
+        notifierErreur(compte + '.\n\nEn échec :\n' + echecs.join('\n'));
+    } else {
+        notifierSucces(compte + '.');
+    }
 }
 
 // La copie locale d'un tournoi supprimé n'a plus de raison d'être.

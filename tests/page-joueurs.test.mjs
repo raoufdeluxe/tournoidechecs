@@ -178,7 +178,7 @@ describe('enregistrer les modifications', () => {
         champs(app, [{ id: 'j-aa', nom: 'Alice', elo: '1500' }]);
         await app.ev('enregistrerJoueursDepuisPage()');
         assert.deepEqual(app.requetes.filter(r => r.methode === 'PATCH'), []);
-        assert.match(app.ev('document.getElementById("joueurs-statut").textContent'), /Rien à enregistrer/);
+        assert.match(app.alertes.at(-1), /Rien à enregistrer/);
     });
 });
 
@@ -196,6 +196,6 @@ describe('supprimer un joueur', () => {
         await app.ev('supprimerJoueur("j-aa")');
         assert.deepEqual(app.serveur.joueurs.map(j => j.nom), ['Bob']);
         assert.doesNotMatch(editeur(app), /value="Alice"/);
-        assert.match(app.ev('document.getElementById("joueurs-statut").textContent'), /Alice.*supprimé/);
+        assert.match(app.alertes.at(-1), /Alice.*supprimé/);
     });
 });

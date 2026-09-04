@@ -185,13 +185,13 @@ async function exporterTournois() {
 
         const tournois = await collecterTournois();
         if (!tournois.length && !joueurs.length) {
-            alert('Rien à exporter : ni tournoi, ni joueur.');
+            notifier('Rien à exporter : ni tournoi, ni joueur.');
             return;
         }
         const sauvegarde = construireSauvegarde(tournois, null, joueurs);
         telechargerFichier(nomFichierSauvegarde(), JSON.stringify(sauvegarde, null, 2) + '\n');
     } catch (e) {
-        alert('Export impossible : ' + e.message);
+        notifierErreur('Export impossible : ' + e.message);
     } finally {
         if (bouton) { bouton.disabled = false; bouton.textContent = libelle; }
     }
@@ -214,7 +214,7 @@ async function preparerRestauration(fichier) {
     try {
         sauvegarde = lireSauvegarde(await fichier.text());
     } catch (e) {
-        alert('Import impossible : ' + e.message);
+        notifierErreur('Import impossible : ' + e.message);
         return;
     }
 
@@ -344,7 +344,7 @@ async function appliquerRestauration() {
     const fichesRetenues = planEnCours.joueurs.filter(j => coches('.restaure-joueur').includes(j.id));
 
     if (!tournoisRetenus.length && !fichesRetenues.length) {
-        alert('Rien de coché : il n\'y a rien à restaurer.');
+        notifier('Rien de coché : il n\'y a rien à restaurer.');
         return;
     }
 
@@ -361,7 +361,7 @@ async function appliquerRestauration() {
         if (!await remplacerJoueurs(fusion.fusion)) {
             bouton.disabled = false;
             avancement.textContent = '';
-            alert('La liste des joueurs n\'a pas pu être enregistrée : restauration abandonnée.');
+            notifierErreur('La liste des joueurs n\'a pas pu être enregistrée : restauration abandonnée.');
             return;
         }
     }
@@ -398,7 +398,11 @@ async function appliquerRestauration() {
     compte += nomsRestaures.length
         ? ', ' + nomsRestaures.length + ' fiche(s) : ' + nomsRestaures.join(', ')
         : ', aucune fiche modifiée';
-    alert(echecs.length ? compte + '.\n\nEn échec :\n' + echecs.join('\n') : compte + '.');
+    if (echecs.length) {
+        notifierErreur(compte + '.\n\nEn échec :\n' + echecs.join('\n'));
+    } else {
+        notifierSucces(compte + '.');
+    }
 
     if (typeof rafraichirApresRestauration === 'function') {
         await rafraichirApresRestauration();

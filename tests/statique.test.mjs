@@ -28,11 +28,11 @@ describe('les scripts de la page', () => {
         }
     });
 
-    test('chaque page commence par core.js puis api.js', () => {
-        // core.js définit l'état et l'échappement, api.js les adresses :
-        // tout le reste s'appuie dessus.
+    test('chaque page commence par le même socle', () => {
+        // core.js définit l'état et l'échappement, notice.js les messages,
+        // api.js les adresses : tout le reste s'appuie dessus.
         for (const page of PAGES) {
-            assert.deepEqual(scriptsDeLaPage(page).slice(0, 2), ['core.js', 'api.js'], page);
+            assert.deepEqual(scriptsDeLaPage(page).slice(0, 3), ['core.js', 'notice.js', 'api.js'], page);
         }
     });
 
@@ -137,7 +137,12 @@ describe('les liaisons entre la page et le code', () => {
     });
 
     test('chaque getElementById vise un élément de la page (ou un gabarit du code)', () => {
-        const idsDisponibles = new Set([...sources.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]));
+        // Les identifiants viennent du HTML, des gabarits du code, ou d'un
+        // élément que le code crée lui-même (elem.id = '…').
+        const idsDisponibles = new Set([
+            ...[...sources.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]),
+            ...[...sources.matchAll(/\.id = '([^']+)'/g)].map(m => m[1]),
+        ]);
         const idsCherches = new Set([...sources.matchAll(/getElementById\(['"]([^'"]+)['"]\)/g)].map(m => m[1]));
         assert.ok(idsCherches.size > 10, 'le relevé a bien trouvé des identifiants');
         for (const id of idsCherches) {
@@ -202,5 +207,34 @@ describe('le Worker et sa configuration', () => {
             assert.match(toml, new RegExp(`binding\\s*=\\s*"${binding}"`),
                 `${binding} est utilisé par le Worker mais absent de wrangler.toml`);
         }
+    });
+});
+
+describe('les messages restent dans la page', () => {
+    const sourcesJs = readdirSync(racine + 'public/js')
+        .filter(f => f.endsWith('.js'))
+        .map(f => [f, lireScript(f)]);
+
+    test('plus aucun alert() : ils bloquent l\'onglet et sortent de la page', () => {
+        for (const [nom, source] of sourcesJs) {
+            assert.doesNotMatch(source, /(^|[^.\w])alert\s*\(/, `${nom} appelle encore alert()`);
+        }
+    });
+
+    test('notice.js est chargé partout où l\'on notifie', () => {
+        for (const page of PAGES) {
+            assert.ok(scriptsDeLaPage(page).includes('notice.js'), page);
+        }
+    });
+
+    test('confirm et prompt restent, mais seulement pour garder une action', () => {
+        // Ils posent une question ; les remplacer demanderait une fenêtre maison,
+        // et affaiblirait les garde-fous des actions destructrices.
+        const gardes = sourcesJs
+            .filter(([, source]) => /(^|[^.\w])(confirm|prompt)\s*\(/m.test(source))
+            .map(([nom]) => nom)
+            .sort();
+        assert.deepEqual(gardes,
+            ['finales.js', 'page-joueurs.js', 'page-sauvegarde.js', 'page-tournois.js', 'poule.js']);
     });
 });

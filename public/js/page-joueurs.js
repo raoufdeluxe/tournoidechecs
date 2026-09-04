@@ -50,7 +50,7 @@ async function enregistrerJoueursDepuisPage() {
     for (let i = 0; i < noms.length; i++) {
         const nom = noms[i].value.trim();
         if (!nom) {
-            alert('Tous les noms doivent être remplis.');
+            notifierErreur('Tous les noms doivent être remplis.');
             return;
         }
         modifications.push({ id: noms[i].dataset.id, nom, elo: eloSaisi(elos[i]) });
@@ -58,8 +58,8 @@ async function enregistrerJoueursDepuisPage() {
 
     const resultat = await enregistrerFiches(modifications);
     renderJoueurs();
-    if (resultat === 'modifie') statut('✓ Enregistré');
-    else if (resultat === 'inchange') statut('Rien à enregistrer');
+    if (resultat === 'modifie') notifierSucces('Modifications enregistrées.');
+    else if (resultat === 'inchange') notifier('Rien à enregistrer.');
 }
 
 async function supprimerJoueur(id) {
@@ -71,22 +71,7 @@ async function supprimerJoueur(id) {
     }
     if (!await supprimerFiche(id)) return;
     renderJoueurs();
-    statut('✓ « ' + fiche.nom + ' » supprimé');
-}
-
-// Un mot sous le titre, plutôt qu'une boîte de dialogue à chaque enregistrement.
-function statut(message) {
-    const el = document.getElementById('joueurs-statut');
-    if (!el) return;
-    el.textContent = message;
-    if (statut.timer) clearTimeout(statut.timer);
-    statut.timer = setTimeout(() => { el.textContent = ''; }, 3000);
-}
-
-// Après une restauration : les fiches ont pu changer.
-async function rafraichirApresRestauration() {
-    await chargerJoueurs();
-    renderJoueurs();
+    notifierSucces('« ' + fiche.nom + ' » supprimé de la liste.');
 }
 
 async function demarrerPageJoueurs() {

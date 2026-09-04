@@ -83,17 +83,17 @@ async function ajouterJoueur(nom, elo) {
             body: JSON.stringify({ nom: propre, elo: elo == null ? null : elo })
         });
     } catch (e) {
-        alert('Ajout impossible : le serveur est injoignable.');
+        notifierErreur('Ajout impossible : le serveur est injoignable.');
         return null;
     }
 
     if (res.status === 409) {
-        alert('« ' + propre + ' » est déjà dans la liste.');
+        notifier('« ' + propre + ' » est déjà dans la liste.');
         await chargerJoueurs();
         return null;
     }
     if (!res.ok) {
-        alert('Ajout refusé : ' + await messageErreur(res, 'erreur ' + res.status));
+        notifierErreur('Ajout refusé : ' + await messageErreur(res, 'erreur ' + res.status));
         return null;
     }
 
@@ -113,17 +113,17 @@ async function modifierJoueur(id, champs) {
             body: JSON.stringify(champs)
         });
     } catch (e) {
-        alert('Modification impossible : le serveur est injoignable.');
+        notifierErreur('Modification impossible : le serveur est injoignable.');
         return null;
     }
 
     if (res.status === 404) {
-        alert('Ce joueur n\'existe plus : la liste vient d\'être rechargée.');
+        notifierErreur('Ce joueur n\'existe plus : la liste vient d\'être rechargée.');
         await chargerJoueurs();
         return null;
     }
     if (!res.ok) {
-        alert('Modification refusée : ' + await messageErreur(res, 'erreur ' + res.status));
+        notifierErreur('Modification refusée : ' + await messageErreur(res, 'erreur ' + res.status));
         return null;
     }
 
@@ -143,12 +143,12 @@ async function supprimerFiche(id) {
     try {
         res = await fetch(urlJoueur(id), { method: 'DELETE' });
     } catch (e) {
-        alert('Suppression impossible : le serveur est injoignable.');
+        notifierErreur('Suppression impossible : le serveur est injoignable.');
         return false;
     }
 
     if (!res.ok && res.status !== 404) {
-        alert('Suppression refusée : ' + await messageErreur(res, 'erreur ' + res.status));
+        notifierErreur('Suppression refusée : ' + await messageErreur(res, 'erreur ' + res.status));
         return false;
     }
 
@@ -184,18 +184,18 @@ async function remplacerJoueurs(liste) {
             body: JSON.stringify({ baseVersion: joueursVersion, joueurs: liste })
         });
     } catch (e) {
-        alert('Enregistrement impossible : le serveur est injoignable.');
+        notifierErreur('Enregistrement impossible : le serveur est injoignable.');
         return false;
     }
 
     if (res.status === 409) {
         await chargerJoueurs();
-        alert('La liste des joueurs a été modifiée sur un autre appareil.\n\n' +
+        notifierErreur('La liste des joueurs a été modifiée sur un autre appareil.\n\n' +
               'Elle vient d\'être rechargée — recommence.');
         return false;
     }
     if (!res.ok) {
-        alert('Enregistrement refusé : ' + await messageErreur(res, 'erreur ' + res.status));
+        notifierErreur('Enregistrement refusé : ' + await messageErreur(res, 'erreur ' + res.status));
         return false;
     }
 

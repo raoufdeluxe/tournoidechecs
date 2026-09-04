@@ -66,6 +66,7 @@ public/
   styles.css      thème « hippodrome » : casaques colorées, typo sport
   js/
     core.js       état partagé, couleurs, échappement, règles de départage
+    notice.js     les messages affichés dans la page (à la place des alert)
     api.js        adresses de l'API, motif d'identifiant, slug d'un nom
     joueurs.js    les fiches : chargement et modifications (aucun rendu)
     poule.js      inscription, calendrier aller/retour, classement, cartes de duel
@@ -260,6 +261,24 @@ fiche par fiche via `/joueurs` : ajouter, renommer, changer un Elo ou supprimer
 ne touche que la fiche visée, si bien que deux appareils qui travaillent en même
 temps ne se marchent pas dessus. Seule une restauration de sauvegarde réécrit
 toute la liste d'un coup, et celle-là est refusée si la liste a bougé entre-temps.
+
+---
+
+## Les messages
+
+Aucun `alert()` : ils bloquent l'onglet, s'affichent hors de la page et ne
+peuvent rien montrer de long. À la place, `notice.js` empile des bandeaux en haut
+à droite :
+
+- **information** et **succès** s'effacent au bout de cinq secondes ;
+- **erreur** reste jusqu'à ce qu'on la ferme — elle porte parfois la liste de ce
+  qui a échoué, qu'on veut pouvoir relire.
+
+`confirm()` et `prompt()` **restent** : ils ne montrent pas un message, ils posent
+une question et gardent une action destructrice (régénérer un calendrier,
+supprimer un tournoi, tout effacer). Les remplacer demanderait une fenêtre maison,
+et affaiblirait ces garde-fous entre-temps. Un test relève où ils subsistent, pour
+que leur nombre ne grossisse pas sans qu'on le veuille.
 
 ---
 

@@ -219,7 +219,7 @@ function finalizeFinals() {
     const outcome = resolveDuel(tournament.finalMatches, finalist1, finalist2);
 
     if (outcome.winner === null) {
-        alert(outcome.needsDecider
+        notifierErreur(outcome.needsDecider
             ? 'Égalité : la manche décisive doit être jouée avant de proclamer le vainqueur.'
             : 'Toutes les manches de la finale doivent être jouées.');
         return;
