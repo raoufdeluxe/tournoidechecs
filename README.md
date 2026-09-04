@@ -263,8 +263,10 @@ acceptés pour les onglets restés sur une version antérieure.
 
 ## La liste des tournois
 
-Chaque ligne montre le **nom en titre** et, juste dessous, **l'adresse qui le
-porte** (`…/#coupe-du-dimanche`), alignée au pixel sur le nom. Le nom s'édite sur
+Chaque ligne montre le **nom en gros titre** — 28 px, plus grand que le titre de
+section : c'est l'information principale de la page — et, juste dessous,
+**l'adresse qui le porte** (`…/#coupe-du-dimanche`) en 12 px, alignée au pixel
+sur le nom. Le nom s'édite sur
 place : au repos il n'a ni cadre ni retrait — le cadre apparaît à l'approche,
 dessiné en `box-shadow` pour ne pas décaler le texte d'un pixel.
 

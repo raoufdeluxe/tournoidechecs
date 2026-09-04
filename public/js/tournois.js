@@ -70,10 +70,27 @@ function saveTournoiCourant() {
 
 
 
+// La barre du tournoi porte le titre de la page : son nom, ce qu'il contient,
+// et son lien — c'est-à-dire ce qu'on partage. Sans tournoi ouvert, elle dit
+// quoi faire plutôt que de rester vide.
 function renderTitreTournoi() {
-    const el = document.getElementById('tournament-name-display');
-    el.textContent = tournoi.name || '';
-    el.hidden = !tournoi.name;
+    const nom = document.getElementById('tournament-name-display');
+    const contexte = document.getElementById('barre-tournoi-contexte');
+    if (!nom || !contexte) return;
+
+    const partants = (tournoi.players || []).length;
+
+    if (!idTournoi && !partants) {
+        nom.textContent = 'Nouveau tournoi';
+        contexte.textContent = 'Choisis les partants, puis donne le départ.';
+        return;
+    }
+
+    nom.textContent = tournoi.name || 'Tournoi sans nom';
+    const morceaux = [];
+    if (partants) morceaux.push(partants + ' partant' + (partants > 1 ? 's' : ''));
+    if (idTournoi) morceaux.push('…/#' + idTournoi);
+    contexte.textContent = morceaux.join(' · ');
 }
 
 // Coller le lien d'un autre tournoi dans la barre d'adresse ne recharge pas

@@ -60,7 +60,8 @@ header {
 }
 
 
-header h1 {
+header h1,
+header .marque {
     font-family: var(--font-display);
     font-weight: 700;
     font-size: 42px;
@@ -78,6 +79,7 @@ header p {
     font-size: 16px;
     opacity: 0.75;
 }
+
 
 .chess-icon {
     font-size: 44px;
@@ -103,15 +105,40 @@ header p {
     display: none;
 }
 
-.tournament-name-display {
-    margin-top: 10px;
-    font-family: var(--font-display);
-    font-weight: 600;
-    font-size: 20px;
-    color: var(--gold);
+/* Barre du tournoi ouvert : le nom est le titre de la page, son lien et l'état
+   de la sauvegarde l'accompagnent. Une bande à part, pour ne pas se mêler à
+   l'enseigne ni à la première carte. */
+.barre-tournoi {
+    max-width: 1200px;
+    margin: 0 auto 20px;
+    padding: 18px 22px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 20px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.14);
 }
+.barre-tournoi-identite { min-width: 0; }
+.barre-tournoi-nom {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 32px;
+    line-height: 1.15;
+    color: white;
+    word-break: break-word;
+}
+.barre-tournoi-contexte {
+    margin-top: 4px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.barre-tournoi .sync-status { margin-top: 0; flex: none; }
 
-.tournament-name-display[hidden] { display: none; }
+
 
 /* Etat de la sauvegarde partagee */
 .sync-status {
@@ -313,7 +340,9 @@ header p {
 @media (max-width: 700px) {
     body { padding: 12px; }
 
-    header h1 { font-size: 30px; gap: 10px; }
+    header h1, header .marque { font-size: 30px; gap: 10px; }
+    .barre-tournoi { padding: 14px 16px; }
+    .barre-tournoi-nom { font-size: 26px; }
     .chess-icon { font-size: 32px; }
     .chief-icon { width: 64px; }
     header p { font-size: 14px; }
@@ -358,7 +387,7 @@ header p {
 }
 
 @media (max-width: 420px) {
-    header h1 { font-size: 25px; }
+    header h1, header .marque { font-size: 25px; }
     .medal { margin-right: 6px; }
 }
 
@@ -1002,33 +1031,10 @@ a.menu-item { display: block; text-decoration: none; }
 
 /* Une ligne de la page Tournois : nom éditable + informations */
 .tournoi-edition { flex: 1 1 auto; min-width: 0; }
-
-/* Le nom se lit comme un titre et s'aligne au caractère près sur l'adresse
-   qui le suit : au repos, ni cadre ni retrait — ils n'apparaissent qu'à
-   l'approche, pour signaler qu'on peut écrire dedans. */
 .tournoi-edition .tournoi-nom {
     width: 100%;
-    margin-bottom: 2px;
-    padding: 2px 0;
-    font-family: var(--font-sport, inherit);
-    font-size: 23px;
-    font-weight: 700;
-    line-height: 1.25;
-    color: var(--text-primary);
-    background: transparent;
-    /* Le cadre est dessiné en box-shadow : contrairement à une bordure, il ne
-       décale pas le texte, qui reste aligné au pixel sur l'adresse en dessous. */
-    border: none;
-    border-radius: 6px;
-    box-shadow: none;
-}
-.tournoi-edition .tournoi-nom:hover {
-    box-shadow: 0 0 0 1px var(--border), 0 0 0 6px var(--bg-secondary);
-}
-.tournoi-edition .tournoi-nom:focus {
-    outline: none;
-    background: var(--bg-primary, #FFFDF7);
-    box-shadow: 0 0 0 1px var(--accent), 0 0 0 6px var(--bg-primary, #FFFDF7);
+    margin-bottom: 4px;
+    font-weight: 600;
 }
 .tournoi-adresse { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .tournoi-ecart {
@@ -1040,15 +1046,88 @@ a.menu-item { display: block; text-decoration: none; }
     font-size: 11px;
     font-weight: 700;
     color: var(--warning, #B8860B);
-    background: var(--bg-secondary);
+    background: var(--bg-primary, #FFFDF7);
     border: 1px dashed var(--warning, #B8860B);
     cursor: pointer;
 }
-.tournoi-ecart:hover {
-    color: var(--bg-primary, #FFFDF7);
-    background: var(--warning, #B8860B);
-    border-style: solid;
+.tournoi-ecart:hover { color: var(--bg-primary, #FFFDF7); background: var(--warning, #B8860B); border-style: solid; }
+
+/* Au repos, ni cadre ni retrait : le nom se lit comme un titre et s'aligne au
+   pixel sur l'adresse. Le cadre apparaît à l'approche, en box-shadow — une
+   bordure décalerait le texte. */
+.tournoi-titre .tournoi-nom {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 2px 0;
+    font-family: var(--font-sport, inherit);
+    font-size: 34px;
+    font-weight: 800;
+    line-height: 1.15;
+    color: var(--text-primary);
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    box-shadow: none;
 }
+.tournoi-titre .tournoi-nom:hover { box-shadow: 0 0 0 1px var(--border), 0 0 0 6px var(--bg-secondary); }
+.tournoi-titre .tournoi-nom:focus {
+    outline: none;
+    background: var(--bg-primary, #FFFDF7);
+    box-shadow: 0 0 0 1px var(--accent), 0 0 0 6px var(--bg-primary, #FFFDF7);
+}
+
+.tournoi-pied {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    margin-top: 6px;
+}
+.tournoi-infos {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+.tournoi-etat::before { content: '· '; }
+.tournoi-adresse { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+/* Les actions ne doivent pas crier plus fort que le nom : du texte, qui prend
+   ses couleurs au survol seulement. */
+.tournoi-actions { display: flex; gap: 4px; }
+.tournoi-action {
+    width: auto;
+    min-width: 0;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.tournoi-action:hover { color: var(--accent); border-color: var(--accent); background: var(--bg-primary, #FFFDF7); }
+.tournoi-action--danger:hover { color: var(--danger, #C1272D); border-color: var(--danger, #C1272D); }
+
+.tournoi-ecart {
+    width: auto;
+    min-width: 0;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--warning, #B8860B);
+    background: var(--bg-primary, #FFFDF7);
+    border: 1px dashed var(--warning, #B8860B);
+    cursor: pointer;
+}
+.tournoi-ecart:hover { color: var(--bg-primary, #FFFDF7); background: var(--warning, #B8860B); border-style: solid; }
+
+
 
 /* Page Sauvegarde : la zone de suppression se distingue */
 .zone-danger { border: 1px solid var(--danger, #C1272D); }

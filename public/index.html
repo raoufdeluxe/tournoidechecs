@@ -13,7 +13,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>
+            <p class="marque">
                 <span class="chess-icon">♟️</span> Grand Prix des Échecs
                 <svg class="chief-icon" viewBox="0 0 140 80" xmlns="http://www.w3.org/2000/svg" aria-label="Coiffe de plumes façon Mardi Gras Indian">
                     <!-- Grandes plumes dorées en éventail -->
@@ -36,9 +36,8 @@
                     <circle cx="82" cy="53" r="3" fill="#1B8A5A"/>
                     <circle cx="88" cy="53" r="3" fill="#D4A017"/>
                 </svg>
-            </h1>
-            <p>Poule qualificative · Demi-finales · Grande Finale</p>
-            <div id="tournament-name-display" class="tournament-name-display" hidden></div>
+            </p>
+            <p id="accueil-baseline">Poule qualificative · Demi-finales · Grande Finale</p>
             <button id="btn-menu" class="menu-toggle" type="button" aria-label="Ouvrir le menu"
                     aria-expanded="false" aria-controls="main-menu" onclick="toggleMenu()">
                 <span></span><span></span><span></span>
@@ -50,8 +49,16 @@
                 <a class="menu-item" href="./stats">📊 Stats</a>
                 <a class="menu-item" href="./sauvegarde">💾 Sauvegarde</a>
             </nav>
-            <div><span id="sync-status" class="sync-status" data-state="saved">✓ Enregistré</span></div>
         </header>
+
+        <!-- Barre du tournoi ouvert : son nom, son lien, l'état de sa sauvegarde. -->
+        <div id="barre-tournoi" class="barre-tournoi">
+            <div class="barre-tournoi-identite">
+                <h1 id="tournament-name-display" class="barre-tournoi-nom">Nouveau tournoi</h1>
+                <p id="barre-tournoi-contexte" class="barre-tournoi-contexte"></p>
+            </div>
+            <span id="sync-status" class="sync-status" data-state="saved">✓ Enregistré</span>
+        </div>
 
         <div id="sync-conflict" class="sync-conflict" hidden>
             <strong>Le tournoi a été modifié sur un autre appareil.</strong>
