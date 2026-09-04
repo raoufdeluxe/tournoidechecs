@@ -50,6 +50,8 @@ La **3e place** ne se joue pas : c'est le mieux classé en poule parmi les deux 
 - **Classement vivant.** Table des scores, barre de progression, cartes de résumé et
   **graphe de progression journée après journée**.
 - **De 4 à 16 partants**, nombre impair géré (journée de repos), Elo optionnel par joueur.
+- **Joueurs réutilisables.** Une liste unique, hors des tournois : on inscrit un partant
+  en le choisissant, plus en retapant son nom.
 
 ---
 
@@ -57,15 +59,24 @@ La **3e place** ne se joue pas : c'est le mieux classé en poule parmi les deux 
 
 ```
 public/
-  index.html      5 écrans (config · poule · demies · finale · résultats)
+  index.html      accueil : le tournoi en cours (config · poule · demies · finale · résultats)
+  joueurs.html    /joueurs  : la liste des joueurs et son édition
+  tournois.html   /tournois : la liste des tournois, renommage, suppression
+  sauvegarde.html /sauvegarde : export, import, effacement total
   styles.css      thème « hippodrome » : casaques colorées, typo sport
   js/
-    core.js       état partagé, couleurs, règles de départage
-    poule.js      calendrier aller/retour, classement, cartes de duel
+    core.js       état partagé, couleurs, échappement, règles de départage
+    api.js        adresses de l'API, motif d'identifiant, slug d'un nom
+    joueurs.js    les fiches : chargement et modifications (aucun rendu)
+    poule.js      inscription, calendrier aller/retour, classement, cartes de duel
     finales.js    demi-finales, grande finale, podium
-    tournois.js   identité du tournoi (lien, nom), liste, renommage
-    sauvegarde.js export/import de tous les tournois, en un fichier JSON
+    menu.js       le menu burger, identique sur les trois pages
+    tournois.js   identité du tournoi courant (lien, nom), renommage
     sync.js       sauvegarde versionnée : envois sérialisés, réessai, conflits
+    page-joueurs.js   la page /joueurs
+    page-tournois.js  la page /tournois
+    sauvegarde.js     export/import (tournois + joueurs)
+    page-sauvegarde.js  la page /sauvegarde : état, effacement total
 worker.js         API + service des fichiers statiques
 wrangler.toml     config Cloudflare (Worker + binding KV + [assets])
 nix/flake.nix     shell de dev (node + wrangler)
@@ -76,12 +87,34 @@ ce qui survit au renommage du Worker comme à l'ajout d'un domaine perso.
 
 ### API
 
+**Les tournois**
+
 | Route | Réponse |
 |---|---|
-| `GET /tournaments` | `{ tournaments: [...], complete }` — liste des tournois non vides |
-| `GET /state?id=<id>` | `{ version, updatedAt, state }` (`state: null` si inexistant) |
-| `POST /state?id=<id>` | corps `{ baseVersion, state }` → `200 { version }`, ou `409` + état courant |
-| `DELETE /state?id=<id>` | supprime définitivement le tournoi |
+| `GET /api/tournois` | `{ tournaments: [...], complete }` — liste des tournois non vides |
+| `GET /api/etat?id=<id>` | `{ version, updatedAt, state }` (`state: null` si inexistant) |
+| `POST /api/etat?id=<id>` | corps `{ baseVersion, state }` → `200 { version }`, ou `409` + état courant |
+| `DELETE /api/etat?id=<id>` | supprime définitivement le tournoi |
+
+**Les joueurs** — création, modification et suppression fiche par fiche :
+
+| Route | Réponse |
+|---|---|
+| `GET /api/joueurs` | `{ version, updatedAt, joueurs }` |
+| `POST /api/joueurs` | corps `{ nom, elo? }` → `201 { version, joueur }`, ou `409` si le nom est pris |
+| `GET /api/joueurs/<id>` | `{ version, joueur }`, ou `404` |
+| `PATCH /api/joueurs/<id>` | corps `{ nom?, elo? }` → `200 { version, joueur }` |
+| `DELETE /api/joueurs/<id>` | `200 { version, deleted }`, ou `404` |
+| `PUT /api/joueurs` | corps `{ baseVersion, joueurs }` — remplace toute la liste (restauration) |
+
+**C'est le serveur qui attribue l'identifiant d'une fiche** et qui refuse les
+homonymes : deux appareils qui ajoutent un joueur en même temps ne peuvent ni
+produire le même renvoi, ni créer un doublon. Il n'y a donc pas de `baseVersion`
+sur les opérations fiche par fiche — chacune s'applique à la liste courante.
+Seul `PUT`, qui écrase tout, la réclame.
+
+`GET /tournaments` et `/state` restent servis, pour qu'un onglet resté sur une
+version antérieure de la page continue de marcher.
 
 Les identifiants suivent `^[a-z0-9-]{1,64}$`. Une requête sans `id` retombe sur la clé
 historique `tournament`, pour qu'un onglet resté sur une ancienne version continue de marcher.
@@ -142,6 +175,10 @@ tests/
   worker.test.mjs    routes, versionnage, liste des tournois
   statique.test.mjs  cohérence page ↔ code ↔ wrangler.toml
   sauvegarde.test.mjs  export/import : format, plan, écriture, échecs partiels
+  joueurs.test.mjs     fiches : résolution, création, modification, inscription
+  page-joueurs.test.mjs   la page /joueurs
+  page-tournois.test.mjs  la page /tournois
+  page-sauvegarde.test.mjs  la page /sauvegarde, dont l'effacement total
 ```
 
 **Comment le front est testé sans navigateur.** Les scripts de `public/js/` sont
@@ -163,15 +200,88 @@ push et chaque pull request, et vérifie en plus que le Worker se compile
 
 ---
 
+## Quatre pages
+
+| Page | Ce qu'on y fait |
+|---|---|
+| `/` | **le tournoi en cours** : inscription, poule, demies, finale, résultats |
+| `/joueurs` | **la liste des joueurs** : ajouter, renommer, changer l'Elo, supprimer |
+| `/tournois` | **la liste des tournois** : renommer, ouvrir, supprimer |
+| `/sauvegarde` | **les données dans leur ensemble** : exporter, importer, tout effacer |
+
+Le **même menu burger** sur les trois pages : d'abord la navigation, puis les
+la sauvegarde (exporter, importer — elle porte les deux listes, donc elle est
+partout), puis les actions propres à la page ouverte (seul l'accueil en a :
+nouveau tournoi et copier le lien). Deux tests vérifient que le bouton est identique partout et
+que les trois entrées de navigation sont les mêmes.
+
+Chaque page ne charge que ce dont elle a besoin : `/joueurs` et `/tournois`
+n'embarquent ni `sync.js` ni la machinerie de la poule, si bien qu'ouvrir l'une
+d'elles ne crée aucun tournoi et n'écrit rien. Un test s'en assure.
+
+**L'API vit sous `/api`** pour cette raison précise : les fichiers statiques sont
+servis avant le Worker, donc `public/joueurs.html` (servi sur `/joueurs`)
+masquerait une route d'API du même nom. `/state` et `/tournaments` restent
+acceptés pour les onglets restés sur une version antérieure.
+
+---
+
+## Les joueurs, hors des tournois
+
+Les joueurs vivent dans **une liste unique** (menu → 👥 Joueurs), pas dans les
+tournois. Un tournoi ne retient qu'un **renvoi** (`ref`) vers la fiche :
+
+```json
+"players": [ { "id": 0, "ref": "j-av9uvyqw", "name": "Raphael", "elo": 1610 } ]
+```
+
+- `id` reste l'indice du partant dans le tournoi — c'est lui que les matchs
+  et les classements référencent.
+- `ref` désigne la fiche, et **fait foi** : renommer quelqu'un dans la liste le
+  renomme partout, y compris dans les tournois déjà joués.
+- `name` et `elo` sont **recopiés au moment de l'inscription, en simple repli**.
+  Ils sont écrasés par la fiche à chaque chargement. Sans eux, un tournoi ouvert
+  hors ligne — ou dont la fiche a été supprimée — n'afficherait que des cases vides.
+
+Supprimer une fiche ne casse donc rien : les tournois où ce joueur figure
+continuent d'afficher son nom, marqué comme absent de la liste.
+
+L'Elo appartient à la fiche : il se saisit sur la page `/joueurs`, plus sur
+l'écran d'inscription. Le départage « Elo le plus bas » utilise la valeur courante
+de la fiche.
+
+Un partant se renomme **sur `/joueurs`**, jamais dans le tournoi : son nom
+appartient à la fiche. Les **tournois d'avant les fiches** n'ont pas de `ref` :
+ils affichent les noms inscrits dans le tournoi, figés — les rattacher à des
+fiches est ce qui les rend à nouveau modifiables.
+
+La liste est partagée comme le reste (clé `players` du KV). Elle s'administre
+fiche par fiche via `/joueurs` : ajouter, renommer, changer un Elo ou supprimer
+ne touche que la fiche visée, si bien que deux appareils qui travaillent en même
+temps ne se marchent pas dessus. Seule une restauration de sauvegarde réécrit
+toute la liste d'un coup, et celle-là est refusée si la liste a bougé entre-temps.
+
+---
+
 ## Sauvegarde et restauration
 
-Tout se fait depuis le menu de la page, sans rien installer :
+Tout se passe sur **`/sauvegarde`** : une sauvegarde contient les tournois *et*
+les fiches des joueurs, elle n'appartient donc à aucune des deux listes.
 
-- **⬇️ Exporter tous les tournois** — télécharge un fichier
-  `tournois-<horodatage>.json` contenant l'état complet de chaque tournoi.
-- **⬆️ Importer une sauvegarde** — ouvre un fichier, **affiche d'abord ce qu'il
-  ferait** (`+` nouveau tournoi, `↻` tournoi existant qui sera remplacé), et
-  n'écrit qu'après confirmation.
+- **⬇️ Tout exporter** — télécharge `sauvegarde-<horodatage>.json` : l'état
+  complet de chaque tournoi, plus toutes les fiches.
+- **⬆️ Importer une sauvegarde** — ouvre un fichier et **affiche d'abord ce qu'il
+  ferait**, ligne par ligne : chaque tournoi (marqué *nouveau* ou *remplacé*) et
+  chaque joueur, nommés, avec une case à cocher — tout est coché au départ, on
+  décoche ce qu'on ne veut pas. Rien n'est écrit avant « Restaurer ».
+
+  **Une fiche réclamée par un tournoi coché ne peut pas être décochée** : sans
+  elle, ses partants s'afficheraient comme supprimés. La ligne indique alors quel
+  tournoi la réclame, et la case redevient libre dès qu'on décoche ce tournoi.
+- **🧨 Tout effacer** — supprime tous les tournois et toutes les fiches. Comme
+  c'est définitif et visible par tous, un `confirm()` serait trop léger : il faut
+  **écrire le mot `EFFACER`**. Un tournoi qui résiste n'arrête pas les autres, et
+  la liste des échecs est affichée.
 
 Aucune route d'export ou d'import n'a été ajoutée au Worker : la page se sert de
 `/tournaments` et `/state?id=…`, qu'elle utilise déjà. Rien de nouveau n'est donc
@@ -181,6 +291,12 @@ Chaque tournoi est réécrit avec la version que le serveur annonce à l'instant
 la restauration n'entre pas en conflit (409) avec l'état en place, elle le
 remplace franchement. Si un tournoi échoue, les autres passent quand même et la
 liste des échecs est affichée.
+
+Depuis que les joueurs vivent hors des tournois, la sauvegarde **embarque aussi
+leurs fiches** (format `version: 2`) : sans elles, des tournois qui ne stockent
+que des renvois seraient illisibles. À l'import, les fiches du fichier font foi,
+celles qui n'y figurent pas sont conservées. Les fichiers `version: 1` restent
+lisibles.
 
 **Ce que l'export ne contient pas** : les tournois sans aucun partant inscrit
 (l'API ne les liste pas) et l'ancienne clé sans identifiant, vestige des

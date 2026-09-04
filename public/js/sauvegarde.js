@@ -12,6 +12,7 @@ const VERSIONS_LUES = [1, 2];
 
 // Sauvegarde relue et validée, en attente de confirmation dans le panneau.
 let sauvegardeEnAttente = null;
+let planEnCours = { tournois: [], joueurs: [] };
 
 // --- Le format ---------------------------------------------------------------
 
@@ -75,42 +76,59 @@ function lireSauvegarde(texte) {
     return data;
 }
 
-// Ce que la restauration ferait, avant de le faire.
-// Les fiches du fichier sont fusionnées : celles qu'il contient font foi, les
-// autres restent en place. Une restauration ne doit pas effacer des joueurs
-// ajoutés depuis la sauvegarde.
+// Les fiches retenues sont fusionnées : celles du fichier font foi, les autres
+// restent en place. Une restauration ne doit pas effacer des joueurs ajoutés
+// depuis la sauvegarde.
 function fusionnerJoueurs(fichesDuFichier, fichesActuelles) {
     const fusion = [...fichesActuelles];
     const nouveaux = [];
     const misAJour = [];
     for (const fiche of fichesDuFichier || []) {
+        const propre = { id: fiche.id, nom: fiche.nom, elo: fiche.elo };
         const i = fusion.findIndex(j => j.id === fiche.id);
         if (i === -1) {
-            fusion.push(fiche);
-            nouveaux.push(fiche);
+            fusion.push(propre);
+            nouveaux.push(propre);
         } else {
-            if (fusion[i].nom !== fiche.nom || fusion[i].elo !== fiche.elo) misAJour.push(fiche);
-            fusion[i] = fiche;
+            if (fusion[i].nom !== propre.nom || fusion[i].elo !== propre.elo) misAJour.push(propre);
+            fusion[i] = propre;
         }
     }
     return { fusion, nouveaux, misAJour };
 }
 
+// Les fiches qu'un tournoi réclame : sans elles, ses partants s'afficheraient
+// comme supprimés. C'est ce qui interdit de les décocher.
+function refsDuTournoi(enveloppe) {
+    const partants = (enveloppe.state && enveloppe.state.tournament && enveloppe.state.tournament.players) || [];
+    return [...new Set(partants.map(p => p.ref).filter(Boolean))];
+}
+
+// Ce que la restauration ferait, avant de le faire : une ligne par tournoi et
+// une par fiche, chacune cochable.
 function planifierRestauration(sauvegarde, idsDistants) {
     const presents = new Set(idsDistants);
-    const entrees = Object.entries(sauvegarde.tournois).map(([id, enveloppe]) => ({
+
+    const tournois = Object.entries(sauvegarde.tournois).map(([id, enveloppe]) => ({
         id,
         enveloppe,
-        nom: (enveloppe.state.tournament.name) || id,
-        partants: enveloppe.state.tournament.players.length
+        nom: enveloppe.state.tournament.name || id,
+        partants: enveloppe.state.tournament.players.length,
+        refs: refsDuTournoi(enveloppe),
+        etat: presents.has(id) ? 'remplacé' : 'nouveau'
     }));
-    const fiches = fusionnerJoueurs(sauvegarde.joueurs, joueurs);
-    return {
-        creations: entrees.filter(e => !presents.has(e.id)),
-        ecrasements: entrees.filter(e => presents.has(e.id)),
-        joueursNouveaux: fiches.nouveaux,
-        joueursMisAJour: fiches.misAJour
-    };
+
+    const actuelles = new Map(joueurs.map(j => [j.id, j]));
+    const fiches = (sauvegarde.joueurs || []).map(fiche => {
+        const existante = actuelles.get(fiche.id);
+        let etat = 'nouveau';
+        if (existante) {
+            etat = (existante.nom === fiche.nom && existante.elo === fiche.elo) ? 'inchangé' : 'mis à jour';
+        }
+        return { ...fiche, etat };
+    });
+
+    return { tournois, joueurs: fiches };
 }
 
 // --- Export ------------------------------------------------------------------
@@ -209,22 +227,16 @@ async function preparerRestauration(fichier) {
     }
 
     sauvegardeEnAttente = sauvegarde;
-    afficherPlanRestauration(planifierRestauration(sauvegarde, idsDistants), sauvegarde, listeLue);
+    planEnCours = planifierRestauration(sauvegarde, idsDistants);
+    afficherPlanRestauration(planEnCours, sauvegarde, listeLue);
 }
 
 function afficherPlanRestauration(plan, sauvegarde, listeLue) {
-    // Le nom et l'identifiant sur la même ligne : séparés, on les lisait comme
-    // deux tournois différents.
-    const ligne = (e, etat) =>
-        '<div class="tournament-row"><div>' +
-        '<div class="tournament-row-name">' + escapeHtml(e.nom) +
-        '<span class="tournament-badge">' + etat + '</span></div>' +
-        '<div class="tournament-row-meta">' +
-        (e.nom === e.id ? '' : escapeHtml(e.id) + ' · ') + e.partants + ' partants</div>' +
-        '</div></div>';
+    const badge = (texte) => '<span class="tournament-badge">' + texte + '</span>';
 
     let html = '<div class="tournaments-empty">Sauvegarde du ' +
-        escapeHtml(new Date(sauvegarde.exporteLe).toLocaleString('fr-FR')) + '</div>';
+        escapeHtml(new Date(sauvegarde.exporteLe).toLocaleString('fr-FR')) +
+        ' — décoche ce que tu ne veux pas restaurer.</div>';
 
     // Sans la liste du serveur, impossible de savoir ce qui existe déjà : on le
     // dit, plutôt que de laisser croire que tout est nouveau.
@@ -234,31 +246,80 @@ function afficherPlanRestauration(plan, sauvegarde, listeLue) {
             'sera remplacé.</div>';
     }
 
-    html += plan.creations.map(e => ligne(e, listeLue ? 'nouveau' : 'à écrire')).join('');
-    html += plan.ecrasements.map(e => ligne(e, 'remplacé')).join('');
-    if (plan.ecrasements.length) {
-        html += '<div class="tournaments-empty">↻ : ces tournois existent déjà et seront' +
-            ' remplacés par la version du fichier. Leur contenu actuel sera perdu.</div>';
-    }
+    html += '<div class="restaure-section">Tournois</div>';
+    html += plan.tournois.length
+        ? plan.tournois.map(t => `
+            <label class="tournament-row restaure-ligne">
+                <input type="checkbox" class="restaure-tournoi" data-id="${escapeHtml(t.id)}" checked
+                       onchange="majFichesRequises()">
+                <span>
+                    <span class="tournament-row-name">${escapeHtml(t.nom)}${badge(listeLue ? t.etat : 'à écrire')}</span>
+                    <span class="tournament-row-meta">${t.nom === t.id ? '' : escapeHtml(t.id) + ' · '}${t.partants} partants</span>
+                </span>
+            </label>`).join('')
+        : '<div class="tournaments-empty">Aucun tournoi dans ce fichier.</div>';
 
-    const fiches = plan.joueursNouveaux.length + plan.joueursMisAJour.length;
-    html += '<div class="tournaments-empty">' + (fiches
-        ? 'Joueurs : ' + plan.joueursNouveaux.length + ' à ajouter, ' +
-          plan.joueursMisAJour.length + ' à mettre à jour. Les fiches absentes du fichier sont conservées.'
-        : 'Aucun changement dans la liste des joueurs.') + '</div>';
+    html += '<div class="restaure-section">Joueurs</div>';
+    html += plan.joueurs.length
+        ? plan.joueurs.map(j => `
+            <label class="tournament-row restaure-ligne" data-fiche="${escapeHtml(j.id)}">
+                <input type="checkbox" class="restaure-joueur" data-id="${escapeHtml(j.id)}" checked>
+                <span>
+                    <span class="tournament-row-name">${escapeHtml(j.nom)}${j.elo != null ? ' (' + j.elo + ')' : ''}${badge(j.etat)}</span>
+                    <span class="tournament-row-meta restaure-requis"></span>
+                </span>
+            </label>`).join('')
+        : '<div class="tournaments-empty">Aucune fiche de joueur dans ce fichier.</div>';
 
-    // Le panneau n'écrit rien : le bouton « Restaurer » reste à cliquer.
-    html += '<div class="tournaments-empty">Rien n\'est encore écrit — ' +
-        '« Restaurer » applique ce plan.</div>';
+    html += '<div class="tournaments-empty">Les fiches absentes du fichier sont conservées. ' +
+        'Rien n\'est encore écrit — « Restaurer » applique ce plan.</div>';
 
     document.getElementById('import-plan').innerHTML = html;
-    document.getElementById('btn-import-confirm').disabled =
-        !(plan.creations.length + plan.ecrasements.length);
+    majFichesRequises();
     document.getElementById('import-panel').hidden = false;
+}
+
+// Une fiche réclamée par un tournoi coché ne peut pas être décochée : sans elle,
+// ses partants s'afficheraient comme supprimés.
+function majFichesRequises() {
+    if (!sauvegardeEnAttente) return;
+
+    const parTournoi = new Map(planEnCours.tournois.map(t => [t.id, t.refs]));
+    const requises = new Map(); // ref -> noms des tournois qui la réclament
+
+    for (const caseTournoi of document.querySelectorAll('.restaure-tournoi')) {
+        if (!caseTournoi.checked) continue;
+        const tournoi = planEnCours.tournois.find(t => t.id === caseTournoi.dataset.id);
+        for (const ref of parTournoi.get(caseTournoi.dataset.id) || []) {
+            if (!requises.has(ref)) requises.set(ref, []);
+            requises.get(ref).push(tournoi ? tournoi.nom : caseTournoi.dataset.id);
+        }
+    }
+
+    for (const caseJoueur of document.querySelectorAll('.restaure-joueur')) {
+        const reclamants = requises.get(caseJoueur.dataset.id);
+        caseJoueur.disabled = Boolean(reclamants);
+        if (reclamants) caseJoueur.checked = true;
+
+        const ligne = document.querySelector('[data-fiche="' + caseJoueur.dataset.id + '"]');
+        const mention = ligne && ligne.querySelector('.restaure-requis');
+        if (mention) {
+            mention.textContent = reclamants
+                ? 'requis par ' + reclamants.join(', ')
+                : '';
+        }
+    }
+}
+
+function coches(selecteur) {
+    return Array.from(document.querySelectorAll(selecteur))
+        .filter(c => c.checked)
+        .map(c => c.dataset.id);
 }
 
 function fermerImport() {
     sauvegardeEnAttente = null;
+    planEnCours = { tournois: [], joueurs: [] };
     document.getElementById('import-panel').hidden = true;
     document.getElementById('import-progress').textContent = '';
 }
@@ -268,56 +329,66 @@ function fermerImport() {
 async function appliquerRestauration() {
     if (!sauvegardeEnAttente) return;
 
+    const tournoisRetenus = planEnCours.tournois.filter(t => coches('.restaure-tournoi').includes(t.id));
+    const fichesRetenues = planEnCours.joueurs.filter(j => coches('.restaure-joueur').includes(j.id));
+
+    if (!tournoisRetenus.length && !fichesRetenues.length) {
+        alert('Rien de coché : il n\'y a rien à restaurer.');
+        return;
+    }
+
+    const bouton = document.getElementById('btn-import-confirm');
+    const avancement = document.getElementById('import-progress');
+    bouton.disabled = true;
+
     // Les fiches d'abord : un tournoi restauré avant elles afficherait
     // « Joueur supprimé » le temps que la liste suive.
-    const fusion = fusionnerJoueurs(sauvegardeEnAttente.joueurs, joueurs);
+    const fusion = fusionnerJoueurs(fichesRetenues, joueurs);
     const fichesTouchees = fusion.nouveaux.length + fusion.misAJour.length;
     if (fichesTouchees) {
+        avancement.textContent = 'Restauration des fiches…';
         if (!await remplacerJoueurs(fusion.fusion)) {
+            bouton.disabled = false;
+            avancement.textContent = '';
             alert('La liste des joueurs n\'a pas pu être enregistrée : restauration abandonnée.');
             return;
         }
     }
 
-    const entrees = Object.entries(sauvegardeEnAttente.tournois);
-    const bouton = document.getElementById('btn-import-confirm');
-    const avancement = document.getElementById('import-progress');
-    bouton.disabled = true;
-
     const echecs = [];
     let faits = 0;
 
-    for (const [id, enveloppe] of entrees) {
-        avancement.textContent = 'Restauration ' + (faits + 1) + '/' + entrees.length + ' — ' + id;
+    for (const tournoi of tournoisRetenus) {
+        avancement.textContent = 'Restauration ' + (faits + echecs.length + 1) + '/' +
+            tournoisRetenus.length + ' — ' + tournoi.nom;
         try {
-            const url = urlEtat(id);
+            const url = urlEtat(tournoi.id);
             const actuel = await fetch(url);
             const distant = actuel.ok ? await actuel.json() : { version: 0 };
 
             const res = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ baseVersion: distant.version || 0, state: enveloppe.state })
+                body: JSON.stringify({ baseVersion: distant.version || 0, state: tournoi.enveloppe.state })
             });
             if (!res.ok) throw new Error('réponse ' + res.status);
             faits++;
         } catch (e) {
-            echecs.push(id + ' (' + e.message + ')');
+            echecs.push(tournoi.nom + ' (' + tournoi.id + ') : ' + e.message);
         }
     }
 
+    const nomsRestaures = fusion.nouveaux.concat(fusion.misAJour).map(f => f.nom);
     avancement.textContent = '';
     fermerImport();
 
-    // Une sauvegarde porte les deux : le compte rendu doit parler des deux.
-    const compte = faits + ' tournoi(s) et ' + fichesTouchees + ' fiche(s) de joueur restaurés';
-    alert(echecs.length
-        ? compte + ', ' + echecs.length + ' en échec :\n' + echecs.join('\n')
-        : compte + '.');
+    // Nommer ce qui a été fait : un compte seul n'apprend rien.
+    let compte = faits + ' tournoi(s) restauré(s)';
+    compte += nomsRestaures.length
+        ? ', ' + nomsRestaures.length + ' fiche(s) : ' + nomsRestaures.join(', ')
+        : ', aucune fiche modifiée';
+    alert(echecs.length ? compte + '.\n\nEn échec :\n' + echecs.join('\n') : compte + '.');
 
-    // Le contenu de la page vient de changer sous ses pieds : chaque page dit
-    // comment se relire (la liste des tournois, celle des joueurs, le tournoi
-    // ouvert). Sans ce point d'accroche, la sauvegarde serait liée à une page.
     if (typeof rafraichirApresRestauration === 'function') {
         await rafraichirApresRestauration();
     }

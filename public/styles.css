@@ -1011,3 +1011,20 @@ a.menu-item { display: block; text-decoration: none; }
 /* Page Sauvegarde : la zone de suppression se distingue */
 .zone-danger { border: 1px solid var(--danger, #C1272D); }
 .zone-danger .card-title { color: var(--danger, #C1272D); }
+
+/* Panneau de restauration : cases à cocher */
+.restaure-section {
+    margin: 14px 0 6px;
+    font-weight: 700;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+}
+.restaure-ligne { cursor: pointer; align-items: center; gap: 12px; justify-content: flex-start; }
+.restaure-ligne > span { flex: 1 1 auto; min-width: 0; }
+.restaure-ligne input[type="checkbox"] { flex: none; width: 18px; height: 18px; accent-color: var(--accent); }
+.restaure-ligne input[type="checkbox"]:disabled { cursor: not-allowed; opacity: 0.6; }
+.restaure-ligne .tournament-row-name,
+.restaure-ligne .tournament-row-meta { display: block; }
+.restaure-requis:empty { display: none; }

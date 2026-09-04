@@ -14,6 +14,19 @@ const enveloppe = (nom, nbJoueurs = 2, version = 3) => ({
     },
 });
 
+const enveloppeAvecRefs = (nom, refs) => ({
+    version: 3,
+    updatedAt: '2026-09-01T10:00:00.000Z',
+    state: {
+        screen: 'screen-tournament',
+        tournament: {
+            name: nom,
+            players: refs.map((ref, i) => ({ id: i, ref, name: 'J' + i, elo: null })),
+            matches: [],
+        },
+    },
+});
+
 const reponse = (status, corps) => ({
     ok: status >= 200 && status < 300,
     status,
@@ -26,12 +39,16 @@ const reponse = (status, corps) => ({
  */
 async function appServeur(tournois = {}, { echouerSur = [] } = {}) {
     const ecritures = [];
+    const roster = { joueurs: [], version: 0 };
     const app = chargerApp({ page: 'sauvegarde.html',
         fetch: async (url, init) => {
             const id = (url.match(/[?&]id=([^&]*)/) || [])[1];
             if (url.includes('/api/joueurs')) {
-                if (init && ['POST', 'PUT'].includes(init.method)) return reponse(200, { version: 1 });
-                return reponse(200, { version: 0, joueurs: [] });
+                if (init && ['POST', 'PUT'].includes(init.method)) {
+                    roster.joueurs = JSON.parse(init.body).joueurs;
+                    return reponse(200, { version: ++roster.version });
+                }
+                return reponse(200, { version: roster.version, joueurs: roster.joueurs });
             }
             if (url.includes('/api/tournois')) {
                 return reponse(200, {
@@ -54,6 +71,7 @@ async function appServeur(tournois = {}, { echouerSur = [] } = {}) {
     });
     await app.pret();
     app.ecritures = ecritures;
+    app.roster = roster;
     // On capture le fichier plutôt que de le télécharger.
     app.ev('telechargerFichier = function (nom, texte) { __fichier = { nom, texte }; };');
     app.oublierAppels();
@@ -145,29 +163,6 @@ describe('les fiches de joueurs voyagent avec la sauvegarde', () => {
         assert.deepEqual(r.misAJour, []);
     });
 
-    test('la restauration écrit les fiches avant les tournois', async () => {
-        const ordre = [];
-        const app = chargerApp({ page: 'sauvegarde.html',
-            fetch: async (url, init) => {
-                if (init && ['POST', 'PUT'].includes(init.method)) {
-                    ordre.push(url.includes('/api/joueurs') ? 'joueurs' : 'tournoi');
-                }
-                if (url.includes('/api/joueurs')) return reponse(200, { version: 0, joueurs: [] });
-                if (url.includes('/api/tournois')) return reponse(200, { tournaments: [], complete: true });
-                return reponse(200, { version: 0, state: null });
-            },
-        });
-        await app.pret();
-        app.set('globalThis.__s', {
-            format: 'grand-prix-des-echecs/sauvegarde', version: 2, exporteLe: '2026-09-04T09:00:00.000Z',
-            joueurs: [{ id: 'j-aa', nom: 'Alice', elo: null }],
-            tournois: { abc: enveloppe('Les potes') },
-        });
-        app.ev('sauvegardeEnAttente = __s;');
-        await app.ev('appliquerRestauration()');
-        assert.deepEqual(ordre, ['joueurs', 'tournoi']);
-    });
-
     test('un fichier v1, sans fiches, reste lisible', () => {
         const app = chargerApp({ page: 'sauvegarde.html' });
         const v1 = {
@@ -222,37 +217,62 @@ describe('lireSauvegarde — un fichier douteux n\'atteint jamais le serveur', (
     });
 });
 
-describe('planifierRestauration — ce qui va se passer', () => {
+describe('planifierRestauration — une ligne par tournoi, une par fiche', () => {
     const sauvegarde = {
-        format: 'grand-prix-des-echecs/sauvegarde', version: 1, exporteLe: '2026-09-04T09:00:00.000Z',
+        format: 'grand-prix-des-echecs/sauvegarde', version: 2, exporteLe: '2026-09-04T09:00:00.000Z',
+        joueurs: [{ id: 'j-aa', nom: 'Alice', elo: 1500 }, { id: 'j-bb', nom: 'Bob', elo: null }],
         tournois: { abc: enveloppe('Les potes', 4), zebre: enveloppe('Zèbre', 2) },
     };
 
-    test('serveur vide : tout est création', () => {
+    test('serveur vide : tous les tournois sont neufs', () => {
         const app = chargerApp({ page: 'sauvegarde.html' });
         const plan = app.appel('planifierRestauration', sauvegarde, []);
-        assert.deepEqual(plan.creations.map(e => e.id), ['abc', 'zebre']);
-        assert.deepEqual(plan.ecrasements, []);
+        assert.deepEqual(plan.tournois.map(t => [t.id, t.etat]), [['abc', 'nouveau'], ['zebre', 'nouveau']]);
     });
 
-    test('un tournoi déjà présent est annoncé comme écrasement', () => {
+    test('un tournoi déjà présent sera remplacé', () => {
         const app = chargerApp({ page: 'sauvegarde.html' });
         const plan = app.appel('planifierRestauration', sauvegarde, ['abc']);
-        assert.deepEqual(plan.ecrasements.map(e => e.id), ['abc']);
-        assert.deepEqual(plan.creations.map(e => e.id), ['zebre']);
+        assert.deepEqual(plan.tournois.map(t => [t.id, t.etat]), [['abc', 'remplacé'], ['zebre', 'nouveau']]);
     });
 
-    test('chaque ligne porte le nom et le nombre de partants', () => {
+    test('chaque ligne de tournoi porte nom, identifiant et partants', () => {
         const app = chargerApp({ page: 'sauvegarde.html' });
-        const [entree] = app.appel('planifierRestauration', sauvegarde, []).creations;
+        const [entree] = app.appel('planifierRestauration', sauvegarde, []).tournois;
         assert.equal(entree.nom, 'Les potes');
+        assert.equal(entree.id, 'abc');
         assert.equal(entree.partants, 4);
     });
 
     test('un tournoi sans nom retombe sur son identifiant', () => {
         const app = chargerApp({ page: 'sauvegarde.html' });
-        const sansNom = { ...sauvegarde, tournois: { abc: enveloppe(null) } };
-        assert.equal(app.appel('planifierRestauration', sansNom, []).creations[0].nom, 'abc');
+        const sansNom = { ...sauvegarde, tournois: { gesphmww4k: enveloppe(null) } };
+        assert.equal(app.appel('planifierRestauration', sansNom, []).tournois[0].nom, 'gesphmww4k');
+    });
+
+    test('l\'état de chaque fiche : nouvelle, mise à jour ou inchangée', () => {
+        const app = chargerApp({ page: 'sauvegarde.html' });
+        app.set('joueurs', [{ id: 'j-aa', nom: 'Alice', elo: 1500 }]);
+        const fiches = app.appel('planifierRestauration', sauvegarde, []).joueurs;
+        assert.deepEqual(fiches.map(j => [j.nom, j.etat]), [['Alice', 'inchangé'], ['Bob', 'nouveau']]);
+    });
+
+    test('une fiche dont le nom ou l\'Elo change est « mis à jour »', () => {
+        const app = chargerApp({ page: 'sauvegarde.html' });
+        app.set('joueurs', [{ id: 'j-aa', nom: 'Alice', elo: 1200 }]);
+        const fiches = app.appel('planifierRestauration', sauvegarde, []).joueurs;
+        assert.equal(fiches.find(j => j.id === 'j-aa').etat, 'mis à jour');
+    });
+
+    test('les fiches que chaque tournoi réclame sont relevées', () => {
+        const app = chargerApp({ page: 'sauvegarde.html' });
+        const avecRefs = { ...sauvegarde, tournois: { abc: enveloppeAvecRefs('Les potes', ['j-aa', 'j-bb', 'j-aa']) } };
+        assert.deepEqual(app.appel('planifierRestauration', avecRefs, []).tournois[0].refs, ['j-aa', 'j-bb']);
+    });
+
+    test('un tournoi d\'avant les fiches ne réclame personne', () => {
+        const app = chargerApp({ page: 'sauvegarde.html' });
+        assert.deepEqual(app.appel('planifierRestauration', sauvegarde, []).tournois[0].refs, []);
     });
 });
 
@@ -323,7 +343,54 @@ describe('preparerRestauration — le plan avant l\'écriture', () => {
         const plan = app.ev('document.getElementById("import-plan").innerHTML');
         assert.match(plan, /Nouveau/);
         assert.match(plan, /Version fichier/);
-        assert.match(plan, /seront.*remplacés/s, 'l\'écrasement est annoncé');
+        assert.match(plan, /Version fichier<span class="tournament-badge">remplacé<\/span>/,
+            'l\'écrasement est annoncé sur la ligne même');
+        assert.match(plan, /Rien n'est encore écrit/, 'le panneau dit qu\'il n\'a rien fait');
+    });
+
+    test('chaque ligne porte son sort en toutes lettres, nom et identifiant ensemble', async () => {
+        const app = await appServeur({ abc: enveloppe('Déjà là') });
+        app.ev(`__f = { text: async () => ${JSON.stringify(JSON.stringify({
+            format: 'grand-prix-des-echecs/sauvegarde', version: 2, exporteLe: '2026-09-04T09:00:00.000Z',
+            tournois: { abc: enveloppe('Version fichier'), neuf: enveloppe('Nouveau') },
+        }))} };`);
+        await app.ev('preparerRestauration(__f)');
+        const plan = app.ev('document.getElementById("import-plan").innerHTML');
+        assert.match(plan, /Nouveau<span class="tournament-badge">nouveau<\/span>/);
+        assert.match(plan, /Version fichier<span class="tournament-badge">remplacé<\/span>/);
+        assert.doesNotMatch(plan, /↻/, 'plus de symbole à déchiffrer');
+    });
+
+    test('un tournoi sans nom n\'affiche pas deux fois son identifiant', async () => {
+        const app = await appServeur({});
+        app.ev(`__f = { text: async () => ${JSON.stringify(JSON.stringify({
+            format: 'grand-prix-des-echecs/sauvegarde', version: 2, exporteLe: '2026-09-04T09:00:00.000Z',
+            tournois: { gesphmww4k: enveloppe(null) },
+        }))} };`);
+        await app.ev('preparerRestauration(__f)');
+        const plan = app.ev('document.getElementById("import-plan").innerHTML');
+        const detail = plan.match(/<span class="tournament-row-meta">([^<]*)<\/span>/)[1];
+        assert.equal(detail, '2 partants', 'l\'identifiant n\'est pas répété sous le nom');
+    });
+
+    test('liste du serveur illisible : le panneau le dit au lieu de tout annoncer comme neuf', async () => {
+        const app = chargerApp({
+            page: 'sauvegarde.html',
+            fetch: async (url, init) => {
+                if (url.includes('/api/tournois')) throw new Error('hors ligne');
+                if (url.includes('/api/joueurs')) return reponse(200, { version: 0, joueurs: [] });
+                return reponse(200, { version: 0, state: null });
+            },
+        });
+        await app.pret();
+        app.ev(`__f = { text: async () => ${JSON.stringify(JSON.stringify({
+            format: 'grand-prix-des-echecs/sauvegarde', version: 2, exporteLe: '2026-09-04T09:00:00.000Z',
+            tournois: { abc: enveloppe('Un') },
+        }))} };`);
+        await app.ev('preparerRestauration(__f)');
+        const plan = app.ev('document.getElementById("import-plan").innerHTML');
+        assert.match(plan, /n'a pas pu être lue/);
+        assert.match(plan, /à écrire<\/span>/, 'on n\'annonce pas « nouveau » sans le savoir');
     });
 
     test('un fichier invalide prévient et laisse le panneau fermé', async () => {
@@ -342,85 +409,180 @@ describe('preparerRestauration — le plan avant l\'écriture', () => {
     });
 });
 
-describe('appliquerRestauration — l\'écriture', () => {
-    async function appAvecSauvegardeEnAttente(distants, tournois) {
+describe('appliquerRestauration — seule la sélection est écrite', () => {
+    /** Coche (ou non) les lignes du panneau, comme le ferait l'utilisateur. */
+    function selectionner(app, { tournois = [], joueurs = [] }) {
+        app.definirElements('.restaure-tournoi',
+            tournois.map(t => ({ checked: t.coche !== false, dataset: { id: t.id } })));
+        app.definirElements('.restaure-joueur',
+            joueurs.map(j => ({ checked: j.coche !== false, dataset: { id: j.id } })));
+    }
+
+    async function appAvecPlan(distants, sauvegarde, selection) {
         const app = await appServeur(distants);
-        app.set('globalThis.__s', {
-            format: 'grand-prix-des-echecs/sauvegarde', version: 1,
-            exporteLe: '2026-09-04T09:00:00.000Z', tournois,
-        });
-        app.ev('sauvegardeEnAttente = __s;');
+        app.set('globalThis.__s', sauvegarde);
+        app.ev('sauvegardeEnAttente = __s; planEnCours = planifierRestauration(__s, []);');
+        selectionner(app, selection);
         return app;
     }
 
+    const sauvegarde = (tournois, fiches = []) => ({
+        format: 'grand-prix-des-echecs/sauvegarde', version: 2,
+        exporteLe: '2026-09-04T09:00:00.000Z', joueurs: fiches, tournois,
+    });
+
+    test('les tournois cochés sont écrits, les autres non', async () => {
+        const app = await appAvecPlan({}, sauvegarde({ abc: enveloppe('Un'), zebre: enveloppe('Deux') }),
+            { tournois: [{ id: 'abc' }, { id: 'zebre', coche: false }] });
+        await app.ev('appliquerRestauration()');
+        assert.deepEqual(app.ecritures.map(e => e.id), ['abc']);
+    });
+
     test('chaque tournoi est écrit avec la version que le serveur annonce', async () => {
-        const app = await appAvecSauvegardeEnAttente(
-            { abc: enveloppe('Serveur', 2, 7) },
-            { abc: enveloppe('Fichier', 4), neuf: enveloppe('Neuf') });
+        const app = await appAvecPlan({ abc: enveloppe('Serveur', 2, 7) },
+            sauvegarde({ abc: enveloppe('Fichier', 4) }), { tournois: [{ id: 'abc' }] });
         await app.ev('appliquerRestauration()');
-
-        const abc = app.ecritures.find(e => e.id === 'abc');
-        assert.equal(abc.baseVersion, 7, 'se cale sur la version distante, donc pas de 409');
-        assert.equal(abc.state.tournament.name, 'Fichier');
-
-        const neuf = app.ecritures.find(e => e.id === 'neuf');
-        assert.equal(neuf.baseVersion, 0, 'un tournoi absent part de zéro');
+        assert.equal(app.ecritures[0].baseVersion, 7, 'pas de 409');
+        assert.equal(app.ecritures[0].state.tournament.name, 'Fichier');
     });
 
-    test('tous les tournois du fichier sont écrits, et rien d\'autre', async () => {
-        const app = await appAvecSauvegardeEnAttente(
-            { autre: enveloppe('À ne pas toucher') },
-            { abc: enveloppe('Un'), zebre: enveloppe('Deux') });
+    test('les fiches cochées sont enregistrées, et nommées dans le compte rendu', async () => {
+        const app = await appAvecPlan({}, sauvegarde({}, [
+            { id: 'j-aa', nom: 'Alice', elo: 1500 },
+            { id: 'j-bb', nom: 'Bob', elo: null },
+        ]), { joueurs: [{ id: 'j-aa' }, { id: 'j-bb', coche: false }] });
         await app.ev('appliquerRestauration()');
-        assert.deepEqual(app.ecritures.map(e => e.id).sort(), ['abc', 'zebre']);
+        assert.deepEqual(app.roster.joueurs.map(j => j.nom), ['Alice'], 'Bob n\'était pas coché');
+        assert.match(app.alertes.at(-1), /1 fiche\(s\) : Alice/);
     });
 
-    test('le compte rendu parle des tournois et des fiches', async () => {
-        const app = await appAvecSauvegardeEnAttente({}, { abc: enveloppe('Un') });
-        app.ev('__s.joueurs = [{ id: "j-neuf", nom: "Neuf", elo: null }];');
+    test('le compte rendu nomme les joueurs restaurés', async () => {
+        const app = await appAvecPlan({}, sauvegarde({ abc: enveloppe('Un') }, [
+            { id: 'j-aa', nom: 'Alice', elo: null },
+            { id: 'j-bb', nom: 'Bob', elo: null },
+        ]), { tournois: [{ id: 'abc' }], joueurs: [{ id: 'j-aa' }, { id: 'j-bb' }] });
         await app.ev('appliquerRestauration()');
-        assert.match(app.alertes.at(-1), /1 tournoi\(s\) et 1 fiche\(s\) de joueur restaurés/);
+        assert.match(app.alertes.at(-1), /1 tournoi\(s\) restauré\(s\), 2 fiche\(s\) : Alice, Bob/);
     });
 
-    test('le panneau se referme et le compte est annoncé', async () => {
-        const app = await appAvecSauvegardeEnAttente({}, { abc: enveloppe('Un') });
+    test('aucune fiche modifiée : le compte rendu le dit', async () => {
+        const app = await appAvecPlan({}, sauvegarde({ abc: enveloppe('Un') }), { tournois: [{ id: 'abc' }] });
         await app.ev('appliquerRestauration()');
-        assert.equal(app.ev('document.getElementById("import-panel").hidden'), true);
-        assert.equal(app.ev('sauvegardeEnAttente'), null);
-        assert.match(app.alertes.at(-1), /1 tournoi\(s\) et 0 fiche\(s\) de joueur restaurés/);
+        assert.match(app.alertes.at(-1), /aucune fiche modifiée/);
     });
 
-    test('un échec sur un tournoi n\'arrête pas les autres et est signalé', async () => {
-        const ecritures = [];
-        const app = chargerApp({ page: 'sauvegarde.html',
+    test('rien de coché : on prévient et on n\'écrit pas', async () => {
+        const app = await appAvecPlan({}, sauvegarde({ abc: enveloppe('Un') }),
+            { tournois: [{ id: 'abc', coche: false }] });
+        await app.ev('appliquerRestauration()');
+        assert.match(app.alertes.at(-1), /Rien de coché/);
+        assert.deepEqual(app.ecritures, []);
+    });
+
+    test('les fiches partent avant les tournois', async () => {
+        const ordre = [];
+        const app = chargerApp({
+            page: 'sauvegarde.html',
             fetch: async (url, init) => {
-                const id = (url.match(/[?&]id=([^&]*)/) || [])[1];
-                if (url.includes('/api/tournois')) return reponse(200, { tournaments: [], complete: true });
-                if (init && init.method === 'POST') {
-                    if (id === 'casse') return reponse(500, {});
-                    ecritures.push(id);
-                    return reponse(200, { version: 1 });
+                if (init && ['POST', 'PUT'].includes(init.method)) {
+                    ordre.push(url.includes('/api/joueurs') ? 'joueurs' : 'tournoi');
                 }
+                if (url.includes('/api/joueurs')) return reponse(200, { version: 1, joueurs: [] });
+                if (url.includes('/api/tournois')) return reponse(200, { tournaments: [], complete: true });
                 return reponse(200, { version: 0, state: null });
             },
         });
         await app.pret();
-        app.set('globalThis.__s', {
-            format: 'grand-prix-des-echecs/sauvegarde', version: 1, exporteLe: '2026-09-04T09:00:00.000Z',
-            tournois: { casse: enveloppe('Cassé'), bon: enveloppe('Bon'), autre: enveloppe('Autre') },
-        });
-        app.ev('sauvegardeEnAttente = __s; appliquerRestauration();');
-        await app.pret();
-
-        assert.deepEqual(ecritures.sort(), ['autre', 'bon'], 'les autres passent quand même');
-        assert.match(app.alertes.at(-1), /2 tournoi\(s\) et 0 fiche\(s\) de joueur restaurés, 1 en échec/);
-        assert.match(app.alertes.at(-1), /casse/);
+        app.set('globalThis.__s', sauvegarde({ abc: enveloppe('Un') }, [{ id: 'j-aa', nom: 'Alice', elo: null }]));
+        app.ev('sauvegardeEnAttente = __s; planEnCours = planifierRestauration(__s, []);');
+        selectionner(app, { tournois: [{ id: 'abc' }], joueurs: [{ id: 'j-aa' }] });
+        await app.ev('appliquerRestauration()');
+        assert.deepEqual(ordre, ['joueurs', 'tournoi']);
     });
 
-    test('sans sauvegarde en attente, le bouton ne fait rien', async () => {
+    test('un échec sur un tournoi n\'arrête pas les autres et le nomme', async () => {
+        const app = await appServeur({}, { echouerSur: ['casse'] });
+        app.set('globalThis.__s', sauvegarde({
+            casse: enveloppe('Cassé'), bon: enveloppe('Bon'), autre: enveloppe('Autre'),
+        }));
+        app.ev('sauvegardeEnAttente = __s; planEnCours = planifierRestauration(__s, []);');
+        selectionner(app, { tournois: [{ id: 'casse' }, { id: 'bon' }, { id: 'autre' }] });
+        await app.ev('appliquerRestauration()');
+
+        assert.deepEqual(app.ecritures.map(e => e.id).sort(), ['autre', 'bon']);
+        assert.match(app.alertes.at(-1), /2 tournoi\(s\) restauré\(s\)/);
+        assert.match(app.alertes.at(-1), /Cassé \(casse\)/);
+    });
+
+    test('le panneau se referme et le plan est oublié', async () => {
+        const app = await appAvecPlan({}, sauvegarde({ abc: enveloppe('Un') }), { tournois: [{ id: 'abc' }] });
+        await app.ev('appliquerRestauration()');
+        assert.equal(app.ev('document.getElementById("import-panel").hidden'), true);
+        assert.equal(app.ev('sauvegardeEnAttente'), null);
+        assert.deepEqual(app.json('planEnCours.tournois'), []);
+    });
+
+    test('sans plan en attente, le bouton ne fait rien', async () => {
         const app = await appServeur({});
         await app.ev('appliquerRestauration()');
-        assert.equal(app.ecritures.length, 0);
+        assert.deepEqual(app.ecritures, []);
         assert.deepEqual(app.alertes, []);
+    });
+});
+
+describe('une fiche réclamée par un tournoi coché ne se décoche pas', () => {
+    /** Panneau rendu, avec de vraies cases interrogeables. */
+    async function panneau(sauvegarde, coches = {}) {
+        const app = await appServeur({});
+        app.set('globalThis.__s', sauvegarde);
+        app.ev('sauvegardeEnAttente = __s; planEnCours = planifierRestauration(__s, []);');
+
+        const cases = { tournois: [], joueurs: [] };
+        for (const t of app.json('planEnCours.tournois')) {
+            cases.tournois.push({ checked: coches[t.id] !== false, dataset: { id: t.id }, disabled: false });
+        }
+        for (const j of app.json('planEnCours.joueurs')) {
+            cases.joueurs.push({ checked: true, dataset: { id: j.id }, disabled: false });
+        }
+        app.definirElements('.restaure-tournoi', cases.tournois);
+        app.definirElements('.restaure-joueur', cases.joueurs);
+        app.ev('majFichesRequises()');
+        return { app, cases };
+    }
+
+    const avecRefs = (tournois, fiches) => ({
+        format: 'grand-prix-des-echecs/sauvegarde', version: 2,
+        exporteLe: '2026-09-04T09:00:00.000Z', joueurs: fiches, tournois,
+    });
+
+    test('la case du joueur est verrouillée et cochée', async () => {
+        const { app } = await panneau(avecRefs(
+            { abc: enveloppeAvecRefs('Les potes', ['j-aa']) },
+            [{ id: 'j-aa', nom: 'Alice', elo: null }, { id: 'j-bb', nom: 'Bob', elo: null }]));
+
+        const [alice, bob] = app.ev('__selecteurs[".restaure-joueur"]');
+        assert.equal(alice.disabled, true, 'Alice est réclamée par le tournoi');
+        assert.equal(alice.checked, true);
+        assert.equal(bob.disabled, false, 'Bob ne l\'est pas');
+    });
+
+    test('décocher le tournoi libère ses joueurs', async () => {
+        const { app, cases } = await panneau(avecRefs(
+            { abc: enveloppeAvecRefs('Les potes', ['j-aa']) },
+            [{ id: 'j-aa', nom: 'Alice', elo: null }]));
+        assert.equal(app.ev('__selecteurs[".restaure-joueur"][0].disabled'), true);
+
+        app.ev('__selecteurs[".restaure-tournoi"][0].checked = false; majFichesRequises();');
+        assert.equal(app.ev('__selecteurs[".restaure-joueur"][0].disabled'), false);
+    });
+
+    test('un joueur réclamé par deux tournois reste verrouillé si l\'un reste coché', async () => {
+        const { app } = await panneau(avecRefs({
+            abc: enveloppeAvecRefs('Les potes', ['j-aa']),
+            zebre: enveloppeAvecRefs('Zèbre', ['j-aa']),
+        }, [{ id: 'j-aa', nom: 'Alice', elo: null }]));
+
+        app.ev('__selecteurs[".restaure-tournoi"][0].checked = false; majFichesRequises();');
+        assert.equal(app.ev('__selecteurs[".restaure-joueur"][0].disabled'), true, 'Zèbre la réclame encore');
     });
 });
