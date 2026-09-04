@@ -322,12 +322,15 @@ function backToDemies() {
 
 // Ouvre un tournoi neuf sous un nouvel identifiant. Le tournoi courant n'est
 // pas supprimé : il reste accessible par son propre lien.
-function startNouveauTournoi() {
-    if (tournoi.players.length && !confirm(
-        'Créer un nouveau tournoi ?\n\n' +
-        'Le tournoi en cours n\'est pas supprimé : il reste accessible par son lien, ' +
-        'que tu peux copier avant de continuer.')) {
-        return;
+async function startNouveauTournoi() {
+    if (tournoi.players.length) {
+        const suite = await askConfirmation({
+            titre: 'Créer un nouveau tournoi ?',
+            message: 'Le tournoi en cours n\'est pas supprimé : il reste accessible par son lien, ' +
+                'et se retrouve dans la liste des tournois.',
+            action: 'Nouveau tournoi'
+        });
+        if (!suite) return;
     }
 
     // Aucun identifiant tant qu'on n'a pas donné le départ : sinon un simple

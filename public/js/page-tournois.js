@@ -41,8 +41,8 @@ async function loadListeTournois() {
     const items = ((data && data.tournaments) || []).filter(t => !tournoisSupprimes.has(t.id));
 
     if (!items.length) {
-        liste.innerHTML = '<div class="tournaments-empty">Aucun tournoi enregistré pour l\'instant. ' +
-            '<a href="./">Ouvre l\'accueil</a> pour en lancer un.</div>';
+        liste.innerHTML = '<div class="tournaments-empty">Aucun tournoi enregistré pour l\'instant : ' +
+            'donne le départ au premier.</div>';
         return;
     }
 
@@ -96,6 +96,18 @@ function openTournoi(id) {
     location.href = PAGE_ACCUEIL + '#' + encodeURIComponent(id);
 }
 
+// Sans lien explicite, l'accueil rouvre le dernier tournoi consulté. Y aller
+// sans oublier ce repère d'abord rouvrirait justement celui qu'on quitte : on
+// n'aurait aucun moyen d'atteindre une inscription vierge.
+function openNouveauTournoi() {
+    try {
+        localStorage.removeItem(CLE_TOURNOI_COURANT);
+    } catch (e) {
+        console.warn('Repère du tournoi non effacé :', e);
+    }
+    location.href = PAGE_ACCUEIL;
+}
+
 // Le nom du tournoi lui sert d'adresse : le changer déplace le tournoi vers un
 // nouveau lien. On écrit à la nouvelle adresse avant d'effacer l'ancienne —
 // jamais l'inverse, sous peine de perdre le tournoi si l'écriture échoue.
@@ -127,11 +139,13 @@ async function renameTournoi(id) {
             notifyErreur('Un tournoi nommé « ' + nouveauNom + ' » existe déjà.');
             return;
         }
-        if (!confirm('Le lien du tournoi va devenir :\n…/#' + slug + '\n\n' +
-                     'L\'ancien lien (…/#' + id + ') cessera de fonctionner. ' +
-                     'Préviens les personnes à qui tu l\'as partagé.\n\nContinuer ?')) {
-            return;
-        }
+        const suite = await askConfirmation({
+            titre: 'Le lien du tournoi va devenir …/#' + slug,
+            message: 'L\'ancien lien (…/#' + id + ') cessera de fonctionner. ' +
+                'Préviens les personnes à qui tu l\'as partagé.',
+            action: 'Déplacer le tournoi'
+        });
+        if (!suite) return;
     }
 
     enveloppe.state.tournament.name = nouveauNom || null;
@@ -167,10 +181,13 @@ async function renameTournoi(id) {
 }
 
 async function removeTournoi(id) {
-    if (!confirm('Supprimer définitivement ce tournoi ?\n\n' +
-                 'Son lien (…/#' + id + ') cessera de fonctionner, pour tout le monde.')) {
-        return;
-    }
+    const suite = await askConfirmation({
+        titre: 'Supprimer définitivement ce tournoi ?',
+        message: 'Son lien (…/#' + id + ') cessera de fonctionner, pour tout le monde.',
+        action: 'Supprimer le tournoi',
+        danger: true
+    });
+    if (!suite) return;
 
     try {
         const res = await fetch(urlEtat(id), { method: 'DELETE' });

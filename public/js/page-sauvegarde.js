@@ -53,16 +53,14 @@ async function eraseTout() {
     }
 
     const quoi = ids.length + ' tournoi(s) et ' + joueurs.length + ' fiche(s) de joueur';
-    const reponse = prompt(
-        'Effacer ' + quoi + ' ?\n\n' +
-        'C\'est définitif, pour tout le monde : les liens déjà partagés cesseront de fonctionner.\n\n' +
-        'Écris ' + MOT_DE_CONFIRMATION + ' pour confirmer.');
-
-    if (reponse == null) return;
-    if (reponse.trim().toUpperCase() !== MOT_DE_CONFIRMATION) {
-        notify('Rien n\'a été effacé.');
-        return;
-    }
+    const suite = await askConfirmation({
+        titre: 'Effacer ' + quoi + ' ?',
+        message: 'C\'est définitif, pour tout le monde : les liens déjà partagés cesseront de fonctionner.',
+        action: 'Tout effacer',
+        danger: true,
+        mot: MOT_DE_CONFIRMATION
+    });
+    if (!suite) return;
 
     bouton.disabled = true;
     const echecs = [];

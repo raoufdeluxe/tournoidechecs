@@ -210,7 +210,7 @@ describe('« Nouveau tournoi » depuis les résultats', () => {
         const { app } = finaleLancee();
         app.ev('setResultatFinale(0, "p1"); setResultatFinale(1, "p1"); finalizeFinale();');
         app.repondreConfirm(true);
-        app.ev('startNouveauTournoi()');
+        await app.ev('startNouveauTournoi()');
 
         assert.equal(app.ev('idTournoi'), '', 'l\'adresse n\'est attribuée qu\'au départ');
         assert.equal(app.ev('location.hash'), '');
@@ -223,7 +223,7 @@ describe('« Nouveau tournoi » depuis les résultats', () => {
         const { app } = finaleLancee();
         const avant = app.ev('idTournoi');
         app.repondreConfirm(false);
-        app.ev('startNouveauTournoi()');
+        await app.ev('startNouveauTournoi()');
         assert.equal(app.ev('idTournoi'), avant);
         assert.ok(app.json('tournoi.players').length);
     });

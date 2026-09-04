@@ -91,10 +91,9 @@ describe('affichage de la liste', () => {
         assert.equal((html.match(/en cours/g) || []).length, 1);
     });
 
-    test('sans tournoi, on renvoie vers l\'accueil', async () => {
+    test('sans tournoi, la liste le dit', async () => {
         const app = await pageTournois({});
         assert.match(liste(app), /Aucun tournoi enregistré/);
-        assert.match(liste(app), /href="\.\/"/);
     });
 
     test('liste injoignable : message, pas de page blanche', async () => {
@@ -247,5 +246,31 @@ describe('ouvrir un tournoi', () => {
         const app = await pageTournois({ abc: { version: 1, state: etatTournoi('A') } });
         app.ev('openTournoi("abc")');
         assert.match(app.ev('location.href'), /#abc$/);
+    });
+});
+
+describe('commencer un nouveau tournoi', () => {
+    // Sans lien, l'accueil rouvre le dernier tournoi consulté : c'est d'ici, et
+    // d'ici seulement, qu'on peut repartir d'une inscription vierge.
+    const avecUnTournoiEnCours = () =>
+        pageTournois({ abc: { version: 1, state: etatTournoi('A') } }, { courant: 'abc' });
+
+    test('renvoie à l\'accueil, sans lien de tournoi', async () => {
+        const app = await avecUnTournoiEnCours();
+        app.ev('openNouveauTournoi()');
+        assert.equal(app.ev('location.href'), './');
+    });
+
+    test('oublie le tournoi en cours, sinon l\'accueil le rouvrirait', async () => {
+        const app = await avecUnTournoiEnCours();
+        app.ev('openNouveauTournoi()');
+        assert.equal(app.stockage.has('tournoi_echecs_courant'), false);
+    });
+
+    test('le tournoi quitté n\'est pas supprimé : il reste dans la liste', async () => {
+        const app = await avecUnTournoiEnCours();
+        app.ev('openNouveauTournoi()');
+        assert.deepEqual(app.requetes.filter(r => r.methode === 'DELETE'), []);
+        assert.ok(app.serveur.tournois.abc);
     });
 });

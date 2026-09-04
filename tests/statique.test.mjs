@@ -152,9 +152,13 @@ describe('les messages restent dans la page', () => {
         .filter(f => f.endsWith('.js'))
         .map(f => [f, lireScript(f)]);
 
-    test('plus aucun alert() : ils bloquent l\'onglet et sortent de la page', () => {
+    test('aucune boîte du navigateur : tout se dit et se demande dans la page', () => {
+        // alert, confirm et prompt bloquent l'onglet, s'affichent hors de la page
+        // et ne peuvent rien mettre en forme. notice.js et dialogue.js les remplacent.
         for (const [nom, source] of sourcesJs) {
-            assert.doesNotMatch(source, /(^|[^.\w])alert\s*\(/, `${nom} appelle encore alert()`);
+            if (nom === 'dialogue.js') continue; // c'est lui qui les remplace
+            assert.doesNotMatch(source, /(^|[^.\w])(alert|confirm|prompt)\s*\(/,
+                `${nom} ouvre encore une boîte du navigateur`);
         }
     });
 

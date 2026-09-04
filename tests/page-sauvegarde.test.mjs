@@ -77,12 +77,22 @@ describe('tout effacer', () => {
         assert.equal(app.serveur.joueurs.length, 1);
     });
 
-    test('un mot approximatif ne suffit pas', async () => {
+    test('un mot approximatif n\'efface rien', async () => {
         const app = await pageSauvegarde(contenu);
         app.repondrePrompt('oui');
         await app.ev('eraseTout()');
-        assert.match(app.alertes.at(-1), /Rien n'a été effacé/);
         assert.deepEqual(app.serveur.tournois, ['abc', 'def']);
+        assert.equal(app.serveur.joueurs.length, 1);
+    });
+
+    test('la demande annonce ce qui va disparaître et réclame le mot', async () => {
+        const app = await pageSauvegarde(contenu);
+        app.repondrePrompt('EFFACER');
+        await app.ev('eraseTout()');
+        const demande = app.dernierDialogue();
+        assert.match(demande.titre, /2 tournoi\(s\) et 1 fiche\(s\)/);
+        assert.equal(demande.mot, 'EFFACER');
+        assert.equal(demande.danger, true);
     });
 
     test('le mot exact efface tournois et fiches', async () => {

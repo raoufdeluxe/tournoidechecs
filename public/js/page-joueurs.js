@@ -65,10 +65,13 @@ async function saveJoueursFromForm() {
 async function removeJoueur(id) {
     const fiche = getJoueur(id);
     if (!fiche) return;
-    if (!confirm('Supprimer « ' + fiche.nom + ' » de la liste ?\n\n' +
-                 'Les tournois où il a joué gardent son nom, mais il ne sera plus proposé à l\'inscription.')) {
-        return;
-    }
+    const suite = await askConfirmation({
+        titre: 'Supprimer « ' + fiche.nom + ' » de la liste ?',
+        message: 'Les tournois où il a joué gardent son nom, mais il ne sera plus proposé à l\'inscription.',
+        action: 'Supprimer',
+        danger: true
+    });
+    if (!suite) return;
     if (!await removeFiche(id)) return;
     renderJoueurs();
     notifySucces('« ' + fiche.nom + ' » supprimé de la liste.');

@@ -183,6 +183,9 @@ export function chargerApp(options = {}) {
     bac.navigator = { clipboard: { writeText: async () => {} }, onLine: true };
 
     const cacheElements = new Map();
+    // Un seul body, comme dans un navigateur : sinon ce qu'on y ajoute
+    // disparaît aussitôt, et les tests ne peuvent rien y observer.
+    const corps = element('body', caches);
     bac.document = {
         getElementById(id) {
             if (!cacheElements.has(id)) cacheElements.set(id, element(id, caches));
@@ -194,7 +197,7 @@ export function chargerApp(options = {}) {
         querySelectorAll: (selecteur) => bac.__selecteurs[selecteur] || [],
         addEventListener() {},
         removeEventListener() {},
-        get body() { return element(); },
+        get body() { return corps; },
         get documentElement() { return element(); },
     };
 
@@ -206,6 +209,27 @@ export function chargerApp(options = {}) {
     const scripts = options.scripts ?? scriptsDeLaPage(page);
     for (const nom of scripts) {
         vm.runInContext(lireScript(nom), contexte, { filename: 'public/js/' + nom });
+    }
+
+    // La confirmation est un panneau dans la page : les tests répondent à sa
+    // place, comme ils répondaient à confirm() et prompt(). Ceux qui veulent
+    // éprouver le panneau lui-même appellent `dialogueReel()`.
+    if (!options.dialogueReel && scripts.includes('dialogue.js')) {
+        vm.runInContext(`
+            __askReel = askConfirmation;
+            askConfirmation = async function (options) {
+                __dernierDialogue = options;
+                if (!__confirmReponse) return null;
+                if (options && options.mot) {
+                    const saisi = String(__promptReponse == null ? '' : __promptReponse).trim().toUpperCase();
+                    return saisi === options.mot.toUpperCase() ? true : null;
+                }
+                if (options && options.saisie !== undefined && options.saisie !== null) {
+                    return __promptReponse;
+                }
+                return true;
+            };
+        `, contexte);
     }
 
     return {
@@ -239,6 +263,12 @@ export function chargerApp(options = {}) {
         },
         repondreConfirm(valeur) { bac.__confirmReponse = valeur; },
         repondrePrompt(valeur) { bac.__promptReponse = valeur; },
+        /** Les options passées à la dernière demande de confirmation. */
+        dernierDialogue() {
+            return this.json('typeof __dernierDialogue !== "undefined" ? __dernierDialogue : null');
+        },
+        /** Rend la main au vrai panneau, pour l'éprouver lui-même. */
+        dialogueReel() { vm.runInContext('askConfirmation = __askReel;', contexte); },
         /**
          * Ce que document.querySelectorAll(selecteur) renverra.
          * Les éléments sont de simples objets : { value, dataset… }.

@@ -1264,3 +1264,30 @@ a.menu-item { display: block; text-decoration: none; }
 
 .stats-resume { margin-bottom: 10px; font-size: 13px; color: var(--text-secondary); }
 #stats-graphe svg { display: block; width: 100%; height: auto; }
+
+/* Confirmations dans la page (à la place de confirm et prompt) */
+.dialogue-fond {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(15, 6, 26, 0.6);
+}
+.dialogue {
+    width: min(480px, 100%);
+    padding: 24px;
+    border-radius: 16px;
+    background: var(--bg-light);
+    border: 1px solid var(--border);
+    box-shadow: 0 24px 60px rgba(7, 18, 41, 0.45);
+}
+.dialogue--danger { border-color: var(--danger); }
+.dialogue-titre { font-family: var(--font-sport); font-size: 20px; margin-bottom: 10px; }
+.dialogue-message { font-size: 14px; color: var(--text-secondary); white-space: pre-line; }
+.dialogue-consigne { margin-top: 14px; font-size: 14px; }
+.dialogue-saisie { width: 100%; margin-top: 10px; padding: 10px 12px; font-size: 15px; }
+.dialogue-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.dialogue-actions button { flex: none; width: auto; min-width: 0; padding: 10px 18px; font-size: 14px; }

@@ -44,7 +44,12 @@ function buildOptionsJoueurs(ref) {
 async function selectJoueur(select) {
     if (select.value !== REF_NOUVEAU) return;
     select.value = '';
-    const nom = prompt('Nom du nouveau joueur :');
+    const nom = await askConfirmation({
+        titre: 'Nouveau joueur',
+        message: 'Il rejoindra la liste des joueurs, réutilisable d\'un tournoi à l\'autre.',
+        action: 'Ajouter',
+        saisie: ''
+    });
     if (nom == null) return;
     const fiche = await addJoueur(nom);
     if (!fiche) return;
@@ -110,13 +115,14 @@ async function startTournoi() {
 
     if (dejaJoues) {
         const pluriel = dejaJoues > 1 ? 's' : '';
-        if (!confirm(
-                `Ce tournoi compte déjà ${dejaJoues} manche${pluriel} jouée${pluriel}.\n\n` +
-                'Donner le départ régénère le calendrier et efface tous les résultats, ' +
-                'y compris les demi-finales et la finale. Cette action est irréversible.\n\n' +
-                'Continuer ?')) {
-            return;
-        }
+        const suite = await askConfirmation({
+            titre: `Effacer ${dejaJoues} manche${pluriel} déjà jouée${pluriel} ?`,
+            message: 'Donner le départ régénère le calendrier et efface tous les résultats, ' +
+                'y compris les demi-finales et la finale. C\'est définitif.',
+            action: 'Régénérer le calendrier',
+            danger: true
+        });
+        if (!suite) return;
     }
 
     // Le nom saisi devient l'adresse du tournoi (…/#tournoi-des-potes).
