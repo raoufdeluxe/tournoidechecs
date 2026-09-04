@@ -37,6 +37,10 @@ function getEtatCourant() {
 }
 
 function saveEtat() {
+    // Aucun tournoi ouvert : il n'y a rien à enregistrer, et surtout aucune
+    // adresse où l'écrire.
+    if (!idTournoi) return;
+
     // Copie locale immédiate (fonctionne même hors-ligne)
     try {
         localStorage.setItem(storageKey(idTournoi), JSON.stringify(getEtatCourant()));
@@ -189,6 +193,11 @@ async function loadEtat() {
     // menus déroulants seraient vides. On les redessine, choix conservés.
     renderPartants();
 
+    // Aucun tournoi à reprendre : on reste sur l'inscription, sans rien créer.
+    const aOuvrir = resolveTournoiAOuvrir();
+    if (!aOuvrir) return false;
+    setIdTournoi(aOuvrir.id);
+
     // 1) On tente d'abord la version partagée sur Cloudflare (la plus à jour, tous appareils confondus)
     try {
         const res = await fetch(urlEtatCourant());
@@ -210,12 +219,16 @@ async function loadEtat() {
     // 2) Repli sur la copie locale (mode hors-ligne, ou Worker injoignable)
     try {
         const raw = localStorage.getItem(storageKey(idTournoi));
-        if (!raw) return false;
-        return applyEtat(JSON.parse(raw));
+        if (raw && applyEtat(JSON.parse(raw))) return true;
     } catch (e) {
         console.warn('Lecture de la sauvegarde locale impossible :', e);
-        return false;
     }
+
+    // Un repère local qui ne mène à rien a fait son temps : on repart de
+    // l'inscription. Un lien partagé, lui, reste valable — le tournoi qu'il
+    // désigne sera créé au premier « Donner le départ ».
+    if (aOuvrir.source === 'repere') forgetTournoiCourant();
+    return false;
 }
 
 // Au chargement de la page, on tente de reprendre là où le tournoi en était

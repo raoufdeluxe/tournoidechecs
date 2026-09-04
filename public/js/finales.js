@@ -330,9 +330,9 @@ function startNouveauTournoi() {
         return;
     }
 
-    idTournoi = newIdTournoi();
-    saveTournoiCourant();
-    history.replaceState(null, '', '#' + idTournoi);
+    // Aucun identifiant tant qu'on n'a pas donné le départ : sinon un simple
+    // « Nouveau tournoi » laisserait une adresse vide dans la liste partagée.
+    forgetTournoiCourant();
 
     // On repart sur un état de synchronisation vierge : nouvelle clé, nouvelle version.
     remoteVersion = 0;

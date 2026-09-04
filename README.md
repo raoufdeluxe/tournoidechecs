@@ -38,6 +38,8 @@ La **3e place** ne se joue pas : c'est le mieux classé en poule parmi les deux 
 
 - **Un lien = un tournoi.** L'identifiant vit dans l'URL (`…/#tournoi-des-potes`).
   Partager le tournoi, c'est partager le lien — qui l'a peut lire et saisir.
+- **L'accueil rouvre le dernier tournoi consulté.** Sans lien ni tournoi
+  précédent, il montre l'écran d'inscription — et n'invente aucune adresse.
 - **Nom lisible.** « Tournoi des potes » devient l'adresse `#tournoi-des-potes`,
   avec vérification qu'elle n'est pas déjà prise.
 - **Synchro multi-appareils.** Chaque saisie est poussée au Worker ; les autres onglets
@@ -207,6 +209,28 @@ ajouté dans `public/js/` mais oublié dans `index.html`, un binding absent de
 La CI GitHub Actions (`.github/workflows/ci.yml`) rejoue tout cela à chaque
 push et chaque pull request, et vérifie en plus que le Worker se compile
 (`wrangler deploy --dry-run`, sans jeton Cloudflare ni déploiement).
+
+---
+
+## Ce que l'accueil ouvre
+
+| Situation | Ce qui se passe |
+|---|---|
+| Lien explicite (`…/#tournoi-des-potes`) | ce tournoi, même s'il n'existe pas encore — le lien a pu être partagé avant le départ |
+| Rien dans l'URL, un tournoi déjà consulté | **le dernier ouvert**, repris là où il en était |
+| Rien du tout | l'écran d'inscription, **sans identifiant** |
+
+**Un tournoi ne reçoit son adresse qu'au premier « Donner le départ »** : le nom
+saisi devient le lien (`Tournoi des potes` → `…/#tournoi-des-potes`), ou un
+identifiant est tiré au sort si le nom est vide. Avant cela, rien n'est écrit —
+ni en local, ni sur le serveur.
+
+C'est ce qui empêche une simple visite de laisser un tournoi fantôme dans la
+liste partagée : auparavant, ouvrir l'accueil réservait une adresse aléatoire,
+et il suffisait de cliquer pour la voir apparaître chez tout le monde.
+
+Un repère local qui ne mène plus à rien — tournoi supprimé entre-temps — est
+oublié, et la barre d'adresse nettoyée. Un lien partagé, lui, reste valable.
 
 ---
 

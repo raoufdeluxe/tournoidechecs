@@ -282,3 +282,44 @@ describe('cadence et type des parties de la poule', () => {
         assert.equal(app.ev('getVariante(tournoi.matches[0])'), 'classique');
     });
 });
+
+describe('l\'adresse du tournoi naît au départ, pas à la visite', () => {
+    async function inscription(nom, fiches) {
+        const app = chargerApp({ hash: '', fetch: async (url) => ({
+            ok: true, status: 200,
+            json: async () => (url.includes('/api/joueurs') ? { version: 1, joueurs: fiches } : { version: 0, state: null }),
+        }) });
+        await app.pret();
+        app.definirElements('.player-ref', fiches.map((f, i) => ({ value: f.id, dataset: { index: String(i) } })));
+        app.ev(`document.getElementById('tournament-name').value = ${JSON.stringify(nom)};`);
+        return app;
+    }
+
+    const quatre = ['A', 'B', 'C', 'D'].map((n, i) => ({ id: 'j-' + i, nom: n, elo: null }));
+
+    test('un nom donné devient l\'adresse', async () => {
+        const app = await inscription('Tournoi des potes', quatre);
+        await app.ev('startTournoi()');
+        assert.equal(app.ev('idTournoi'), 'tournoi-des-potes');
+        assert.equal(app.ev('location.hash'), '#tournoi-des-potes');
+    });
+
+    test('sans nom, une adresse est tirée au sort — au départ seulement', async () => {
+        const app = await inscription('', quatre);
+        assert.equal(app.ev('idTournoi'), '', 'rien avant le départ');
+        await app.ev('startTournoi()');
+        assert.match(app.ev('idTournoi'), /^[a-z0-9-]{1,64}$/);
+        assert.equal(app.stockage.get('tournoi_echecs_courant'), app.ev('idTournoi'),
+            'et il devient le dernier tournoi ouvert');
+    });
+
+    test('un départ refusé ne réserve pas d\'adresse', async () => {
+        const app = await inscription('', quatre.slice(0, 3));
+        app.definirElements('.player-ref', [
+            { value: 'j-0', dataset: { index: '0' } },
+            { value: '', dataset: { index: '1' } },
+        ]);
+        await app.ev('startTournoi()');
+        assert.equal(app.ev('idTournoi'), '', 'emplacement vide : rien n\'est créé');
+    });
+});

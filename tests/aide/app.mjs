@@ -162,6 +162,7 @@ export function chargerApp(options = {}) {
     bac.location = {
         protocol: 'https:',
         host: 'echecs.test',
+        pathname: '/',
         hash,
         href: 'https://echecs.test/' + hash,
         reload() {},
@@ -169,8 +170,14 @@ export function chargerApp(options = {}) {
     };
 
     bac.history = {
-        replaceState(_a, _b, url) { if (url) bac.location.hash = String(url); },
-        pushEtat() {},
+        // Comme le navigateur : une URL sans fragment efface le fragment.
+        replaceState(_a, _b, url) {
+            if (url == null) return;
+            const texte = String(url);
+            bac.location.hash = texte.startsWith('#') ? texte : '';
+            bac.location.href = 'https://echecs.test' + (texte.startsWith('#') ? '/' + texte : texte);
+        },
+        pushState() {},
     };
 
     bac.navigator = { clipboard: { writeText: async () => {} }, onLine: true };

@@ -192,8 +192,9 @@ describe('loadEtat', () => {
     });
 
     test('serveur injoignable : repli sur la copie locale', async () => {
-        const app = chargerApp({ fetch: async () => { throw new Error('hors ligne'); } });
-        const cle = app.ev('storageKey(idTournoi)');
+        // L'identifiant n'est fixé qu'au chargement : on vise la clé du hash.
+        const app = chargerApp({ hash: '#test-tournoi', fetch: async () => { throw new Error('hors ligne'); } });
+        const cle = app.ev('storageKey("test-tournoi")');
         app.stockage.set(cle, JSON.stringify({
             screen: 'screen-config',
             tournament: { name: 'Copie locale', players: joueurs(['A', 'B']) },

@@ -120,9 +120,14 @@ async function startTournoi() {
     }
 
     // Le nom saisi devient l'adresse du tournoi (…/#tournoi-des-potes).
-    // Sans nom, on garde l'identifiant aléatoire attribué à l'ouverture.
+    // Sans nom, un identifiant est tiré au sort — c'est ici, et seulement ici,
+    // qu'un tournoi reçoit son adresse.
     const rawName = document.getElementById('tournament-name').value.trim();
     const slug = slugify(rawName);
+
+    if (!idTournoi && !slug) {
+        setIdTournoi(newIdTournoi());
+    }
 
     if (slug && slug !== idTournoi) {
         if (await isIdTaken(slug)) {
@@ -130,9 +135,7 @@ async function startTournoi() {
                   'Ouvre-le avec son lien (…/#' + slug + '), ou choisis un autre nom.');
             return;
         }
-        idTournoi = slug;
-        history.replaceState(null, '', '#' + idTournoi);
-        saveTournoiCourant();
+        setIdTournoi(slug);
         remoteVersion = 0; // nouvelle clé côté serveur
     }
 

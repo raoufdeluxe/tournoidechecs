@@ -64,36 +64,95 @@ describe('newIdTournoi', () => {
     });
 });
 
-describe('identifiant porté par l\'URL', () => {
-    test('un lien partagé ouvre le tournoi correspondant', () => {
-        const app = chargerApp({ hash: '#tournoi-des-potes' });
+describe('ce que l\'accueil ouvre', () => {
+    const serveurVide = async () => ({ ok: true, status: 200, json: async () => ({ version: 0, state: null }) });
+
+    test('un lien partagé ouvre le tournoi correspondant', async () => {
+        const app = chargerApp({ hash: '#tournoi-des-potes', fetch: serveurVide });
+        await app.pret();
         assert.equal(app.ev('idTournoi'), 'tournoi-des-potes');
         assert.match(app.ev('urlEtatCourant()'), /\?id=tournoi-des-potes$/);
     });
 
-    test('sans identifiant dans l\'URL, un nouveau est tiré et inscrit dans le lien', () => {
-        const app = chargerApp({ hash: '' });
-        assert.match(app.ev('idTournoi'), MOTIF_ID);
-        assert.equal(app.ev('location.hash'), '#' + app.ev('idTournoi'));
+    test('sans lien, on rouvre le dernier tournoi consulté', async () => {
+        const etat = {
+            version: 3,
+            state: {
+                screen: 'screen-tournament',
+                tournament: { name: 'Coupe du Dimanche', players: [{ id: 0, name: 'A', elo: null }], matches: [] },
+            },
+        };
+        const app = chargerApp({
+            hash: '',
+            fetch: async (url) => ({
+                ok: true, status: 200,
+                json: async () => (url.includes('/api/etat') ? etat : { version: 0, joueurs: [] }),
+            }),
+        });
+        app.stockage.set('tournoi_echecs_courant', 'coupe-du-dimanche');
+        await app.pret();
+
+        assert.equal(app.ev('idTournoi'), 'coupe-du-dimanche');
+        assert.equal(app.ev('location.hash'), '#coupe-du-dimanche');
+        assert.equal(app.ev('tournoi.name'), 'Coupe du Dimanche', 'et son contenu est chargé');
     });
 
-    test('un identifiant invalide dans l\'URL est remplacé, jamais transmis tel quel', () => {
-        const app = chargerApp({ hash: '#PAS/VALIDE' });
-        assert.match(app.ev('idTournoi'), MOTIF_ID);
-        assert.notEqual(app.ev('idTournoi'), 'PAS/VALIDE');
+    test('sans lien ni tournoi précédent, aucun identifiant n\'est inventé', async () => {
+        // Une simple visite ne doit pas créer de tournoi fantôme dans la liste
+        // partagée : l'adresse n'apparaît qu'au premier « Donner le départ ».
+        const app = chargerApp({ hash: '', fetch: serveurVide });
+        await app.pret();
+        assert.equal(app.ev('idTournoi'), '');
+        assert.equal(app.ev('location.hash'), '');
+        assert.deepEqual(app.appelsFetch.filter(a => a.url.includes('/api/etat')), []);
+    });
+
+    test('une visite sans tournoi n\'écrit rien, ni en local ni sur le serveur', async () => {
+        const app = chargerApp({ hash: '', fetch: serveurVide });
+        await app.pret();
+        app.ev('saveEtat()');
+        await app.attendreSync();
+        assert.equal(app.stockage.size, 0);
+        assert.deepEqual(app.appelsFetch.filter(a => a.init && a.init.method === 'POST'), []);
+    });
+
+    test('un identifiant invalide dans l\'URL est ignoré, jamais transmis', async () => {
+        const app = chargerApp({ hash: '#PAS/VALIDE', fetch: serveurVide });
+        await app.pret();
+        assert.equal(app.ev('idTournoi'), '');
+        assert.deepEqual(app.appelsFetch.filter(a => a.url.includes('PAS')), []);
+    });
+
+    test('un repère qui ne mène à rien est oublié', async () => {
+        const app = chargerApp({ hash: '', fetch: serveurVide });
+        app.stockage.set('tournoi_echecs_courant', 'disparu');
+        await app.pret();
+        assert.equal(app.stockage.has('tournoi_echecs_courant'), false);
+        assert.equal(app.ev('idTournoi'), '');
+        assert.equal(app.ev('location.hash'), '', 'plus d\'adresse morte dans la barre');
+    });
+
+    test('un lien partagé vers un tournoi pas encore créé reste valable', async () => {
+        // Quelqu'un partage …/#tournoi-des-potes avant de donner le départ :
+        // le lien doit tenir, sinon le nom convenu est perdu.
+        const app = chargerApp({ hash: '#tournoi-des-potes', fetch: serveurVide });
+        await app.pret();
+        assert.equal(app.ev('idTournoi'), 'tournoi-des-potes');
+        assert.equal(app.ev('location.hash'), '#tournoi-des-potes');
     });
 
     test('la clé locale est propre à chaque tournoi', () => {
-        const a = chargerApp({ hash: '#un' });
-        const b = chargerApp({ hash: '#deux' });
-        assert.notEqual(a.ev('storageKey(idTournoi)'), b.ev('storageKey(idTournoi)'));
-        assert.equal(a.ev('storageKey("autre")'), b.ev('storageKey("autre")'));
+        const app = chargerApp();
+        assert.notEqual(app.ev('storageKey("un")'), app.ev('storageKey("deux")'));
+        assert.equal(app.ev('storageKey("meme")'), app.ev('storageKey("meme")'));
     });
 });
 
 describe('le tournoi courant est noté pour la page /tournois', () => {
-    test('à l\'ouverture', () => {
-        const app = chargerApp({ hash: '#tournoi-des-potes' });
+    test('dès qu\'un tournoi est ouvert', async () => {
+        const app = chargerApp({ hash: '#tournoi-des-potes',
+            fetch: async () => ({ ok: true, status: 200, json: async () => ({ version: 0, state: null }) }) });
+        await app.pret();
         assert.equal(app.stockage.get('tournoi_echecs_courant'), 'tournoi-des-potes');
     });
 
