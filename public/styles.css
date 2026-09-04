@@ -177,6 +177,21 @@ header .sync-status { margin-top: 10px; }
 
 .tournament-row button { flex: none; width: auto; min-width: 0; padding: 9px 18px; font-size: 13px; }
 .tournament-row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Bouton sans texte : une cible carrée d'au moins 40 px, taille au-dessous de
+   laquelle un doigt ne vise plus. Le picto occupe la moitié, le reste est la
+   marge de frappe. */
+button.bouton-picto {
+    flex: none;
+    width: 40px;
+    min-width: 0;
+    height: 40px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+button.bouton-picto svg { width: 20px; height: 20px; }
 .tournament-row button[disabled] { opacity: 0.45; cursor: default; }
 
 .tournament-row-name { font-weight: 600; font-family: var(--font-sport); }
