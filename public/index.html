@@ -42,7 +42,7 @@
 
         <div id="sync-conflict" class="sync-conflict" hidden>
             <strong>Le tournoi a été modifié sur un autre appareil.</strong>
-            <div style="margin-top: 6px; font-size: 14px;">Deux versions existent en parallèle. Choisis celle à conserver — l'autre sera définitivement perdue.</div>
+            <div class="sync-conflict-detail">Deux versions existent en parallèle. Choisis celle à conserver — l'autre sera définitivement perdue.</div>
             <div class="sync-conflict-actions">
                 <button class="secondary" data-action="pull">Prendre la version de l'autre appareil</button>
                 <button data-action="push">Garder la mienne et l'imposer</button>
@@ -55,7 +55,7 @@
                 <h2 class="card-title">🎟️ Inscription des partants</h2>
                 
                 <div class="form-group">
-                    <label for="tournament-name">Nom du tournoi <span style="color: var(--text-secondary); font-weight: 400;">(optionnel — sert d'adresse au tournoi)</span></label>
+                    <label for="tournament-name">Nom du tournoi <span class="texte-attenue">(optionnel — sert d'adresse au tournoi)</span></label>
                     <input type="text" id="tournament-name" placeholder="Ex. Tournoi des potes" maxlength="64">
                 </div>
 
@@ -75,15 +75,15 @@
         <!-- ÉCRAN 2: Tournoi (Poule) -->
         <div class="screen" id="screen-tournament">
             <div class="card">
-                <h3 id="standings-title" style="margin-top: 10px; margin-bottom: 20px; color: var(--text-primary); font-family: var(--font-sport); font-weight: 700;">Classement</h3>
+                <h3 id="standings-title" class="titre-section">Classement</h3>
                 <div class="table-scroll">
                 <table class="standings-table" id="standings">
                     <thead>
                         <tr>
-                            <th style="width: 40px;">Rang</th>
+                            <th>Rang</th>
                             <th>Partant</th>
-                            <th style="width: 60px;">Pts</th>
-                            <th style="width: 80px;">Manches</th>
+                            <th>Pts</th>
+                            <th>Manches</th>
                         </tr>
                     </thead>
                     <tbody id="standings-body"></tbody>
@@ -91,7 +91,7 @@
                 </div>
 
                 <div class="progress-bar">
-                    <div class="progress-fill" id="progress-fill" style="width: 0%;"></div>
+                    <div class="progress-fill" id="progress-fill"></div>
                 </div>
                 <div class="progress-labels">
                     <span>🏁 Départ</span>
@@ -131,8 +131,8 @@
                     <button class="success" onclick="finalizePoule()">🏁 Clôturer la poule</button>
                 </div>
 
-                <h3 style="margin-top: 40px; margin-bottom: 16px; color: var(--text-primary); font-family: var(--font-sport); font-weight: 700;">Progression journée après journée</h3>
-                <div id="progress-chart-container" style="background: var(--bg-secondary); border-radius: 12px; padding: 16px;"></div>
+                <h3 class="titre-section">Progression journée après journée</h3>
+                <div id="progress-chart-container" class="graphe-cadre"></div>
             </div>
         </div>
 
@@ -142,7 +142,7 @@
                 <h2 class="card-title">🥊 Demi-Finales</h2>
                 
                 <div class="progress-bar">
-                    <div class="progress-fill" id="progress-fill-semis" style="width: 0%;"></div>
+                    <div class="progress-fill" id="progress-fill-semis"></div>
                 </div>
 
                 <div class="finals-bracket">
@@ -154,8 +154,8 @@
                     </div>
                     <div class="bracket-round">
                         <div class="bracket-title">Finale</div>
-                        <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
-                            <div style="text-align: center; width: 100%;" id="final-placeholder">
+                        <div class="bracket-centre">
+                            <div class="bracket-attente" id="final-placeholder">
                                 En attente des demi-finales...
                             </div>
                         </div>
@@ -168,7 +168,7 @@
                     </div>
                 </div>
 
-                <div class="button-group" style="margin-top: 40px;">
+                <div class="button-group">
                     <button class="secondary" onclick="backToPoule()">← Retour à la poule</button>
                     <button class="success" onclick="startFinale()" id="start-finals-btn" disabled>🏆 Vers la Grande Finale →</button>
                 </div>
@@ -187,9 +187,9 @@
                     </div>
                     <div class="bracket-round">
                         <div class="bracket-title">Résultat</div>
-                        <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
-                            <div style="text-align: center; width: 100%;">
-                                <div id="final-result-placeholder" style="color: var(--text-secondary); font-size: 14px;">
+                        <div class="bracket-centre">
+                            <div class="bracket-attente">
+                                <div id="final-result-placeholder">
                                     En attente du résultat...
                                 </div>
                             </div>
@@ -197,9 +197,9 @@
                     </div>
                 </div>
 
-                <div id="final-matches-container" style="margin-top: 40px;"></div>
+                <div id="final-matches-container" class="finale-manches"></div>
 
-                <div class="button-group" style="margin-top: 40px;">
+                <div class="button-group">
                     <button class="secondary" onclick="backToDemies()">← Retour aux demies</button>
                     <button class="success" onclick="finalizeFinale()" id="finalize-finals-btn" disabled>🏆 Proclamer le vainqueur →</button>
                 </div>
@@ -211,24 +211,24 @@
             <div class="card">
                 <h2 class="card-title">🏆 Arrivée Officielle</h2>
                 
-                <div id="podium" style="margin: 40px 0; text-align: center;"></div>
+                <div id="podium" class="podium"></div>
 
-                <h3 style="margin-top: 30px; margin-bottom: 20px; color: var(--text-primary); font-family: var(--font-sport); font-weight: 700;">Classement final</h3>
+                <h3 class="titre-section">Classement final</h3>
                 <div class="table-scroll">
                 <table class="standings-table" id="final-standings">
                     <thead>
                         <tr>
-                            <th style="width: 40px;">Rang</th>
+                            <th>Rang</th>
                             <th>Partant</th>
-                            <th style="width: 60px;">Pts</th>
-                            <th style="width: 100px;">Manches</th>
+                            <th>Pts</th>
+                            <th>Manches</th>
                         </tr>
                     </thead>
                     <tbody id="final-standings-body"></tbody>
                 </table>
                 </div>
 
-                <div class="button-group" style="margin-top: 30px;">
+                <div class="button-group">
                     <button class="secondary" onclick="startNouveauTournoi()">🏁 Nouveau tournoi</button>
                 </div>
             </div>

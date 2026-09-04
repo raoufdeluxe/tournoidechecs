@@ -116,7 +116,7 @@ function buildGraphe(lignes) {
 
     // Pas de hauteur en pixels : avec une largeur à 100 %, le viewBox serait
     // mis en boîte aux lettres et le graphe flotterait au milieu de la carte.
-    return `<svg viewBox="0 0 ${largeur} ${hauteur}" role="img"
+    return `<svg viewBox="0 0 ${largeur} ${hauteur}" class="graphe-svg" role="img"
                  aria-label="Pourcentage de victoire par joueur">${grille}${barres}</svg>`;
 }
 

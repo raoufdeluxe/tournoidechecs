@@ -75,7 +75,7 @@ function renderPartants(refsChoisies) {
         const group = document.createElement('div');
         group.className = 'player-input-group';
         group.innerHTML = `
-            <div class="form-group" style="margin-bottom: 0;">
+            <div class="form-group form-group--serre">
                 <label>Partant n°${i + 1}</label>
                 <select class="player-ref" data-index="${i}" onchange="selectJoueur(this)">
                     ${buildOptionsJoueurs(refs[i] || '')}
@@ -313,13 +313,13 @@ function renderClassement() {
     const tbody = document.getElementById('standings-body');
     tbody.innerHTML = standings.map((p, idx) => {
         const pending = countPartiesEnRetard(p.id);
-        const pendingTag = pending > 0 ? ` <span style="color: var(--danger); font-weight: 700; font-size: 12px;">(-${pending})</span>` : '';
+        const pendingTag = pending > 0 ? ` <span class="tag-retard">(-${pending})</span>` : '';
         return `
         <tr>
             <td><strong>${idx + 1}</strong></td>
             <td>${buildCasaque(p.id)}${escapeHtml(p.name)}${p.absent ? buildTagFicheAbsente() : ''}${pendingTag}</td>
-            <td style="text-align: center; font-weight: 600; font-size: 18px;">${p.points.toFixed(1)}</td>
-            <td style="text-align: center;">${p.matches}</td>
+            <td class="cell-points">${p.points.toFixed(1)}</td>
+            <td class="cell-nombre">${p.matches}</td>
         </tr>
     `;
     }).join('');
@@ -391,16 +391,16 @@ function renderGrapheProgression() {
         d.series.forEach((pts, idx) => {
             linesHtml += `<circle cx="${xFor(idx + 1)}" cy="${yFor(pts)}" r="2.5" fill="${color}"/>`;
         });
-        legendHtml += `<span style="display:inline-flex; align-items:center; gap:6px; margin-right:14px; margin-bottom:6px; font-size:12px; color:var(--text-secondary);"><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${color};"></span>${escapeHtml(d.name)}</span>`;
+        legendHtml += `<span class="graphe-legende-item"><span class="graphe-pastille" style="background:${color};"></span>${escapeHtml(d.name)}</span>`;
     });
 
     container.innerHTML = `
-        <svg viewBox="0 0 ${width} ${height}" style="width: 100%; height: auto; display: block;">
+        <svg viewBox="0 0 ${width} ${height}" class="graphe-svg">
             ${gridHtml}
             ${xLabelsHtml}
             ${linesHtml}
         </svg>
-        <div style="margin-top: 10px; display: flex; flex-wrap: wrap;">${legendHtml}</div>
+        <div class="graphe-legende">${legendHtml}</div>
     `;
 }
 
@@ -460,8 +460,8 @@ function renderCartePartie(match) {
 
     const div = document.createElement('div');
     div.innerHTML = `
-        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
-            <div class="match-card" style="margin: 0 0 12px;">
+        <div class="carte-partie">
+            <div class="match-card match-card--serre">
                 <div class="player-result ${getClasseResultat(match, true)}">
                     ${getIconeResultat(match, true)}${buildCasaque(p1.id)}${escapeHtml(p1.name)}
                     ${buildBadgeTerrain(match, true)}

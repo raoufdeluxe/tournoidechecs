@@ -1,3 +1,37 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Grand Prix des Échecs — feuille de style
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Un seul fichier, rangé du plus général au plus précis : c'est le sens de la
+   cascade. Une règle écrite plus bas l'emporte sur une règle de même force
+   écrite plus haut — donc on ne déplace pas un bloc sans raison.
+
+   SOMMAIRE
+    1. Réglages
+    2. Fondations
+    3. Champs et boutons
+    4. En-tête et menu
+    5. Briques communes
+    6. Accueil — la poule
+    7. Accueil — les finales
+    8. Page Tournois
+    9. Page Joueurs
+   10. Page Stats
+   11. Page Sauvegarde
+   12. Synchronisation
+   13. Petits écrans
+
+   Les adaptations aux petits écrans sont écrites sous le composant qu'elles
+   concernent, pas regroupées ailleurs. Seules les deux qui touchent à
+   plusieurs sujets à la fois sont rassemblées en fin de fichier.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   1. RÉGLAGES
+   Couleurs, polices, remise à zéro. Tout part d'ici.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
 * {
     margin: 0;
     padding: 0;
@@ -32,6 +66,12 @@
     --font-sport: 'Poppins', sans-serif;
 }
 
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   2. FONDATIONS
+   Le fond de page, le conteneur, la carte, l'écran actif.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background:
@@ -46,362 +86,6 @@ body {
 .container {
     max-width: 1200px;
     margin: 0 auto;
-}
-
-header {
-    text-align: center;
-    margin-bottom: 30px;
-    color: white;
-    position: relative;
-    padding-bottom: 6px;
-    /* marge à droite pour ne pas passer sous le bouton du menu */
-    padding-right: 56px;
-    padding-left: 56px;
-}
-
-
-header h1 {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 42px;
-    line-height: 1.15;
-    margin-bottom: 12px;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 15px;
-}
-
-
-header p {
-    font-family: 'Inter', sans-serif;
-    font-size: 16px;
-    opacity: 0.75;
-}
-
-
-.chess-icon {
-    font-size: 44px;
-}
-
-/* Bouton de remise a zero, disponible depuis n'importe quel ecran */
-.header-reset {
-    margin-top: 18px;
-    padding: 8px 18px;
-    min-width: 0;
-    font-size: 13px;
-    background: rgba(255, 255, 255, 0.08);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.22);
-}
-
-.header-reset:hover {
-    background: rgba(255, 255, 255, 0.18);
-    box-shadow: none;
-}
-
-.header-reset[hidden] {
-    display: none;
-}
-
-/* Le nom du tournoi est le titre de la page ; le témoin d'enregistrement se
-   range sous lui, assez discret pour ne pas lui disputer la place. */
-.titre-tournoi { word-break: break-word; }
-header .sync-status { margin-top: 10px; }
-
-
-
-/* Etat de la sauvegarde partagee */
-.sync-status {
-    display: inline-block;
-    margin-top: 12px;
-    padding: 5px 14px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 600;
-    font-family: var(--font-sport);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(255, 255, 255, 0.72);
-}
-
-.sync-status[data-state="saved"]    { color: #8FE3B8; }
-.sync-status[data-state="saving"]   { color: rgba(255, 255, 255, 0.72); }
-.sync-status[data-state="offline"],
-.sync-status[data-state="conflict"] {
-    color: #FFD98A;
-    border-color: rgba(255, 217, 138, 0.45);
-    background: rgba(255, 217, 138, 0.12);
-}
-
-.tournaments-panel {
-    max-width: 1200px;
-    margin: 0 auto 20px;
-    padding: 22px 24px;
-    border-radius: 16px;
-    background: var(--bg-light);
-    border: 1px solid var(--border);
-}
-
-.tournaments-panel[hidden] { display: none; }
-
-.tournaments-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-}
-
-.tournaments-head strong {
-    font-family: var(--font-sport);
-    font-size: 18px;
-}
-
-.tournaments-head button { flex: none; width: auto; min-width: 0; padding: 8px 16px; font-size: 13px; }
-
-.tournament-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 14px;
-    padding: 14px 16px;
-    border-radius: 10px;
-    background: var(--bg-secondary);
-    margin-bottom: 10px;
-    flex-wrap: wrap;
-}
-
-.tournament-row.is-current { box-shadow: inset 0 0 0 2px var(--accent); }
-
-.tournament-row button { flex: none; width: auto; min-width: 0; padding: 9px 18px; font-size: 13px; }
-.tournament-row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-
-/* Bouton sans texte : une cible carrée d'au moins 40 px, taille au-dessous de
-   laquelle un doigt ne vise plus. Le picto occupe la moitié, le reste est la
-   marge de frappe. */
-button.bouton-picto {
-    flex: none;
-    width: 40px;
-    min-width: 0;
-    height: 40px;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-button.bouton-picto svg { width: 20px; height: 20px; }
-.tournament-row button[disabled] { opacity: 0.45; cursor: default; }
-
-.tournament-row-name { font-weight: 600; font-family: var(--font-sport); }
-.tournament-row-meta { font-size: 13px; color: var(--text-secondary); margin-top: 3px; }
-
-.tournament-badge {
-    display: inline-block;
-    margin-left: 8px;
-    padding: 2px 9px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 700;
-    background: var(--accent-light);
-    color: var(--success);
-}
-
-.tournaments-empty { color: var(--text-secondary); font-size: 14px; padding: 8px 2px; }
-
-
-
-/* Journée de référence du classement, en rappel discret du titre */
-.standings-round {
-    font-family: 'Inter', sans-serif;
-    font-weight: 500;
-    font-size: 14px;
-    color: var(--text-secondary);
-}
-
-/* --- Adaptation aux petits écrans --- */
-/* --- Menu hamburger --- */
-/* Les règles globales « button { flex: 1; min-width: 120px } » ne conviennent
-   ni au bouton ni aux entrées : on les neutralise explicitement. */
-.menu-toggle {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 46px;
-    height: 46px;
-    flex: 0 0 auto;
-    min-width: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 12px;
-    cursor: pointer;
-}
-
-.menu-toggle:hover {
-    background: rgba(255, 255, 255, 0.16);
-    transform: none;
-    box-shadow: none;
-}
-
-.menu-toggle span {
-    display: block;
-    width: 20px;
-    height: 2px;
-    border-radius: 2px;
-    background: white;
-    transition: transform 0.2s ease, opacity 0.2s ease;
-}
-
-/* Le bouton se transforme en croix quand le menu est ouvert. */
-.menu-toggle[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-.menu-toggle[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
-.menu-toggle[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
-
-.main-menu {
-    position: absolute;
-    top: 54px;
-    left: 0;
-    z-index: 50;
-    display: flex;
-    flex-direction: column;
-    min-width: 240px;
-    max-width: calc(100vw - 32px);
-    padding: 8px;
-    text-align: left;
-    background: var(--bg-light);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    box-shadow: 0 18px 40px rgba(7, 18, 41, 0.35);
-}
-
-.main-menu[hidden] { display: none; }
-
-.main-menu .menu-item {
-    flex: 0 0 auto;
-    width: 100%;
-    min-width: 0;
-    padding: 11px 14px;
-    text-align: left;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-primary);
-    background: transparent;
-    border: none;
-    border-radius: 9px;
-    white-space: nowrap;
-}
-
-.main-menu .menu-item:hover {
-    background: var(--bg-secondary);
-    transform: none;
-    box-shadow: none;
-}
-
-.main-menu .menu-item[hidden] { display: none; }
-
-@media (max-width: 700px) {
-    body { padding: 12px; }
-
-    header h1 { font-size: 30px; gap: 10px; }
-    .chess-icon { font-size: 32px; }
-    .chief-icon { width: 64px; }
-    header p { font-size: 14px; }
-
-    .card { padding: 18px 14px; border-radius: 14px; }
-    .card-title { font-size: 19px; }
-
-    .menu-toggle { width: 42px; height: 42px; }
-    .main-menu { top: 50px; }
-
-    .standings-table th,
-    .standings-table td { padding: 10px 8px; font-size: 14px; }
-
-    .tournaments-panel { padding: 16px 14px; }
-
-    .players-actions button { width: 100%; min-width: 0; }
-    .rename-input { min-width: 0; max-width: none; width: 100%; }
-
-    .button-group { flex-direction: column; }
-    .button-group button { width: 100%; }
-}
-
-/* Sur téléphone, « Manches » (le nombre de rencontres jouées) est la colonne
-   la moins utile : on la masque plutôt que d'imposer un défilement latéral.
-   Elle réapparaît dès qu'il y a la place. */
-@media (max-width: 480px) {
-    .standings-table th:nth-child(4),
-    .standings-table td:nth-child(4) { display: none; }
-
-    .standings-table th,
-    .standings-table td { padding: 9px 6px; font-size: 13px; }
-}
-
-@media (max-width: 420px) {
-    header h1 { font-size: 25px; }
-    .medal { margin-right: 6px; }
-}
-
-.venue {
-    display: block;
-    margin-top: 5px;
-    /* exactement la moitié du nom, quelle que soit la taille de celui-ci */
-    font-size: 0.5em;
-    font-weight: 700;
-    font-family: var(--font-sport);
-    letter-spacing: 0.02em;
-}
-
-.venue-home    { color: var(--success); }
-.venue-away    { color: var(--text-secondary); }
-.venue-neutral { color: var(--warning); }
-
-.rename-input {
-    flex: 1;
-    min-width: 200px;
-    max-width: 420px;
-    padding: 9px 12px;
-    font-size: 15px;
-}
-
-.players-actions { margin-top: 14px; }
-.players-actions button { width: auto; min-width: 220px; flex: none; }
-
-.sync-conflict {
-    max-width: 1200px;
-    margin: 0 auto 20px;
-    padding: 18px 20px;
-    border-radius: 12px;
-    background: #FBF1DA;
-    border: 1px solid var(--warning);
-    color: var(--text-primary);
-}
-
-.sync-conflict[hidden] { display: none; }
-
-.sync-conflict-actions {
-    display: flex;
-    gap: 12px;
-    margin-top: 14px;
-    flex-wrap: wrap;
-}
-
-.sync-conflict-actions button {
-    flex: 1;
-    min-width: 200px;
-    font-size: 14px;
-    padding: 10px 16px;
-}
-
-.chief-icon {
-    width: 90px;
-    height: auto;
 }
 
 .screen {
@@ -429,6 +113,45 @@ button.bouton-picto svg { width: 20px; height: 20px; }
     margin-bottom: 20px;
     color: var(--text-primary);
 }
+
+/* Un tableau plus large que l'écran défile dans son propre cadre,
+   au lieu de faire déborder toute la page. */
+.table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    /* le classement est désormais en tête de carte : on dégage ce qui suit */
+    margin-bottom: 26px;
+}
+
+.card-intro {
+    margin: -6px 0 16px;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.card > .titre-section:first-child { margin-top: 10px; }
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   3. CHAMPS ET BOUTONS
+   Ce sur quoi on tape et ce qu'on clique, partout dans l'application.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* Bouton sans texte : une cible carrée d'au moins 40 px, taille au-dessous de
+   laquelle un doigt ne vise plus. Le picto occupe la moitié, le reste est la
+   marge de frappe. */
+button.bouton-picto {
+    flex: none;
+    width: 40px;
+    min-width: 0;
+    height: 40px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+button.bouton-picto svg { width: 20px; height: 20px; }
 
 .form-group {
     margin-bottom: 20px;
@@ -537,24 +260,460 @@ button.success:hover {
     }
 }
 
+.result-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-light);
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.result-select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+/* Un champ qui s'appuie sur le suivant, sans écart en bas. */
+.form-group--serre { margin-bottom: 0; }
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   4. EN-TÊTE ET MENU
+   Le titre de la page, le témoin d'enregistrement, le burger.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+    color: white;
+    position: relative;
+    padding-bottom: 6px;
+    /* marge à droite pour ne pas passer sous le bouton du menu */
+    padding-right: 56px;
+    padding-left: 56px;
+}
+
+header h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 42px;
+    line-height: 1.15;
+    margin-bottom: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+}
+
+header p {
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    opacity: 0.75;
+}
+
+.chess-icon {
+    font-size: 44px;
+}
+
+/* Le nom du tournoi est le titre de la page ; le témoin d'enregistrement se
+   range sous lui, assez discret pour ne pas lui disputer la place. */
+.titre-tournoi { word-break: break-word; }
+
+header .sync-status { margin-top: 10px; }
+
+/* Etat de la sauvegarde partagee */
+.sync-status {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: var(--font-sport);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.sync-status[data-state="saved"]    { color: #8FE3B8; }
+
+.sync-status[data-state="saving"]   { color: rgba(255, 255, 255, 0.72); }
+
+.sync-status[data-state="offline"],
+.sync-status[data-state="conflict"] {
+    color: #FFD98A;
+    border-color: rgba(255, 217, 138, 0.45);
+    background: rgba(255, 217, 138, 0.12);
+}
+
+/* --- Adaptation aux petits écrans --- */
+/* --- Menu hamburger --- */
+/* Les règles globales « button { flex: 1; min-width: 120px } » ne conviennent
+   ni au bouton ni aux entrées : on les neutralise explicitement. */
+.menu-toggle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 46px;
+    height: 46px;
+    flex: 0 0 auto;
+    min-width: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+.menu-toggle:hover {
+    background: rgba(255, 255, 255, 0.16);
+    transform: none;
+    box-shadow: none;
+}
+
+.menu-toggle span {
+    display: block;
+    width: 20px;
+    height: 2px;
+    border-radius: 2px;
+    background: white;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+/* Le bouton se transforme en croix quand le menu est ouvert. */
+.menu-toggle[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+
+.menu-toggle[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+
+.menu-toggle[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+.main-menu {
+    position: absolute;
+    top: 54px;
+    left: 0;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    min-width: 240px;
+    max-width: calc(100vw - 32px);
+    padding: 8px;
+    text-align: left;
+    background: var(--bg-light);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 18px 40px rgba(7, 18, 41, 0.35);
+}
+
+.main-menu[hidden] { display: none; }
+
+.main-menu .menu-item {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    padding: 11px 14px;
+    text-align: left;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: transparent;
+    border: none;
+    border-radius: 9px;
+    white-space: nowrap;
+}
+
+.main-menu .menu-item:hover {
+    background: var(--bg-secondary);
+    transform: none;
+    box-shadow: none;
+}
+
+.main-menu .menu-item[hidden] { display: none; }
+
+.chief-icon {
+    width: 90px;
+    height: auto;
+}
+
+.main-menu .menu-item[aria-current="page"] {
+    font-weight: 700;
+    color: var(--accent);
+}
+
+a.menu-item { display: block; text-decoration: none; }
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   5. BRIQUES COMMUNES
+   Ce qui sert sur plusieurs pages : pastilles, médailles, messages, panneaux.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.medal {
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    margin-right: 10px;
+}
+
+.medal-gold { background: #FFD700; color: #000; box-shadow: 0 0 0 4px rgba(255,215,0,0.25); }
+
+.medal-silver { background: #C0C0C0; color: #000; box-shadow: 0 0 0 4px rgba(192,192,192,0.25); }
+
+.medal-bronze { background: #CD7F32; box-shadow: 0 0 0 4px rgba(205,127,50,0.25); }
+
+@keyframes podium-pop {
+    0% { transform: scale(0.4); opacity: 0; }
+    70% { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); }
+}
+
+.badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-primary {
+    background: var(--primary-light);
+    color: var(--primary);
+}
+
+.silk-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+    border: 1px solid rgba(0,0,0,0.2);
+    vertical-align: middle;
+}
+
+/* Le règlement, replié sous le nom du tournoi. <details> suffit : ouvrir et
+   fermer un panneau n'appelle pas de JavaScript. */
+.reglement {
+    max-width: 1200px;
+    margin: -8px auto 20px;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 14px;
+}
+
+.reglement > summary {
+    width: fit-content;
+    padding: 8px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: var(--font-sport);
+    font-weight: 600;
+    color: white;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.reglement > summary:hover { background: rgba(255, 255, 255, 0.14); }
+
+.reglement-corps {
+    margin-top: 10px;
+    padding: 18px 22px;
+    border-radius: 12px;
+    line-height: 1.55;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.reglement-corps h3 {
+    margin-top: 16px;
+    font-family: var(--font-sport);
+    font-size: 14px;
+    color: white;
+}
+
+.reglement-corps h3:first-child { margin-top: 0; }
+
+.reglement-corps p { margin-top: 4px; }
+
+/* Messages de la page (à la place des alert du navigateur) */
+.notices {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: min(420px, calc(100vw - 32px));
+}
+
+.notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--bg-primary, #FFFDF7);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.notice--succes { border-left-color: var(--success, #1B8A5A); }
+
+.notice--erreur { border-left-color: var(--danger, #C1272D); }
+
+.notice-texte { flex: 1 1 auto; white-space: pre-line; word-break: break-word; }
+
+.notice-fermer {
+    flex: none;
+    width: auto;
+    min-width: 0;
+    padding: 0 4px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.notice-fermer:hover { color: var(--text-primary); }
+
+@media (max-width: 600px) {
+    .notices { top: 8px; right: 8px; left: 8px; max-width: none; }
+}
+
+/* Partant dont la fiche de joueur a été supprimée */
+.tag-absent {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    border: 1px dashed var(--border);
+    cursor: help;
+}
+
+/* Confirmations dans la page (à la place de confirm et prompt) */
+.dialogue-fond {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(15, 6, 26, 0.6);
+}
+
+.dialogue {
+    width: min(480px, 100%);
+    padding: 24px;
+    border-radius: 16px;
+    background: var(--bg-light);
+    border: 1px solid var(--border);
+    box-shadow: 0 24px 60px rgba(7, 18, 41, 0.45);
+}
+
+.dialogue--danger { border-color: var(--danger); }
+
+.dialogue-titre { font-family: var(--font-sport); font-size: 20px; margin-bottom: 10px; }
+
+.dialogue-message { font-size: 14px; color: var(--text-secondary); white-space: pre-line; }
+
+.dialogue-consigne { margin-top: 14px; font-size: 14px; }
+
+.dialogue-saisie { width: 100%; margin-top: 10px; padding: 10px 12px; font-size: 15px; }
+
+.dialogue-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+.dialogue-actions button { flex: none; width: auto; min-width: 0; padding: 10px 18px; font-size: 14px; }
+
+/* Titre d'une section à l'intérieur d'une carte. Le premier d'une carte se colle
+   à son bord haut ; les suivants prennent leurs distances. */
+.titre-section {
+    margin: 40px 0 16px;
+    color: var(--text-primary);
+    font-family: var(--font-sport);
+    font-weight: 700;
+}
+
+/* Une mention secondaire posée dans une phrase : « (optionnel) », « vs ». */
+.texte-attenue { color: var(--text-secondary); font-weight: 400; }
+
+/* Manches jouées par un partant alors que la journée est passée. */
+.tag-retard { color: var(--danger); font-weight: 700; font-size: 12px; }
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   6. ACCUEIL — LA POULE
+   Classement, journées, duels, graphe de progression.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* Journée de référence du classement, en rappel discret du titre */
+.standings-round {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+/* Sur téléphone, « Manches » (le nombre de rencontres jouées) est la colonne
+   la moins utile : on la masque plutôt que d'imposer un défilement latéral.
+   Elle réapparaît dès qu'il y a la place. */
+@media (max-width: 480px) {
+    .standings-table th:nth-child(4),
+    .standings-table td:nth-child(4) { display: none; }
+
+    .standings-table th,
+    .standings-table td { padding: 9px 6px; font-size: 13px; }
+}
+
+.venue {
+    display: block;
+    margin-top: 5px;
+    /* exactement la moitié du nom, quelle que soit la taille de celui-ci */
+    font-size: 0.5em;
+    font-weight: 700;
+    font-family: var(--font-sport);
+    letter-spacing: 0.02em;
+}
+
+.venue-home    { color: var(--success); }
+
+.venue-away    { color: var(--text-secondary); }
+
+.venue-neutral { color: var(--warning); }
+
 .standings-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
 }
 
-/* Un tableau plus large que l'écran défile dans son propre cadre,
-   au lieu de faire déborder toute la page. */
-.table-scroll {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    /* le classement est désormais en tête de carte : on dégage ce qui suit */
-    margin-bottom: 26px;
-}
-
 /* Pas de largeur plancher : le tableau se comprime d'abord, et ne défile
    que si son contenu l'exige vraiment. */
-
 .standings-table thead {
     background: var(--primary-light);
 }
@@ -579,29 +738,6 @@ button.success:hover {
 
 .standings-table tbody tr:hover {
     background: var(--primary-light);
-}
-
-.medal {
-    display: inline-block;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 600;
-    margin-right: 10px;
-}
-
-.medal-gold { background: #FFD700; color: #000; box-shadow: 0 0 0 4px rgba(255,215,0,0.25); }
-.medal-silver { background: #C0C0C0; color: #000; box-shadow: 0 0 0 4px rgba(192,192,192,0.25); }
-.medal-bronze { background: #CD7F32; box-shadow: 0 0 0 4px rgba(205,127,50,0.25); }
-
-@keyframes podium-pop {
-    0% { transform: scale(0.4); opacity: 0; }
-    70% { transform: scale(1.08); opacity: 1; }
-    100% { transform: scale(1); }
 }
 
 .match-card {
@@ -689,61 +825,6 @@ button.success:hover {
     padding: 6px 4px;
 }
 
-.match-controls {
-    display: flex;
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.match-controls button {
-    flex: 1;
-    padding: 8px 12px;
-    font-size: 13px;
-    min-width: 60px;
-}
-
-.score-input {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-
-.score-input input {
-    width: 60px;
-    padding: 8px;
-    text-align: center;
-    font-size: 18px;
-    font-weight: 600;
-}
-
-.badge {
-    display: inline-block;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.badge-primary {
-    background: var(--primary-light);
-    color: var(--primary);
-}
-
-.badge-success {
-    background: var(--accent-light);
-    color: var(--success);
-}
-
-.badge-warning {
-    background: #FAEEDA;
-    color: var(--warning);
-}
-
-.badge-danger {
-    background: #FCEBEB;
-    color: var(--danger);
-}
-
 .progress-bar {
     width: 100%;
     height: 14px;
@@ -756,6 +837,8 @@ button.success:hover {
 }
 
 .progress-fill {
+    /* Vide au départ : c'est le JavaScript qui la remplit au fil des manches. */
+    width: 0;
     height: 100%;
     background: repeating-linear-gradient(45deg, var(--primary), var(--primary) 10px, var(--primary-dark) 10px, var(--primary-dark) 20px);
     transition: width 0.3s ease;
@@ -769,35 +852,6 @@ button.success:hover {
     font-weight: 600;
     color: var(--text-secondary);
     margin-bottom: 20px;
-}
-
-.silk-dot {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin-right: 8px;
-    border: 1px solid rgba(0,0,0,0.2);
-    vertical-align: middle;
-}
-
-.result-select {
-    width: 100%;
-    padding: 10px 12px;
-    border: 2px solid var(--border);
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    font-family: 'Inter', sans-serif;
-    background: var(--bg-light);
-    color: var(--text-primary);
-    cursor: pointer;
-}
-
-.result-select:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px var(--primary-light);
 }
 
 .result-hint {
@@ -817,6 +871,7 @@ button.success:hover {
     gap: 12px;
     margin: 30px 0 20px;
 }
+
 .journee-titre {
     flex: 0 1 auto;
     display: flex;
@@ -829,6 +884,7 @@ button.success:hover {
     font-family: var(--font-sport);
     font-weight: 700;
 }
+
 .journee-fleche {
     flex: none;
     width: 40px;
@@ -842,7 +898,9 @@ button.success:hover {
     color: var(--primary);
     border-color: var(--primary);
 }
+
 .journee-fleche:hover:not(:disabled) { background: var(--primary-light); transform: none; }
+
 .journee-fleche:disabled { opacity: 0.3; cursor: default; }
 
 /* Le numéro se saisit comme tout autre champ de l'application : même cadre, même
@@ -856,11 +914,14 @@ input.journee-numero {
     appearance: textfield;
     -moz-appearance: textfield;
 }
+
 input.journee-numero::-webkit-inner-spin-button,
 input.journee-numero::-webkit-outer-spin-button { appearance: none; margin: 0; }
+
 /* Le dénominateur d'une progression — « / 6 », « / 30 » — s'efface derrière
    la valeur qui bouge. */
 .sur-total { flex: none; color: var(--text-secondary); font-weight: 500; }
+
 .journee-titre .badge { margin-left: 2px; }
 
 /* Deux mentions que seul le grand écran peut se permettre. Sur un téléphone,
@@ -903,6 +964,83 @@ input.journee-numero::-webkit-outer-spin-button { appearance: none; margin: 0; }
     color: var(--text-secondary);
     font-weight: 600;
 }
+
+/* Réglages d'une partie : cadence et variante */
+.partie-reglages {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.partie-reglage {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.partie-reglage-titre {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+    font-weight: 700;
+}
+
+.partie-reglage select {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 13px;
+}
+
+/* Largeur des colonnes du classement : le nom prend ce qui reste. */
+.standings-table th:first-child  { width: 40px; }
+
+.standings-table th:nth-child(3) { width: 60px; }
+
+.standings-table th:nth-child(4) { width: 90px; }
+
+.graphe-cadre { background: var(--bg-secondary); border-radius: 12px; padding: 16px; }
+
+/* Cellules chiffrées du classement. */
+.cell-points { text-align: center; font-weight: 600; font-size: 18px; }
+
+.cell-nombre { text-align: center; }
+
+/* Graphes tracés en SVG : celui de la poule et celui de la page Stats. */
+.graphe-svg { display: block; width: 100%; height: auto; }
+
+.graphe-legende { margin-top: 10px; display: flex; flex-wrap: wrap; }
+
+.graphe-legende-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 14px;
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* La pastille reçoit la couleur du partant, la seule chose qui reste calculée. */
+.graphe-pastille { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+
+/* Le cadre d'un duel de poule : les deux adversaires, les réglages, le résultat. */
+.carte-partie {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.match-card--serre { margin: 0 0 12px; }
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   7. ACCUEIL — LES FINALES
+   Demi-finales, grande finale, podium.
+   ══════════════════════════════════════════════════════════════════════════════ */
 
 .finals-bracket {
     display: grid;
@@ -955,62 +1093,252 @@ input.journee-numero::-webkit-outer-spin-button { appearance: none; margin: 0; }
     padding-left: 12px;
 }
 
-.winner-circle {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--primary), var(--accent));
+.podium { margin: 40px 0; text-align: center; }
+
+.finale-manches { margin-top: 40px; }
+
+/* La colonne centrale d'un tableau final : ce qu'on y attend est centré dans la
+   hauteur disponible. */
+.bracket-centre {
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
-    font-size: 28px;
-    margin: 20px auto;
 }
 
-.controls-row {
-    display: flex;
-    gap: 12px;
+.bracket-attente { width: 100%; text-align: center; }
+
+#final-result-placeholder { color: var(--text-secondary); font-size: 14px; }
+
+/* ─── Demi-finales ────────────────────────────────────────────────────────── */
+.demie { margin-bottom: 15px; }
+
+.demie-affiche { font-weight: 600; margin-bottom: 10px; }
+
+.demie-manche { margin-bottom: 14px; }
+
+.demie-manche-titre { margin-bottom: 6px; font-size: 12px; color: var(--text-secondary); }
+
+.demie-manche .match-card { margin-bottom: 8px; }
+
+.demie-manche .result-select { padding: 8px; font-size: 13px; }
+
+.demie-score {
     margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border);
+    font-weight: 600;
+}
+
+/* L'issue d'un duel : qualification acquise, ou égalité qui appelle une belle. */
+.verdict {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 6px;
+    text-align: center;
+    font-weight: 600;
+}
+
+.verdict--qualifie { background: var(--accent-light); color: var(--success); }
+
+.verdict--egalite  { background: #FBF1DA; color: var(--warning); }
+
+/* ─── Grande finale ───────────────────────────────────────────────────────── */
+.finaliste-premier { margin-bottom: 20px; }
+
+.finaliste-nom { font-weight: 600; }
+
+.finaliste-vs {
+    margin: 15px 0;
+    text-align: center;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.finale-manche { margin-bottom: 20px; }
+
+.finale-manche-titre {
+    margin-bottom: 12px;
+    color: var(--text-primary);
+    font-family: var(--font-sport);
+    font-weight: 700;
+}
+
+.finale-manche .match-card { margin-bottom: 12px; }
+
+.verdict-champion { font-weight: 700; color: var(--success); }
+
+.verdict-detail { font-size: 12px; }
+
+.verdict-egalite { font-weight: 600; color: var(--warning); }
+
+/* ─── Podium ──────────────────────────────────────────────────────────────── */
+.podium-titre {
+    margin-bottom: 20px;
+    font-family: var(--font-sport);
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.podium-marches {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 30px;
+    margin-bottom: 40px;
+}
+
+.podium-place { text-align: center; animation: podium-pop 0.5s ease-out both; }
+
+.podium-medaille { margin: 0 auto 10px; }
+
+.podium-nom { font-weight: 600; color: var(--text-secondary); }
+
+.podium-rang {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-family: var(--font-sport);
+    font-weight: 600;
+}
+
+.podium-emoji { font-size: 24px; }
+
+/* Le champion occupe la marche haute : plus grand, surélevé, et il apparaît
+   le premier — les deux autres le suivent. */
+.podium-place--or { transform: translateY(-20px); animation-duration: 0.55s; }
+
+.podium-place--or .podium-medaille { width: 100px; height: 100px; font-size: 48px; }
+
+.podium-place--or .podium-nom { font-size: 24px; color: var(--primary-dark); }
+
+.podium-place--or .podium-rang { color: var(--gold); font-weight: 700; }
+
+.podium-place--or .podium-emoji { font-size: 32px; }
+
+.podium-place--argent { animation-delay: 0.15s; }
+
+.podium-place--argent .podium-medaille { width: 80px; height: 80px; font-size: 36px; }
+
+.podium-place--bronze { animation-delay: 0.25s; }
+
+.podium-place--bronze .podium-medaille { width: 70px; height: 70px; font-size: 32px; }
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   8. PAGE TOURNOIS
+   La liste des tournois et son édition.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.tournaments-panel {
+    max-width: 1200px;
+    margin: 0 auto 20px;
+    padding: 22px 24px;
+    border-radius: 16px;
+    background: var(--bg-light);
+    border: 1px solid var(--border);
+}
+
+.tournaments-panel[hidden] { display: none; }
+
+.tournaments-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.tournaments-head strong {
+    font-family: var(--font-sport);
+    font-size: 18px;
+}
+
+.tournaments-head button { flex: none; width: auto; min-width: 0; padding: 8px 16px; font-size: 13px; }
+
+.tournament-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: var(--bg-secondary);
+    margin-bottom: 10px;
     flex-wrap: wrap;
 }
 
-/* Le règlement, replié sous le nom du tournoi. <details> suffit : ouvrir et
-   fermer un panneau n'appelle pas de JavaScript. */
-.reglement {
-    max-width: 1200px;
-    margin: -8px auto 20px;
-    color: rgba(255, 255, 255, 0.75);
-    font-size: 14px;
+.tournament-row.is-current { box-shadow: inset 0 0 0 2px var(--accent); }
+
+/* Les boutons de texte d'une ligne. Le `:not()` écarte les boutons pictos, qui
+   ont leur propre taille : sans lui, laquelle des deux règles l'emporte dépend
+   de leur ordre dans le fichier — un piège pour qui range. */
+.tournament-row button:not(.bouton-picto) {
+    flex: none;
+    width: auto;
+    min-width: 0;
+    padding: 9px 18px;
+    font-size: 13px;
 }
-.reglement > summary {
-    width: fit-content;
-    padding: 8px 16px;
-    border-radius: 10px;
-    cursor: pointer;
-    font-family: var(--font-sport);
+
+.tournament-row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.tournament-row button[disabled] { opacity: 0.45; cursor: default; }
+
+.tournament-row-name { font-weight: 600; font-family: var(--font-sport); }
+
+.tournament-row-meta { font-size: 13px; color: var(--text-secondary); margin-top: 3px; }
+
+.tournament-badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--accent-light);
+    color: var(--success);
+}
+
+.tournaments-empty { color: var(--text-secondary); font-size: 14px; padding: 8px 2px; }
+
+/* Une ligne de la page Tournois : nom éditable + informations */
+.tournoi-edition { flex: 1 1 auto; min-width: 0; }
+
+.tournoi-edition .tournoi-nom {
+    width: 100%;
+    margin-bottom: 4px;
     font-weight: 600;
-    color: white;
-    background: rgba(255, 255, 255, 0.07);
-    border: 1px solid rgba(255, 255, 255, 0.14);
 }
-.reglement > summary:hover { background: rgba(255, 255, 255, 0.14); }
-.reglement-corps {
-    margin-top: 10px;
-    padding: 18px 22px;
-    border-radius: 12px;
-    line-height: 1.55;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+
+.tournoi-adresse { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+.tournoi-ecart {
+    width: auto;
+    min-width: 0;
+    margin-left: 8px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--warning, #B8860B);
+    background: var(--bg-primary, #FFFDF7);
+    border: 1px dashed var(--warning, #B8860B);
+    cursor: pointer;
 }
-.reglement-corps h3 {
-    margin-top: 16px;
-    font-family: var(--font-sport);
-    font-size: 14px;
-    color: white;
-}
-.reglement-corps h3:first-child { margin-top: 0; }
-.reglement-corps p { margin-top: 4px; }
+
+.tournoi-ecart:hover { color: var(--bg-primary, #FFFDF7); background: var(--warning, #B8860B); border-style: solid; }
+
+.actions-liste { margin: 20px 0 24px; }
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   9. PAGE JOUEURS
+   Les fiches réutilisables d'un tournoi à l'autre.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.players-actions { margin-top: 14px; }
+
+.players-actions button { width: auto; min-width: 220px; flex: none; }
 
 /* Liste des joueurs réutilisables */
 .joueur-row {
@@ -1020,12 +1348,16 @@ input.journee-numero::-webkit-outer-spin-button { appearance: none; margin: 0; }
     padding: 8px 0;
     border-bottom: 1px solid var(--border);
 }
+
 .joueur-row:last-of-type { border-bottom: none; }
+
 .joueur-row--nouveau { border-top: 2px solid var(--border); margin-top: 6px; }
+
 .joueur-row .joueur-nom { flex: 1 1 auto; min-width: 0; }
+
 .joueur-row .joueur-elo { flex: 0 0 110px; }
-.joueur-row button { flex: none; width: auto; min-width: 0; padding: 8px 14px; font-size: 13px; }
-.joueur-row button.bouton-picto { width: 40px; padding: 0; }
+
+.joueur-row button:not(.bouton-picto) { flex: none; width: auto; min-width: 0; padding: 8px 14px; font-size: 13px; }
 
 @media (max-width: 600px) {
     .joueur-row { flex-wrap: wrap; }
@@ -1034,233 +1366,16 @@ input.journee-numero::-webkit-outer-spin-button { appearance: none; margin: 0; }
 }
 
 
-/* Séparateur entre la navigation et les actions, dans le menu */
-.menu-separateur {
-    height: 1px;
-    margin: 6px 0;
-    background: var(--border);
-}
-.main-menu .menu-item[aria-current="page"] {
-    font-weight: 700;
-    color: var(--accent);
-}
-a.menu-item { display: block; text-decoration: none; }
-
-.card-intro {
-    margin: -6px 0 16px;
-    color: var(--text-secondary);
-    font-size: 14px;
-}
-
-/* Une ligne de la page Tournois : nom éditable + informations */
-.tournoi-edition { flex: 1 1 auto; min-width: 0; }
-.tournoi-edition .tournoi-nom {
-    width: 100%;
-    margin-bottom: 4px;
-    font-weight: 600;
-}
-.tournoi-adresse { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-.tournoi-ecart {
-    width: auto;
-    min-width: 0;
-    margin-left: 8px;
-    padding: 2px 10px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--warning, #B8860B);
-    background: var(--bg-primary, #FFFDF7);
-    border: 1px dashed var(--warning, #B8860B);
-    cursor: pointer;
-}
-.tournoi-ecart:hover { color: var(--bg-primary, #FFFDF7); background: var(--warning, #B8860B); border-style: solid; }
-
-/* Au repos, ni cadre ni retrait : le nom se lit comme un titre et s'aligne au
-   pixel sur l'adresse. Le cadre apparaît à l'approche, en box-shadow — une
-   bordure décalerait le texte. */
-.tournoi-titre .tournoi-nom {
-    flex: 1 1 auto;
-    min-width: 0;
-    padding: 2px 0;
-    font-family: var(--font-sport, inherit);
-    font-size: 34px;
-    font-weight: 800;
-    line-height: 1.15;
-    color: var(--text-primary);
-    background: transparent;
-    border: none;
-    border-radius: 6px;
-    box-shadow: none;
-}
-.tournoi-titre .tournoi-nom:hover { box-shadow: 0 0 0 1px var(--border), 0 0 0 6px var(--bg-secondary); }
-.tournoi-titre .tournoi-nom:focus {
-    outline: none;
-    background: var(--bg-primary, #FFFDF7);
-    box-shadow: 0 0 0 1px var(--accent), 0 0 0 6px var(--bg-primary, #FFFDF7);
-}
-
-.tournoi-pied {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px 16px;
-    margin-top: 6px;
-}
-.tournoi-infos {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: var(--text-secondary);
-}
-.tournoi-etat::before { content: '· '; }
-.tournoi-adresse { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-
-/* Les actions ne doivent pas crier plus fort que le nom : du texte, qui prend
-   ses couleurs au survol seulement. */
-.tournoi-actions { display: flex; gap: 4px; }
-.tournoi-action {
-    width: auto;
-    min-width: 0;
-    padding: 6px 12px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    background: none;
-    border: 1px solid transparent;
-    border-radius: 8px;
-    cursor: pointer;
-}
-.tournoi-action:hover { color: var(--accent); border-color: var(--accent); background: var(--bg-primary, #FFFDF7); }
-.tournoi-action--danger:hover { color: var(--danger, #C1272D); border-color: var(--danger, #C1272D); }
-
-.tournoi-ecart {
-    width: auto;
-    min-width: 0;
-    padding: 2px 10px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--warning, #B8860B);
-    background: var(--bg-primary, #FFFDF7);
-    border: 1px dashed var(--warning, #B8860B);
-    cursor: pointer;
-}
-.tournoi-ecart:hover { color: var(--bg-primary, #FFFDF7); background: var(--warning, #B8860B); border-style: solid; }
-
-
-
-/* Page Sauvegarde : la zone de suppression se distingue */
-.zone-danger { border: 1px solid var(--danger, #C1272D); }
-.zone-danger .card-title { color: var(--danger, #C1272D); }
-
-/* Panneau de restauration : cases à cocher */
-.restaure-section {
-    margin: 14px 0 6px;
-    font-weight: 700;
-    font-size: 13px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-secondary);
-}
-.restaure-ligne { cursor: pointer; align-items: center; gap: 12px; justify-content: flex-start; }
-.restaure-ligne > span { flex: 1 1 auto; min-width: 0; }
-.restaure-ligne input[type="checkbox"] { flex: none; width: 18px; height: 18px; accent-color: var(--accent); }
-.restaure-ligne input[type="checkbox"]:disabled { cursor: not-allowed; opacity: 0.6; }
-.restaure-ligne .tournament-row-name,
-.restaure-ligne .tournament-row-meta { display: block; }
-.restaure-requis:empty { display: none; }
-
-/* Messages de la page (à la place des alert du navigateur) */
-.notices {
-    position: fixed;
-    top: 16px;
-    right: 16px;
-    z-index: 100;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    max-width: min(420px, calc(100vw - 32px));
-}
-.notice {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 12px 14px;
-    border-radius: 10px;
-    background: var(--bg-primary, #FFFDF7);
-    border: 1px solid var(--border);
-    border-left: 4px solid var(--accent);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-    font-size: 14px;
-    line-height: 1.45;
-}
-.notice--succes { border-left-color: var(--success, #1B8A5A); }
-.notice--erreur { border-left-color: var(--danger, #C1272D); }
-.notice-texte { flex: 1 1 auto; white-space: pre-line; word-break: break-word; }
-.notice-fermer {
-    flex: none;
-    width: auto;
-    min-width: 0;
-    padding: 0 4px;
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    font-size: 20px;
-    line-height: 1;
-    cursor: pointer;
-}
-.notice-fermer:hover { color: var(--text-primary); }
-
-@media (max-width: 600px) {
-    .notices { top: 8px; right: 8px; left: 8px; max-width: none; }
-}
-
-/* Réglages d'une partie : cadence et variante */
-.partie-reglages {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 10px;
-}
-.partie-reglage {
-    flex: 1 1 0;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-.partie-reglage-titre {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-secondary);
-    font-weight: 700;
-}
-.partie-reglage select {
-    width: 100%;
-    padding: 8px 10px;
-    font-size: 13px;
-}
-
-/* Partant dont la fiche de joueur a été supprimée */
-.tag-absent {
-    display: inline-block;
-    margin-left: 8px;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text-secondary);
-    background: var(--bg-secondary);
-    border: 1px dashed var(--border);
-    cursor: help;
-}
+/* ══════════════════════════════════════════════════════════════════════════════
+   10. PAGE STATS
+   Filtres et graphe des statistiques.
+   ══════════════════════════════════════════════════════════════════════════════ */
 
 /* Page Stats */
 .stats-groupe { margin-bottom: 14px; }
+
 .stats-groupe:last-child { margin-bottom: 0; }
+
 .stats-groupe-titre {
     margin-bottom: 6px;
     font-size: 12px;
@@ -1269,7 +1384,9 @@ a.menu-item { display: block; text-decoration: none; }
     letter-spacing: 0.04em;
     color: var(--text-secondary);
 }
+
 .stats-filtres { display: flex; flex-wrap: wrap; gap: 8px; }
+
 .stats-filtre {
     display: flex;
     align-items: center;
@@ -1281,36 +1398,116 @@ a.menu-item { display: block; text-decoration: none; }
     cursor: pointer;
     font-size: 14px;
 }
+
 .stats-filtre input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
+
 .stats-filtre-nom { font-weight: 600; }
+
 .stats-filtre-detail { color: var(--text-secondary); font-size: 12px; }
 
 .stats-resume { margin-bottom: 10px; font-size: 13px; color: var(--text-secondary); }
-#stats-graphe svg { display: block; width: 100%; height: auto; }
 
-/* Confirmations dans la page (à la place de confirm et prompt) */
-.dialogue-fond {
-    position: fixed;
-    inset: 0;
-    z-index: 200;
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   11. PAGE SAUVEGARDE
+   Zone de danger et panneau de restauration.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* Page Sauvegarde : la zone de suppression se distingue */
+.zone-danger { border: 1px solid var(--danger, #C1272D); }
+
+.zone-danger .card-title { color: var(--danger, #C1272D); }
+
+/* Panneau de restauration : cases à cocher */
+.restaure-section {
+    margin: 14px 0 6px;
+    font-weight: 700;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+}
+
+.restaure-ligne { cursor: pointer; align-items: center; gap: 12px; justify-content: flex-start; }
+
+.restaure-ligne > span { flex: 1 1 auto; min-width: 0; }
+
+.restaure-ligne input[type="checkbox"] { flex: none; width: 18px; height: 18px; accent-color: var(--accent); }
+
+.restaure-ligne input[type="checkbox"]:disabled { cursor: not-allowed; opacity: 0.6; }
+
+.restaure-ligne .tournament-row-name,
+.restaure-ligne .tournament-row-meta { display: block; }
+
+.restaure-requis:empty { display: none; }
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   12. SYNCHRONISATION
+   Le conflit entre deux appareils, à arbitrer dans la page.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.sync-conflict {
+    max-width: 1200px;
+    margin: 0 auto 20px;
+    padding: 18px 20px;
+    border-radius: 12px;
+    background: #FBF1DA;
+    border: 1px solid var(--warning);
+    color: var(--text-primary);
+}
+
+.sync-conflict[hidden] { display: none; }
+
+.sync-conflict-actions {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    background: rgba(15, 6, 26, 0.6);
+    gap: 12px;
+    margin-top: 14px;
+    flex-wrap: wrap;
 }
-.dialogue {
-    width: min(480px, 100%);
-    padding: 24px;
-    border-radius: 16px;
-    background: var(--bg-light);
-    border: 1px solid var(--border);
-    box-shadow: 0 24px 60px rgba(7, 18, 41, 0.45);
+
+.sync-conflict-actions button {
+    flex: 1;
+    min-width: 200px;
+    font-size: 14px;
+    padding: 10px 16px;
 }
-.dialogue--danger { border-color: var(--danger); }
-.dialogue-titre { font-family: var(--font-sport); font-size: 20px; margin-bottom: 10px; }
-.dialogue-message { font-size: 14px; color: var(--text-secondary); white-space: pre-line; }
-.dialogue-consigne { margin-top: 14px; font-size: 14px; }
-.dialogue-saisie { width: 100%; margin-top: 10px; padding: 10px 12px; font-size: 15px; }
-.dialogue-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-.dialogue-actions button { flex: none; width: auto; min-width: 0; padding: 10px 18px; font-size: 14px; }
+
+.sync-conflict-detail { margin-top: 6px; font-size: 14px; }
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   13. PETITS ÉCRANS
+   Les deux adaptations qui touchent à plusieurs sujets à la fois.
+   Les autres sont écrites juste sous le composant qu'elles concernent.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 700px) {
+    body { padding: 12px; }
+
+    header h1 { font-size: 30px; gap: 10px; }
+    .chess-icon { font-size: 32px; }
+    .chief-icon { width: 64px; }
+    header p { font-size: 14px; }
+
+    .card { padding: 18px 14px; border-radius: 14px; }
+    .card-title { font-size: 19px; }
+
+    .menu-toggle { width: 42px; height: 42px; }
+    .main-menu { top: 50px; }
+
+    .standings-table th,
+    .standings-table td { padding: 10px 8px; font-size: 14px; }
+
+    .tournaments-panel { padding: 16px 14px; }
+
+    .players-actions button { width: 100%; min-width: 0; }
+
+    .button-group { flex-direction: column; }
+    .button-group button { width: 100%; }
+}
+
+@media (max-width: 420px) {
+    header h1 { font-size: 25px; }
+    .medal { margin-right: 6px; }
+}

@@ -23,15 +23,15 @@ function renderDemie(index, elemPrefix) {
     const scores = computeScoresDemie(semifinal);
     
     let html = `
-        <div style="margin-bottom: 15px;">
-            <div style="font-weight: 600; margin-bottom: 10px;">${buildCasaque(p1Idx)}${p1Name} <span style="color: var(--text-secondary); font-weight: 400;">vs</span> ${buildCasaque(p2Idx)}${p2Name}</div>
+        <div class="demie">
+            <div class="demie-affiche">${buildCasaque(p1Idx)}${p1Name} <span class="texte-attenue">vs</span> ${buildCasaque(p2Idx)}${p2Name}</div>
     `;
     
     semifinal.matches.forEach((match, mIdx) => {
         html += `
-            <div style="margin-bottom: 14px;">
-                <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 6px;">Match ${match.num}</div>
-                <div class="match-card match-card--compact" style="margin-bottom: 8px;">
+            <div class="demie-manche">
+                <div class="demie-manche-titre">Match ${match.num}</div>
+                <div class="match-card match-card--compact">
                     <div class="player-result ${getClasseResultat(match, true)}">
                         ${getIconeResultat(match, true)}${p1Name}
                         ${buildBadgeTerrain(match, true)}
@@ -45,7 +45,7 @@ function renderDemie(index, elemPrefix) {
                 ${buildReglagesPartie(match,
                     `setCadenceDemie(${index}, ${mIdx}, this.value)`,
                     `setVarianteDemie(${index}, ${mIdx}, this.value)`)}
-                <select class="result-select" style="font-size: 13px; padding: 8px;" onchange="setResultatDemie(${index}, ${mIdx}, this.value)">
+                <select class="result-select" onchange="setResultatDemie(${index}, ${mIdx}, this.value)">
                     ${buildOptionsResultat(match, p1Name, p2Name)}
                 </select>
             </div>
@@ -53,7 +53,7 @@ function renderDemie(index, elemPrefix) {
     });
     
     html += `
-        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border); font-weight: 600;">
+        <div class="demie-score">
             ${p1Name}: ${scores.player1} pt | ${p2Name}: ${scores.player2} pt
         </div>
     `;
@@ -64,9 +64,9 @@ function renderDemie(index, elemPrefix) {
     if (outcome.winner !== null) {
         const winnerName = escapeHtml(tournoi.players[outcome.winner].name);
         const via = outcome.reason ? ` (${outcome.reason})` : '';
-        html += `<div style="margin-top: 10px; padding: 10px; background: var(--accent-light); border-radius: 6px; text-align: center; font-weight: 600; color: var(--success);">${outcome.reason ? '⚖️' : '✓'} ${winnerName} qualifié${via}</div>`;
+        html += `<div class="verdict verdict--qualifie">${outcome.reason ? '⚖️' : '✓'} ${winnerName} qualifié${via}</div>`;
     } else if (semifinal.matches.length > 2) {
-        html += `<div style="margin-top: 10px; padding: 10px; background: #FBF1DA; border-radius: 6px; text-align: center; font-weight: 600; color: var(--warning);">Égalité — manche décisive à jouer</div>`;
+        html += `<div class="verdict verdict--egalite">Égalité — manche décisive à jouer</div>`;
     }
     
     contentDiv.innerHTML = html;
@@ -153,12 +153,12 @@ function renderFinale() {
     const finalist2 = tournoi.players[tournoi.semifinalMatches[1].winner];
     
     document.getElementById('finalistes-list').innerHTML = `
-        <div class="bracket-player" style="margin-bottom: 20px;">
-            <span style="font-weight: 600;">${buildCasaque(finalist1.id)}${escapeHtml(finalist1.name)}</span>
+        <div class="bracket-player finaliste-premier">
+            <span class="finaliste-nom">${buildCasaque(finalist1.id)}${escapeHtml(finalist1.name)}</span>
         </div>
-        <div style="text-align: center; margin: 15px 0; color: var(--text-secondary); font-size: 14px;">VS</div>
+        <div class="finaliste-vs">VS</div>
         <div class="bracket-player">
-            <span style="font-weight: 600;">${buildCasaque(finalist2.id)}${escapeHtml(finalist2.name)}</span>
+            <span class="finaliste-nom">${buildCasaque(finalist2.id)}${escapeHtml(finalist2.name)}</span>
         </div>
     `;
     
@@ -168,9 +168,9 @@ function renderFinale() {
     tournoi.finalMatches.forEach((match, idx) => {
         const div = document.createElement('div');
         div.innerHTML = `
-            <div style="margin-bottom: 20px;">
-                <div style="font-weight: 700; margin-bottom: 12px; color: var(--text-primary); font-family: var(--font-sport);">Match ${match.num}</div>
-                <div class="match-card" style="margin-bottom: 12px;">
+            <div class="finale-manche">
+                <div class="finale-manche-titre">Match ${match.num}</div>
+                <div class="match-card">
                     <div class="player-result ${getClasseResultat(match, true)}">
                         ${getIconeResultat(match, true)}${escapeHtml(finalist1.name)}
                         ${buildBadgeTerrain(match, true)}
@@ -198,10 +198,10 @@ function renderFinale() {
     const placeholder = document.getElementById('final-result-placeholder');
     if (outcome.winner !== null) {
         const champName = tournoi.players[outcome.winner].name;
-        placeholder.innerHTML = `<span style="font-weight: 700; color: var(--success);">🏆 ${champName}</span>` +
-            (outcome.reason ? `<br><span style="font-size: 12px;">départagé — ${outcome.reason}</span>` : '');
+        placeholder.innerHTML = `<span class="verdict-champion">🏆 ${champName}</span>` +
+            (outcome.reason ? `<br><span class="verdict-detail">départagé — ${outcome.reason}</span>` : '');
     } else if (tournoi.finalMatches.length > 2) {
-        placeholder.innerHTML = '<span style="font-weight: 600; color: var(--warning);">Égalité — manche décisive à jouer</span>';
+        placeholder.innerHTML = '<span class="verdict-egalite">Égalité — manche décisive à jouer</span>';
     } else {
         placeholder.textContent = 'En attente du résultat...';
     }
@@ -267,25 +267,25 @@ function showResultats(champion, runner) {
     const third = thirdId != null ? tournoi.players[thirdId] : null;
     const podium = document.getElementById('podium');
     podium.innerHTML = `
-        <div style="font-family: var(--font-sport); color: var(--accent); font-weight: 700; margin-bottom: 20px;">📣 Photo-finish confirmée</div>
-        <div style="display: flex; justify-content: center; align-items: flex-end; gap: 30px; margin-bottom: 40px;">
-            <div style="text-align: center; animation: podium-pop 0.5s ease-out 0.15s both;">
-                <div class="medal medal-silver" style="width: 80px; height: 80px; font-size: 36px; margin: 0 auto 10px;">2</div>
-                <div style="font-weight: 600; color: var(--text-secondary);">${buildCasaque(runner.id)}${escapeHtml(runner.name)}</div>
-                <div style="font-size: 13px; color: var(--text-secondary); font-family: var(--font-sport); font-weight: 600;">Dauphin</div>
-                <div style="font-size: 24px;">🥈</div>
+        <div class="podium-titre">📣 Photo-finish confirmée</div>
+        <div class="podium-marches">
+            <div class="podium-place podium-place--argent">
+                <div class="medal medal-silver podium-medaille">2</div>
+                <div class="podium-nom">${buildCasaque(runner.id)}${escapeHtml(runner.name)}</div>
+                <div class="podium-rang">Dauphin</div>
+                <div class="podium-emoji">🥈</div>
             </div>
-            <div style="text-align: center; transform: translateY(-20px); animation: podium-pop 0.55s ease-out both;">
-                <div class="medal medal-gold" style="width: 100px; height: 100px; font-size: 48px; margin: 0 auto 10px;">1</div>
-                <div style="font-weight: 600; font-size: 24px; color: var(--primary-dark);">${buildCasaque(champion.id)}${escapeHtml(champion.name)}</div>
-                <div style="font-size: 13px; color: var(--gold); font-family: var(--font-sport); font-weight: 700;">Champion</div>
-                <div style="font-size: 32px;">🏆</div>
+            <div class="podium-place podium-place--or">
+                <div class="medal medal-gold podium-medaille">1</div>
+                <div class="podium-nom">${buildCasaque(champion.id)}${escapeHtml(champion.name)}</div>
+                <div class="podium-rang">Champion</div>
+                <div class="podium-emoji">🏆</div>
             </div>
-            <div style="text-align: center; animation: podium-pop 0.5s ease-out 0.25s both;">
-                <div class="medal medal-bronze" style="width: 70px; height: 70px; font-size: 32px; margin: 0 auto 10px;">3</div>
-                <div style="font-weight: 600; color: var(--text-secondary);">${third ? buildCasaque(third.id) + third.name : 'Demi-finalistes'}</div>
-                <div style="font-size: 13px; color: var(--text-secondary); font-family: var(--font-sport); font-weight: 600;">${third ? 'Troisième' : ''}</div>
-                <div style="font-size: 24px;">🥉</div>
+            <div class="podium-place podium-place--bronze">
+                <div class="medal medal-bronze podium-medaille">3</div>
+                <div class="podium-nom">${third ? buildCasaque(third.id) + third.name : 'Demi-finalistes'}</div>
+                <div class="podium-rang">${third ? 'Troisième' : ''}</div>
+                <div class="podium-emoji">🥉</div>
             </div>
         </div>
     `;
@@ -299,8 +299,8 @@ function showResultats(champion, runner) {
                 ${p.id === champion.id ? ' 🏆' : p.id === runner.id ? ' 🥈' : (third && p.id === third.id) ? ' 🥉' : ''}
             </td>
             <td>${buildCasaque(p.id)}${escapeHtml(p.name)}</td>
-            <td style="text-align: center; font-weight: 600; font-size: 18px;">${p.points.toFixed(1)}</td>
-            <td style="text-align: center;">${p.matches}</td>
+            <td class="cell-points">${p.points.toFixed(1)}</td>
+            <td class="cell-nombre">${p.matches}</td>
         </tr>
     `).join('');
 }
