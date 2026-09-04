@@ -848,6 +848,19 @@ input.journee-numero::-webkit-outer-spin-button { appearance: none; margin: 0; }
 .sur-total { flex: none; color: var(--text-secondary); font-weight: 500; }
 .journee-titre .badge { margin-left: 2px; }
 
+/* Deux mentions que seul le grand écran peut se permettre. Sur un téléphone,
+   « Domicile / Extérieur » se répète sous chaque nom des trente duels et pousse
+   le reste hors de vue ; le badge de manche vole la place au numéro de journée.
+   Les demies et la finale gardent la mention en toutes tailles : elle n'y paraît
+   que deux fois. Un seul balisage, servi partout — c'est la largeur qui décide. */
+#matches-container .venue,
+.journee-titre .badge { display: none; }
+
+@media (min-width: 701px) {
+    #matches-container .venue { display: block; }
+    .journee-titre .badge { display: inline-block; }
+}
+
 .summary-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
