@@ -107,6 +107,13 @@ describe('ce que l\'accueil ouvre', () => {
         assert.deepEqual(app.appelsFetch.filter(a => a.url.includes('/api/etat')), []);
     });
 
+    test('sans tournoi, le titre annonce celui qui reste à créer', async () => {
+        const app = chargerApp({ hash: '', fetch: serveurVide });
+        await app.pret();
+        assert.equal(app.ev('document.getElementById("tournament-name-display").textContent'),
+            'Nouveau tournoi');
+    });
+
     test('une visite sans tournoi n\'écrit rien, ni en local ni sur le serveur', async () => {
         const app = chargerApp({ hash: '', fetch: serveurVide });
         await app.pret();

@@ -60,8 +60,7 @@ header {
 }
 
 
-header h1,
-header .marque {
+header h1 {
     font-family: var(--font-display);
     font-weight: 700;
     font-size: 42px;
@@ -73,6 +72,7 @@ header .marque {
     justify-content: center;
     gap: 15px;
 }
+
 
 header p {
     font-family: 'Inter', sans-serif;
@@ -105,38 +105,10 @@ header p {
     display: none;
 }
 
-/* Barre du tournoi ouvert : le nom est le titre de la page, son lien et l'état
-   de la sauvegarde l'accompagnent. Une bande à part, pour ne pas se mêler à
-   l'enseigne ni à la première carte. */
-.barre-tournoi {
-    max-width: 1200px;
-    margin: 0 auto 20px;
-    padding: 18px 22px;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px 20px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.07);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-}
-.barre-tournoi-identite { min-width: 0; }
-.barre-tournoi-nom {
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 32px;
-    line-height: 1.15;
-    color: white;
-    word-break: break-word;
-}
-.barre-tournoi-contexte {
-    margin-top: 4px;
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.6);
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-.barre-tournoi .sync-status { margin-top: 0; flex: none; }
+/* Le nom du tournoi est le titre de la page ; le témoin d'enregistrement se
+   range sous lui, assez discret pour ne pas lui disputer la place. */
+.titre-tournoi { word-break: break-word; }
+header .sync-status { margin-top: 10px; }
 
 
 
@@ -223,25 +195,7 @@ header p {
 
 .tournaments-empty { color: var(--text-secondary); font-size: 14px; padding: 8px 2px; }
 
-.card-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    flex-wrap: wrap;
-}
 
-.card-head .card-title { margin-bottom: 20px; }
-
-/* .result-select impose width:100% plus bas dans la feuille : on prend le dessus
-   avec un sélecteur plus spécifique, sinon le menu passe à la ligne. */
-.card-head .round-picker {
-    width: auto;
-    max-width: 100%;
-    margin-bottom: 20px;
-    font-size: 14px;
-    padding: 9px 12px;
-}
 
 /* Journée de référence du classement, en rappel discret du titre */
 .standings-round {
@@ -340,9 +294,7 @@ header p {
 @media (max-width: 700px) {
     body { padding: 12px; }
 
-    header h1, header .marque { font-size: 30px; gap: 10px; }
-    .barre-tournoi { padding: 14px 16px; }
-    .barre-tournoi-nom { font-size: 26px; }
+    header h1 { font-size: 30px; gap: 10px; }
     .chess-icon { font-size: 32px; }
     .chief-icon { width: 64px; }
     header p { font-size: 14px; }
@@ -387,7 +339,7 @@ header p {
 }
 
 @media (max-width: 420px) {
-    header h1, header .marque { font-size: 25px; }
+    header h1 { font-size: 25px; }
     .medal { margin-right: 6px; }
 }
 
@@ -973,22 +925,42 @@ button.success:hover {
     flex-wrap: wrap;
 }
 
-.info-banner {
-    background: var(--accent-light);
-    border: 1px solid var(--accent);
-    border-left: 5px solid var(--accent);
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 20px;
-    color: var(--success);
+/* Le règlement, replié sous le nom du tournoi. <details> suffit : ouvrir et
+   fermer un panneau n'appelle pas de JavaScript. */
+.reglement {
+    max-width: 1200px;
+    margin: -8px auto 20px;
+    color: rgba(255, 255, 255, 0.75);
     font-size: 14px;
 }
-
-.info-banner strong {
-    display: block;
-    margin-bottom: 5px;
+.reglement > summary {
+    width: fit-content;
+    padding: 8px 16px;
+    border-radius: 10px;
+    cursor: pointer;
     font-family: var(--font-sport);
+    font-weight: 600;
+    color: white;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.14);
 }
+.reglement > summary:hover { background: rgba(255, 255, 255, 0.14); }
+.reglement-corps {
+    margin-top: 10px;
+    padding: 18px 22px;
+    border-radius: 12px;
+    line-height: 1.55;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.reglement-corps h3 {
+    margin-top: 16px;
+    font-family: var(--font-sport);
+    font-size: 14px;
+    color: white;
+}
+.reglement-corps h3:first-child { margin-top: 0; }
+.reglement-corps p { margin-top: 4px; }
 
 /* Liste des joueurs réutilisables */
 .joueur-row {

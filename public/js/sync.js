@@ -192,6 +192,9 @@ async function loadEtat() {
     // L'écran d'inscription a été dessiné avant l'arrivée des fiches : ses
     // menus déroulants seraient vides. On les redessine, choix conservés.
     renderPartants();
+    // Même raison pour la barre : sans tournoi à reprendre, applyEtat() ne la
+    // dessinera jamais et elle resterait muette sur ce qu'il y a à faire.
+    renderTitreTournoi();
 
     // Aucun tournoi à reprendre : on reste sur l'inscription, sans rien créer.
     const aOuvrir = resolveTournoiAOuvrir();

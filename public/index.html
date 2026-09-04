@@ -13,31 +13,8 @@
 <body>
     <div class="container">
         <header>
-            <p class="marque">
-                <span class="chess-icon">♟️</span> Grand Prix des Échecs
-                <svg class="chief-icon" viewBox="0 0 140 80" xmlns="http://www.w3.org/2000/svg" aria-label="Coiffe de plumes façon Mardi Gras Indian">
-                    <!-- Grandes plumes dorées en éventail -->
-                    <path d="M70 44 C64 24 58 4 46 -4 C56 8 60 22 62 40 Z" fill="#F5C518" transform="translate(0,4)"/>
-                    <path d="M70 44 C60 28 48 12 30 6 C44 16 52 28 58 42 Z" fill="#EFB90C" transform="translate(0,4)"/>
-                    <path d="M70 44 C56 34 40 26 20 26 C38 30 50 36 60 46 Z" fill="#FFDB58" transform="translate(0,4)"/>
-                    <path d="M70 44 C58 42 44 44 28 52 C42 48 54 48 62 50 Z" fill="#D4A017" transform="translate(0,4)"/>
-                    <path d="M70 44 C64 24 58 4 46 -4 C56 8 60 22 62 40 Z" fill="#F5C518" transform="translate(0,4) scale(-1,1) translate(-140,0)"/>
-                    <path d="M70 44 C60 28 48 12 30 6 C44 16 52 28 58 42 Z" fill="#EFB90C" transform="translate(0,4) scale(-1,1) translate(-140,0)"/>
-                    <path d="M70 44 C56 34 40 26 20 26 C38 30 50 36 60 46 Z" fill="#FFDB58" transform="translate(0,4) scale(-1,1) translate(-140,0)"/>
-                    <path d="M70 44 C58 42 44 44 28 52 C42 48 54 48 62 50 Z" fill="#D4A017" transform="translate(0,4) scale(-1,1) translate(-140,0)"/>
-                    <!-- Nervures des plumes -->
-                    <path d="M70 48 L46 4" stroke="#B8860B" stroke-width="1" opacity="0.5" fill="none"/>
-                    <path d="M70 48 L94 4" stroke="#B8860B" stroke-width="1" opacity="0.5" fill="none"/>
-                    <!-- Bandeau perlé -->
-                    <rect x="42" y="46" width="56" height="14" rx="7" fill="#4E2067"/>
-                    <circle cx="52" cy="53" r="3" fill="#D4A017"/>
-                    <circle cx="62" cy="53" r="3" fill="#1B8A5A"/>
-                    <circle cx="72" cy="53" r="3" fill="#D4A017"/>
-                    <circle cx="82" cy="53" r="3" fill="#1B8A5A"/>
-                    <circle cx="88" cy="53" r="3" fill="#D4A017"/>
-                </svg>
-            </p>
-            <p id="accueil-baseline">Poule qualificative · Demi-finales · Grande Finale</p>
+            <h1 id="tournament-name-display" class="titre-tournoi">Nouveau tournoi</h1>
+            <span id="sync-status" class="sync-status" data-state="saved">✓ Enregistré</span>
             <button id="btn-menu" class="menu-toggle" type="button" aria-label="Ouvrir le menu"
                     aria-expanded="false" aria-controls="main-menu" onclick="toggleMenu()">
                 <span></span><span></span><span></span>
@@ -51,14 +28,17 @@
             </nav>
         </header>
 
-        <!-- Barre du tournoi ouvert : son nom, son lien, l'état de sa sauvegarde. -->
-        <div id="barre-tournoi" class="barre-tournoi">
-            <div class="barre-tournoi-identite">
-                <h1 id="tournament-name-display" class="barre-tournoi-nom">Nouveau tournoi</h1>
-                <p id="barre-tournoi-contexte" class="barre-tournoi-contexte"></p>
+        <details class="reglement">
+            <summary>Règlement</summary>
+            <div class="reglement-corps">
+                <h3>Poule qualificative — championnat en journées</h3>
+                <p>Chaque partant affronte tous les autres une fois à l'aller, une fois au retour — un duel par journée. Celui qui reçoit à l'aller se déplace au retour. Victoire = 1 pt, Nulle = 0,5 pt, Défaite = 0 pt. Les 4 premiers au classement se qualifient.</p>
+                <h3>Demi-finales — 1er vs 4e / 2e vs 3e</h3>
+                <p>Chaque demi-finale se joue en 2 manches, une chez chacun. En cas d'égalité : le partant au plus bas Elo est qualifié ; à défaut d'Elo, une manche décisive (belle) est ajoutée ; si la belle est nulle elle aussi, le mieux classé en poule passe.</p>
+                <h3>Grande finale — la der des ders, 2 manches</h3>
+                <p>Les deux finalistes s'affrontent pour le titre, une manche chez chacun (la belle éventuelle sur terrain neutre). En cas d'égalité, même règle qu'en demies : Elo le plus bas, puis manche décisive (belle), puis classement de la poule.</p>
             </div>
-            <span id="sync-status" class="sync-status" data-state="saved">✓ Enregistré</span>
-        </div>
+        </details>
 
         <div id="sync-conflict" class="sync-conflict" hidden>
             <strong>Le tournoi a été modifié sur un autre appareil.</strong>
@@ -95,11 +75,6 @@
         <!-- ÉCRAN 2: Tournoi (Poule) -->
         <div class="screen" id="screen-tournament">
             <div class="card">
-                <div class="card-head">
-                    <h2 class="card-title">🏇 Phase de Poule</h2>
-                    <select id="round-select-top" class="result-select round-picker" onchange="goToJournee(this.value)"></select>
-                </div>
-
                 <h3 id="standings-title" style="margin-top: 10px; margin-bottom: 20px; color: var(--text-primary); font-family: var(--font-sport); font-weight: 700;">Classement</h3>
                 <div class="table-scroll">
                 <table class="standings-table" id="standings">
@@ -113,11 +88,6 @@
                     </thead>
                     <tbody id="standings-body"></tbody>
                 </table>
-                </div>
-
-                <div class="info-banner">
-                    <strong>Manche qualificative — Championnat en journées</strong>
-                    Chaque partant affronte tous les autres une fois à l'aller, une fois au retour — un duel par journée. Celui qui reçoit à l'aller se déplace au retour. Victoire = 1 pt, Nulle = 0,5 pt, Défaite = 0 pt. Les 4 premiers au classement se qualifient.
                 </div>
 
                 <div class="progress-bar">
@@ -161,11 +131,6 @@
             <div class="card">
                 <h2 class="card-title">🥊 Demi-Finales</h2>
                 
-                <div class="info-banner">
-                    <strong>Confrontations — 1er vs 4e / 2e vs 3e</strong>
-                    Chaque demi-finale se joue en 2 manches, une chez chacun. En cas d'égalité : le partant au plus bas Elo est qualifié ; à défaut d'Elo, une manche décisive (belle) est ajoutée ; si la belle est nulle elle aussi, le mieux classé en poule passe.
-                </div>
-
                 <div class="progress-bar">
                     <div class="progress-fill" id="progress-fill-semis" style="width: 0%;"></div>
                 </div>
@@ -205,11 +170,6 @@
             <div class="card">
                 <h2 class="card-title">🏆 Grande Finale</h2>
                 
-                <div class="info-banner">
-                    <strong>La der des ders — 2 manches</strong>
-                    Les deux finalistes s'affrontent pour le titre, une manche chez chacun (la belle éventuelle sur terrain neutre). En cas d'égalité, même règle qu'en demies : Elo le plus bas, puis manche décisive (belle), puis classement de la poule.
-                </div>
-
                 <div class="finals-bracket">
                     <div class="bracket-round">
                         <div class="bracket-title">Les Finalistes</div>

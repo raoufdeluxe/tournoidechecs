@@ -420,11 +420,7 @@ function renderParties() {
         const rLeg = r <= total / 2 ? 'Aller' : 'Retour';
         options += `<option value="${r}" ${r === current ? 'selected' : ''}>Journée ${r} — ${rLeg}</option>`;
     }
-    // Deux sélecteurs pilotent la même journée : celui du titre et celui des duels.
-    ['round-select-top', 'round-select'].forEach(id => {
-        const select = document.getElementById(id);
-        if (select) select.innerHTML = options;
-    });
+    document.getElementById('round-select').innerHTML = options;
 
     document.getElementById('prev-round-btn').disabled = current <= 1;
 
