@@ -1113,3 +1113,34 @@ a.menu-item { display: block; text-decoration: none; }
     border: 1px dashed var(--border);
     cursor: help;
 }
+
+/* Page Stats */
+.stats-joueurs { display: flex; flex-wrap: wrap; gap: 10px; }
+.stats-joueur {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    font-size: 14px;
+}
+.stats-joueur input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
+.stats-joueur-nom { font-weight: 600; }
+.stats-joueur-parties { color: var(--text-secondary); font-size: 12px; }
+
+.stats-titre { margin: 18px 0 8px; font-size: 15px; }
+.stats-defilement { overflow-x: auto; }
+.stats-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.stats-table th, .stats-table td {
+    padding: 10px 12px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+}
+.stats-table thead th { background: var(--bg-secondary); font-size: 13px; }
+.stats-table tbody th { text-align: left; font-weight: 600; }
+.stats-detail { display: block; font-size: 11px; color: var(--text-secondary); font-weight: 400; }
+.stats-vide { color: var(--text-secondary); }

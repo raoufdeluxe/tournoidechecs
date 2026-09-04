@@ -65,6 +65,7 @@ public/
   index.html      accueil : le tournoi en cours (config · poule · demies · finale · résultats)
   joueurs.html    /joueurs  : la liste des joueurs et son édition
   tournois.html   /tournois : la liste des tournois, renommage, suppression
+  stats.html      /stats : comparaison des joueurs
   sauvegarde.html /sauvegarde : export, import, effacement total
   styles.css      thème « hippodrome » : casaques colorées, typo sport
   js/
@@ -81,6 +82,8 @@ public/
     page-joueurs.js   la page /joueurs
     page-tournois.js  la page /tournois
     sauvegarde.js     export/import (tournois + joueurs)
+    stats.js          dépouillement des parties (calcul pur)
+    page-stats.js     la page /stats : sélection et tableaux
     page-sauvegarde.js  la page /sauvegarde : état, effacement total
 worker.js         API + service des fichiers statiques
 wrangler.toml     config Cloudflare (Worker + binding KV + [assets])
@@ -184,6 +187,8 @@ tests/
   page-joueurs.test.mjs   la page /joueurs
   page-tournois.test.mjs  la page /tournois
   page-sauvegarde.test.mjs  la page /sauvegarde, dont l'effacement total
+  stats.test.mjs       le dépouillement des parties
+  page-stats.test.mjs  la page /stats : sélection et lecture des tableaux
 ```
 
 **Comment le front est testé sans navigateur.** Les scripts de `public/js/` sont
@@ -205,13 +210,14 @@ push et chaque pull request, et vérifie en plus que le Worker se compile
 
 ---
 
-## Quatre pages
+## Cinq pages
 
 | Page | Ce qu'on y fait |
 |---|---|
 | `/` | **le tournoi en cours** : inscription, poule, demies, finale, résultats |
 | `/joueurs` | **la liste des joueurs** : ajouter, renommer, changer l'Elo, supprimer |
 | `/tournois` | **la liste des tournois** : renommer, ouvrir, supprimer |
+| `/stats` | **comparer les joueurs** : % de victoire par cadence et par type |
 | `/sauvegarde` | **les données dans leur ensemble** : exporter, importer, tout effacer |
 
 Le **même menu burger** sur les trois pages : d'abord la navigation, puis les
@@ -228,6 +234,28 @@ d'elles ne crée aucun tournoi et n'écrit rien. Un test s'en assure.
 servis avant le Worker, donc `public/joueurs.html` (servi sur `/joueurs`)
 masquerait une route d'API du même nom. `/state` et `/tournaments` restent
 acceptés pour les onglets restés sur une version antérieure.
+
+---
+
+## Les statistiques
+
+`/stats` compare de **un à tous les joueurs** sur trois axes : toutes parties
+confondues, par cadence, par type de partie. Chaque cellule donne le pourcentage
+de victoire, le nombre de parties dessous, et le bilan complet au survol
+(« 2 victoires, 1 nulle, 1 défaite »).
+
+- Le taux porte sur les **parties jouées**, nulles comprises : deux victoires sur
+  quatre parties dont une nulle font 50 %.
+- Un format jamais joué affiche **—**, pas « 0 % » : l'absence de partie n'est pas
+  un échec.
+- Les joueurs sont cochés d'emblée **s'ils ont joué** ; les autres restent
+  proposés, décochés.
+
+**Les parties sont comptées par fiche, jamais par nom.** Deux homonymes seraient
+confondus, et un renommage effacerait un historique. Les parties dont un partant
+n'a pas de fiche — les tournois d'avant leur existence — ne sont donc pas
+attribuables : la page en donne le nombre plutôt que de les passer sous silence.
+Les rattacher à des fiches les fait entrer dans les comptes.
 
 ---
 

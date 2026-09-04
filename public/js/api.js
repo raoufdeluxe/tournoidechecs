@@ -49,3 +49,25 @@ async function isIdTaken(id) {
         return false; // hors ligne : on ne bloque pas la création
     }
 }
+
+// L'API ne sait lister que les tournois ayant au moins un partant : ce sont
+// exactement ceux que la page affiche, et les seuls qui valent d'être gardés.
+async function fetchTournois() {
+    const res = await fetch(URL_TOURNOIS);
+    if (!res.ok) throw new Error('Liste indisponible (' + res.status + ')');
+    const data = await res.json();
+    const ids = ((data && data.tournaments) || []).map(t => t.id);
+
+    const tournois = [];
+    for (const id of ids) {
+        const reponse = await fetch(urlEtat(id));
+        if (!reponse.ok) throw new Error('Lecture impossible pour « ' + id + ' »');
+        const enveloppe = await reponse.json();
+        if (enveloppe && enveloppe.state) {
+            tournois.push({ id, enveloppe });
+        }
+    }
+    return tournois;
+}
+
+// Le fichier contient les tournois ET les fiches des joueurs : son nom le dit.

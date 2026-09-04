@@ -44,7 +44,7 @@ describe('les scripts de la page', () => {
     test('les pages dédiées ne chargent pas la machinerie du tournoi', () => {
         // sync.js ouvre et enregistre le tournoi courant : sur /joueurs ou
         // /tournois, il créerait un tournoi qu'on n'a pas demandé.
-        for (const page of ['joueurs.html', 'tournois.html']) {
+        for (const page of ['joueurs.html', 'tournois.html', 'stats.html']) {
             const scripts = scriptsDeLaPage(page);
             for (const interdit of ['sync.js', 'poule.js', 'finales.js', 'tournois.js']) {
                 assert.ok(!scripts.includes(interdit), `${page} ne devrait pas charger ${interdit}`);
@@ -67,7 +67,7 @@ describe('les scripts de la page', () => {
     });
 
     test('le menu est de la navigation, la même partout et rien d\'autre', () => {
-        const attendu = './ ./tournois ./joueurs ./sauvegarde';
+        const attendu = './ ./tournois ./joueurs ./stats ./sauvegarde';
         for (const page of PAGES) {
             const menu = lireFichier('public/' + page).match(/<nav id="main-menu"[\s\S]*?<\/nav>/)[0];
             const liens = [...menu.matchAll(/<a class="menu-item" href="([^"]+)"/g)].map(m => m[1]).join(' ');
@@ -78,7 +78,9 @@ describe('les scripts de la page', () => {
     });
 
     test('chaque page marque sa propre entrée comme courante', () => {
-        for (const [page, href] of [['index.html', './'], ['joueurs.html', './joueurs'], ['tournois.html', './tournois']]) {
+        for (const [page, href] of [['index.html', './'], ['joueurs.html', './joueurs'],
+                                    ['tournois.html', './tournois'], ['stats.html', './stats'],
+                                    ['sauvegarde.html', './sauvegarde']]) {
             const courant = lireFichier('public/' + page).match(/<a class="menu-item" href="([^"]+)" aria-current="page">/);
             assert.ok(courant, `${page} ne marque aucune entrée courante`);
             assert.equal(courant[1], href, page);
