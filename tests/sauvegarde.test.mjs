@@ -277,6 +277,42 @@ describe('planifierRestauration — une ligne par tournoi, une par fiche', () =>
 });
 
 describe('exporterTournois — le bouton', () => {
+    test('les fiches sont relues au moment de l\'export, pas prises telles quelles', async () => {
+        // Un clic rapide ne doit pas produire un fichier sans joueurs.
+        const app = await appServeur({ abc: enveloppe('Les potes', 4) });
+        app.roster.joueurs = [
+            { id: 'j-aa', nom: 'Dans un tournoi', elo: null },
+            { id: 'j-libre', nom: 'Jamais inscrit', elo: 1200 },
+        ];
+        app.ev('joueurs = [];'); // la page n'a pas encore reçu la liste
+        await app.ev('exporterTournois()');
+        assert.deepEqual(fichierProduit(app).contenu.joueurs.map(j => j.nom),
+            ['Dans un tournoi', 'Jamais inscrit']);
+    });
+
+    test('un joueur qu\'aucun tournoi ne cite est exporté comme les autres', async () => {
+        const app = await appServeur({ abc: enveloppe('Les potes', 4) });
+        app.roster.joueurs = [{ id: 'j-libre', nom: 'Jamais inscrit', elo: 1200 }];
+        await app.ev('exporterTournois()');
+        assert.deepEqual(fichierProduit(app).contenu.joueurs.map(j => j.nom), ['Jamais inscrit']);
+    });
+
+    test('liste des joueurs injoignable : on refuse plutôt que d\'exporter sans elle', async () => {
+        const app = chargerApp({
+            page: 'sauvegarde.html',
+            fetch: async (url) => {
+                if (url.includes('/api/joueurs')) throw new Error('hors ligne');
+                if (url.includes('/api/tournois')) return reponse(200, { tournaments: [], complete: true });
+                return reponse(200, { version: 0, state: null });
+            },
+        });
+        await app.pret();
+        app.ev('telechargerFichier = function (nom, texte) { __fichier = { nom, texte }; };');
+        await app.ev('exporterTournois()');
+        assert.match(app.alertes.at(-1), /Export impossible.*injoignable/s);
+        assert.equal(app.json('typeof __fichier !== "undefined" ? __fichier : null'), null);
+    });
+
     test('rassemble tous les tournois listés et produit un fichier daté', async () => {
         const app = await appServeur({ abc: enveloppe('Les potes', 4), zebre: enveloppe('Zèbre') });
         await app.ev('exporterTournois()');
@@ -304,7 +340,7 @@ describe('exporterTournois — le bouton', () => {
 
     test('des joueurs sans aucun tournoi méritent quand même une sauvegarde', async () => {
         const app = await appServeur({});
-        app.set('joueurs', [{ id: 'j-aa', nom: 'Alice', elo: null }]);
+        app.roster.joueurs = [{ id: 'j-aa', nom: 'Alice', elo: null }];
         await app.ev('exporterTournois()');
         const fichier = fichierProduit(app);
         assert.ok(fichier, 'un fichier est bien produit');

@@ -176,6 +176,13 @@ async function exporterTournois() {
     if (bouton) { bouton.disabled = true; bouton.textContent = '⏳ Export en cours…'; }
 
     try {
+        // On relit les fiches plutôt que de se fier à celles que la page a pu
+        // charger : sinon un clic rapide exporterait une liste encore vide, et
+        // le fichier perdrait tous les joueurs qu'aucun tournoi ne cite.
+        if (!await chargerJoueurs()) {
+            throw new Error('la liste des joueurs est injoignable');
+        }
+
         const tournois = await collecterTournois();
         if (!tournois.length && !joueurs.length) {
             alert('Rien à exporter : ni tournoi, ni joueur.');
@@ -210,6 +217,10 @@ async function preparerRestauration(fichier) {
         alert('Import impossible : ' + e.message);
         return;
     }
+
+    // Même raison qu'à l'export : sans les fiches à jour, le plan annoncerait
+    // « nouveau » pour des joueurs qui existent déjà.
+    await chargerJoueurs();
 
     let idsDistants = [];
     let listeLue = false;

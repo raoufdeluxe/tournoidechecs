@@ -269,7 +269,10 @@ Tout se passe sur **`/sauvegarde`** : une sauvegarde contient les tournois *et*
 les fiches des joueurs, elle n'appartient donc à aucune des deux listes.
 
 - **⬇️ Tout exporter** — télécharge `sauvegarde-<horodatage>.json` : l'état
-  complet de chaque tournoi, plus toutes les fiches.
+  complet de chaque tournoi, plus **toutes** les fiches — y compris celles
+  qu'aucun tournoi ne cite. L'export relit la liste des joueurs au moment du
+  clic plutôt que de se fier à ce que la page a chargé : sinon un clic rapide
+  produisait un fichier sans aucune fiche.
 - **⬆️ Importer une sauvegarde** — ouvre un fichier et **affiche d'abord ce qu'il
   ferait**, ligne par ligne : chaque tournoi (marqué *nouveau* ou *remplacé*) et
   chaque joueur, nommés, avec une case à cocher — tout est coché au départ, on
