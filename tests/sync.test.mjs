@@ -43,7 +43,7 @@ describe('saveState', () => {
         const app = await appReseau({ post: new Error('hors ligne') });
         app.ev('saveState()');
         await app.attendreSync();
-        const cle = app.ev('storageKey()');
+        const cle = app.ev('storageKey(tournamentId)');
         const local = JSON.parse(app.stockage.get(cle));
         assert.deepEqual(local.tournament.players.map(p => p.name), ['A', 'B']);
     });
@@ -193,7 +193,7 @@ describe('loadState', () => {
 
     test('serveur injoignable : repli sur la copie locale', async () => {
         const app = chargerApp({ fetch: async () => { throw new Error('hors ligne'); } });
-        const cle = app.ev('storageKey()');
+        const cle = app.ev('storageKey(tournamentId)');
         app.stockage.set(cle, JSON.stringify({
             screen: 'screen-config',
             tournament: { name: 'Copie locale', players: joueurs(['A', 'B']) },

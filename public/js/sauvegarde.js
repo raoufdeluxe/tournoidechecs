@@ -4,7 +4,11 @@
 // (/tournaments, /state?id=…). Rien de nouveau n'est donc exposé publiquement.
 
 const FORMAT_SAUVEGARDE = 'grand-prix-des-echecs/sauvegarde';
-const VERSION_SAUVEGARDE = 1;
+// v2 : la sauvegarde embarque les fiches des joueurs. Un tournoi ne stocke
+// qu'un renvoi vers elles — sans les fiches, le fichier serait illisible.
+// Les fichiers v1 restent acceptés : leurs tournois portaient les noms en dur.
+const VERSION_SAUVEGARDE = 2;
+const VERSIONS_LUES = [1, 2];
 
 // Sauvegarde relue et validée, en attente de confirmation dans le panneau.
 let sauvegardeEnAttente = null;
@@ -14,7 +18,7 @@ let sauvegardeEnAttente = null;
 // Les tournois sont écrits décodés (et non en chaînes échappées) et triés par
 // identifiant : le fichier se lit à l'œil, et deux exports d'un contenu
 // inchangé donnent le même fichier — donc pas de diff parasite si on l'archive.
-function construireSauvegarde(tournois, date) {
+function construireSauvegarde(tournois, date, listeJoueurs) {
     const contenu = {};
     for (const { id, enveloppe } of [...tournois].sort((a, b) => a.id.localeCompare(b.id))) {
         contenu[id] = enveloppe;
@@ -23,6 +27,7 @@ function construireSauvegarde(tournois, date) {
         format: FORMAT_SAUVEGARDE,
         version: VERSION_SAUVEGARDE,
         exporteLe: (date || new Date()).toISOString(),
+        joueurs: [...(listeJoueurs || joueurs)].sort((a, b) => a.id.localeCompare(b.id)),
         tournois: contenu
     };
 }
@@ -42,8 +47,18 @@ function lireSauvegarde(texte) {
     if (data.format !== FORMAT_SAUVEGARDE) {
         throw new Error('Ce fichier n\'est pas une sauvegarde de tournois.');
     }
-    if (data.version !== VERSION_SAUVEGARDE) {
-        throw new Error('Sauvegarde en version ' + data.version + ', cette page attend la version ' + VERSION_SAUVEGARDE + '.');
+    if (!VERSIONS_LUES.includes(data.version)) {
+        throw new Error('Sauvegarde en version ' + data.version + ', cette page lit les versions ' + VERSIONS_LUES.join(' et ') + '.');
+    }
+    if (data.joueurs !== undefined) {
+        if (!Array.isArray(data.joueurs)) {
+            throw new Error('Fichier invalide : la liste des joueurs est illisible.');
+        }
+        for (const fiche of data.joueurs) {
+            if (!fiche || !ID_PATTERN.test(String(fiche.id)) || !String(fiche.nom || '').trim()) {
+                throw new Error('Fichier invalide : une fiche de joueur est incomplète.');
+            }
+        }
     }
     if (!data.tournois || typeof data.tournois !== 'object' || Array.isArray(data.tournois)) {
         throw new Error('Fichier invalide : aucun tournoi dedans.');
@@ -61,6 +76,26 @@ function lireSauvegarde(texte) {
 }
 
 // Ce que la restauration ferait, avant de le faire.
+// Les fiches du fichier sont fusionnées : celles qu'il contient font foi, les
+// autres restent en place. Une restauration ne doit pas effacer des joueurs
+// ajoutés depuis la sauvegarde.
+function fusionnerJoueurs(fichesDuFichier, fichesActuelles) {
+    const fusion = [...fichesActuelles];
+    const nouveaux = [];
+    const misAJour = [];
+    for (const fiche of fichesDuFichier || []) {
+        const i = fusion.findIndex(j => j.id === fiche.id);
+        if (i === -1) {
+            fusion.push(fiche);
+            nouveaux.push(fiche);
+        } else {
+            if (fusion[i].nom !== fiche.nom || fusion[i].elo !== fiche.elo) misAJour.push(fiche);
+            fusion[i] = fiche;
+        }
+    }
+    return { fusion, nouveaux, misAJour };
+}
+
 function planifierRestauration(sauvegarde, idsDistants) {
     const presents = new Set(idsDistants);
     const entrees = Object.entries(sauvegarde.tournois).map(([id, enveloppe]) => ({
@@ -69,9 +104,12 @@ function planifierRestauration(sauvegarde, idsDistants) {
         nom: (enveloppe.state.tournament.name) || id,
         partants: enveloppe.state.tournament.players.length
     }));
+    const fiches = fusionnerJoueurs(sauvegarde.joueurs, joueurs);
     return {
         creations: entrees.filter(e => !presents.has(e.id)),
-        ecrasements: entrees.filter(e => presents.has(e.id))
+        ecrasements: entrees.filter(e => presents.has(e.id)),
+        joueursNouveaux: fiches.nouveaux,
+        joueursMisAJour: fiches.misAJour
     };
 }
 
@@ -80,14 +118,14 @@ function planifierRestauration(sauvegarde, idsDistants) {
 // L'API ne sait lister que les tournois ayant au moins un partant : ce sont
 // exactement ceux que la page affiche, et les seuls qui valent d'être gardés.
 async function collecterTournois() {
-    const res = await fetch(TOURNAMENTS_URL);
+    const res = await fetch(URL_TOURNOIS);
     if (!res.ok) throw new Error('Liste indisponible (' + res.status + ')');
     const data = await res.json();
     const ids = ((data && data.tournaments) || []).map(t => t.id);
 
     const tournois = [];
     for (const id of ids) {
-        const reponse = await fetch(API_BASE + '?id=' + encodeURIComponent(id));
+        const reponse = await fetch(urlEtat(id));
         if (!reponse.ok) throw new Error('Lecture impossible pour « ' + id + ' »');
         const enveloppe = await reponse.json();
         if (enveloppe && enveloppe.state) {
@@ -124,9 +162,8 @@ async function exporterTournois() {
             alert('Aucun tournoi à exporter.');
             return;
         }
-        const sauvegarde = construireSauvegarde(tournois);
+        const sauvegarde = construireSauvegarde(tournois, null, joueurs);
         telechargerFichier(nomFichierSauvegarde(), JSON.stringify(sauvegarde, null, 2) + '\n');
-        closeMainMenu();
     } catch (e) {
         alert('Export impossible : ' + e.message);
     } finally {
@@ -146,7 +183,6 @@ function declencherImport() {
 // attend une confirmation. Rien n'est écrit à ce stade.
 async function preparerRestauration(fichier) {
     if (!fichier) return;
-    closeMainMenu();
 
     let sauvegarde;
     try {
@@ -158,7 +194,7 @@ async function preparerRestauration(fichier) {
 
     let idsDistants = [];
     try {
-        const res = await fetch(TOURNAMENTS_URL);
+        const res = await fetch(URL_TOURNOIS);
         if (res.ok) {
             const data = await res.json();
             idsDistants = ((data && data.tournaments) || []).map(t => t.id);
@@ -188,6 +224,12 @@ function afficherPlanRestauration(plan, sauvegarde) {
             ' remplacés par la version du fichier. Leur contenu actuel sera perdu.</div>';
     }
 
+    const fiches = plan.joueursNouveaux.length + plan.joueursMisAJour.length;
+    html += '<div class="tournaments-empty">' + (fiches
+        ? 'Joueurs : ' + plan.joueursNouveaux.length + ' ajouté(s), ' +
+          plan.joueursMisAJour.length + ' mis à jour. Les fiches absentes du fichier sont conservées.'
+        : 'Aucun changement dans la liste des joueurs.') + '</div>';
+
     document.getElementById('import-plan').innerHTML = html;
     document.getElementById('btn-import-confirm').disabled =
         !(plan.creations.length + plan.ecrasements.length);
@@ -205,6 +247,16 @@ function fermerImport() {
 async function appliquerRestauration() {
     if (!sauvegardeEnAttente) return;
 
+    // Les fiches d'abord : un tournoi restauré avant elles afficherait
+    // « Joueur supprimé » le temps que la liste suive.
+    const fusion = fusionnerJoueurs(sauvegardeEnAttente.joueurs, joueurs);
+    if (fusion.nouveaux.length || fusion.misAJour.length) {
+        if (!await remplacerJoueurs(fusion.fusion)) {
+            alert('La liste des joueurs n\'a pas pu être enregistrée : restauration abandonnée.');
+            return;
+        }
+    }
+
     const entrees = Object.entries(sauvegardeEnAttente.tournois);
     const bouton = document.getElementById('btn-import-confirm');
     const avancement = document.getElementById('import-progress');
@@ -216,7 +268,7 @@ async function appliquerRestauration() {
     for (const [id, enveloppe] of entrees) {
         avancement.textContent = 'Restauration ' + (faits + 1) + '/' + entrees.length + ' — ' + id;
         try {
-            const url = API_BASE + '?id=' + encodeURIComponent(id);
+            const url = urlEtat(id);
             const actuel = await fetch(url);
             const distant = actuel.ok ? await actuel.json() : { version: 0 };
 
@@ -241,7 +293,6 @@ async function appliquerRestauration() {
         alert(faits + ' tournoi(s) restauré(s).');
     }
 
-    // Le tournoi ouvert vient peut-être d'être remplacé : on repart de l'état serveur.
-    await loadState();
-    if (!document.getElementById('tournaments-panel').hidden) loadTournamentsList();
+    // La liste vient de changer sous nos pieds : on la relit.
+    await chargerListe();
 }

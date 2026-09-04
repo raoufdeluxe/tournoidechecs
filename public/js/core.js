@@ -1,5 +1,12 @@
 // Etat partage du tournoi, couleurs, helpers de resultat et regles de departage
 
+// Copie locale d'un tournoi, par identifiant : elle sert de repli hors ligne.
+const storageKey = (id) => 'tournoi_echecs_state_v1:' + id;
+
+// Dernier tournoi ouvert sur l'accueil : la page /tournois s'en sert pour
+// marquer lequel est « en cours », qu'elle n'a aucun autre moyen de connaître.
+const CLE_TOURNOI_COURANT = 'tournoi_echecs_courant';
+
 let tournament = {
     players: [],
     matches: [],
@@ -9,6 +16,12 @@ let tournament = {
     totalRounds: 0,
     currentRound: 1
 };
+
+// Les noms viennent d'autres personnes via la liste partagée : jamais injectés bruts.
+function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, c =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 
 // Palette des "casaques" (couleurs de course) attribuées à chaque partant
 const SILK_COLORS = ['#6B2D8C', '#1B8A5A', '#D4A017', '#C1272D', '#B8860B', '#8E44AD', '#2E8B57', '#A0522D'];

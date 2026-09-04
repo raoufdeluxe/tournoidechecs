@@ -12,7 +12,15 @@ import vm from 'node:vm';
 const racine = fileURLToPath(new URL('../..', import.meta.url));
 
 // Ordre de chargement de public/index.html
-export const SCRIPTS = ['core.js', 'poule.js', 'finales.js', 'tournois.js', 'sauvegarde.js', 'sync.js'];
+
+
+// Les trois pages de l'application.
+export const PAGES = ['index.html', 'joueurs.html', 'tournois.html'];
+
+/** Les scripts que charge une page, dans son ordre à elle. */
+export function scriptsDeLaPage(page = 'index.html') {
+    return [...lireFichier('public/' + page).matchAll(/<script src="js\/([^"]+)"><\/script>/g)].map(m => m[1]);
+}
 
 export function lireScript(nom) {
     return readFileSync(racine + 'public/js/' + nom, 'utf8');
@@ -25,15 +33,17 @@ export function lireFichier(chemin) {
 // Éléments qui portent l'attribut `hidden` dans index.html : le faux DOM doit
 // partir du même état, sinon un test croit un panneau ouvert alors que la page
 // le montre fermé.
-const IDS_CACHES = new Set(
-    [...readFileSync(racine + 'public/index.html', 'utf8').matchAll(/<[a-z][^>]*>/gi)]
-        .map(m => m[0])
-        .filter(balise => /\shidden(\s|>|=)/.test(balise))
-        .map(balise => (balise.match(/\bid="([^"]+)"/) || [])[1])
-        .filter(Boolean));
+function idsCaches(page) {
+    return new Set(
+        [...readFileSync(racine + 'public/' + page, 'utf8').matchAll(/<[a-z][^>]*>/gi)]
+            .map(m => m[0])
+            .filter(balise => /\shidden(\s|>|=)/.test(balise))
+            .map(balise => (balise.match(/\bid="([^"]+)"/) || [])[1])
+            .filter(Boolean));
+}
 
 // Élément DOM factice : accepte tout ce que le code de rendu lui demande.
-function element(id) {
+function element(id, caches) {
     const el = {
         style: {},
         dataset: {},
@@ -43,7 +53,7 @@ function element(id) {
         textContent: '',
         value: '',
         checked: false,
-        hidden: IDS_CACHES.has(id),
+        hidden: caches ? caches.has(id) : false,
         disabled: false,
         appendChild(enfant) { this.children.push(enfant); return enfant; },
         insertBefore(enfant) { this.children.push(enfant); return enfant; },
@@ -86,10 +96,13 @@ function contexte2d() {
  * @param {object} options
  * @param {string} options.hash        fragment d'URL (identifiant du tournoi)
  * @param {function} options.fetch     implémentation de fetch (par défaut : réseau injoignable)
- * @param {string[]} options.scripts   scripts à charger (par défaut : tous)
+ * @param {string} options.page        page à instancier (par défaut : index.html)
+ * @param {string[]} options.scripts   scripts à charger (par défaut : ceux de la page)
  */
 export function chargerApp(options = {}) {
     const hash = options.hash ?? '#test-tournoi';
+    const page = options.page ?? 'index.html';
+    const caches = idsCaches(page);
     const stockage = new Map();
     const appelsFetch = [];
 
@@ -118,7 +131,10 @@ export function chargerApp(options = {}) {
         Uint8Array, Intl, encodeURIComponent, decodeURIComponent, parseInt, parseFloat, isNaN,
         alert(message) { bac.__alerts.push(message); },
         confirm() { return bac.__confirmReponse; },
-        prompt() { return null; },
+        prompt() { return bac.__promptReponse; },
+        __promptReponse: null,
+        // Éléments que renverra document.querySelectorAll, par sélecteur.
+        __selecteurs: {},
         __ecouteurs: {},
         addEventListener(type, handler) { (bac.__ecouteurs[type] ||= []).push(handler); },
         removeEventListener() {},
@@ -162,13 +178,13 @@ export function chargerApp(options = {}) {
     const cacheElements = new Map();
     bac.document = {
         getElementById(id) {
-            if (!cacheElements.has(id)) cacheElements.set(id, element(id));
+            if (!cacheElements.has(id)) cacheElements.set(id, element(id, caches));
             return cacheElements.get(id);
         },
         createElement: () => element(),
         createElementNS: () => element(),
         querySelector: () => element(),
-        querySelectorAll: () => [],
+        querySelectorAll: (selecteur) => bac.__selecteurs[selecteur] || [],
         addEventListener() {},
         removeEventListener() {},
         get body() { return element(); },
@@ -180,7 +196,7 @@ export function chargerApp(options = {}) {
     bac.self = bac;
 
     const contexte = vm.createContext(bac);
-    const scripts = options.scripts ?? SCRIPTS;
+    const scripts = options.scripts ?? scriptsDeLaPage(page);
     for (const nom of scripts) {
         vm.runInContext(lireScript(nom), contexte, { filename: 'public/js/' + nom });
     }
@@ -211,6 +227,15 @@ export function chargerApp(options = {}) {
             return this.json(`${nom}(...__args)`);
         },
         repondreConfirm(valeur) { bac.__confirmReponse = valeur; },
+        repondrePrompt(valeur) { bac.__promptReponse = valeur; },
+        /**
+         * Ce que document.querySelectorAll(selecteur) renverra.
+         * Les éléments sont de simples objets : { value, dataset… }.
+         */
+        definirElements(selecteur, elements) {
+            bac.__transfert = elements;
+            vm.runInContext(`__selecteurs[${JSON.stringify(selecteur)}] = __transfert;`, contexte);
+        },
         /**
          * Attend que le chargement initial (loadState au bas de sync.js) soit retombé.
          * À appeler avant d'agir, sinon cette lecture asynchrone vient se mêler

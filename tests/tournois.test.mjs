@@ -86,8 +86,21 @@ describe('identifiant porté par l\'URL', () => {
     test('la clé locale est propre à chaque tournoi', () => {
         const a = chargerApp({ hash: '#un' });
         const b = chargerApp({ hash: '#deux' });
-        assert.notEqual(a.ev('storageKey()'), b.ev('storageKey()'));
+        assert.notEqual(a.ev('storageKey(tournamentId)'), b.ev('storageKey(tournamentId)'));
         assert.equal(a.ev('storageKey("autre")'), b.ev('storageKey("autre")'));
+    });
+});
+
+describe('le tournoi courant est noté pour la page /tournois', () => {
+    test('à l\'ouverture', () => {
+        const app = chargerApp({ hash: '#tournoi-des-potes' });
+        assert.equal(app.stockage.get('tournoi_echecs_courant'), 'tournoi-des-potes');
+    });
+
+    test('et quand le tournoi change d\'adresse', () => {
+        const app = chargerApp({ hash: '#avant' });
+        app.ev('tournamentId = "apres"; noterTournoiCourant();');
+        assert.equal(app.stockage.get('tournoi_echecs_courant'), 'apres');
     });
 });
 

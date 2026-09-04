@@ -307,6 +307,7 @@ function startNewTournament() {
     }
 
     tournamentId = newTournamentId();
+    noterTournoiCourant();
     history.replaceState(null, '', '#' + tournamentId);
 
     // On repart sur un état de synchronisation vierge : nouvelle clé, nouvelle version.

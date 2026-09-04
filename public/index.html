@@ -47,12 +47,9 @@
                 <button id="btn-reset" class="menu-item" onclick="startNewTournament()">↺ Nouveau tournoi</button>
                 <button id="btn-copy-link" class="menu-item" onclick="copyTournamentLink()">🔗 Copier le lien</button>
                 <button id="btn-rename" class="menu-item" onclick="togglePlayersPanel()">✏️ Renommer</button>
-                <button id="btn-list" class="menu-item" onclick="toggleTournamentsPanel()">📋 Tous les tournois</button>
-                <button id="btn-export" class="menu-item" onclick="exporterTournois()">⬇️ Exporter tous les tournois</button>
-                <button id="btn-import" class="menu-item" onclick="declencherImport()">⬆️ Importer une sauvegarde</button>
+                <a id="btn-list" class="menu-item" href="./tournois">📋 Tournois</a>
+                <a id="btn-joueurs" class="menu-item" href="./joueurs">👥 Joueurs</a>
             </nav>
-            <input type="file" id="import-file" accept="application/json,.json" hidden
-                   onchange="preparerRestauration(this.files[0])">
             <div><span id="sync-status" class="sync-status" data-state="saved">✓ Enregistré</span></div>
         </header>
 
@@ -64,26 +61,6 @@
             <div id="players-editor"></div>
             <div class="players-actions">
                 <button onclick="savePlayerNames()">Enregistrer</button>
-            </div>
-        </div>
-
-        <div id="tournaments-panel" class="tournaments-panel" hidden>
-            <div class="tournaments-head">
-                <strong>📋 Tournois enregistrés</strong>
-                <button class="secondary" onclick="toggleTournamentsPanel()">Fermer</button>
-            </div>
-            <div id="tournaments-list"></div>
-        </div>
-
-        <div id="import-panel" class="tournaments-panel" hidden>
-            <div class="tournaments-head">
-                <strong>⬆️ Restaurer une sauvegarde</strong>
-                <button class="secondary" onclick="fermerImport()">Fermer</button>
-            </div>
-            <div id="import-plan"></div>
-            <div id="import-progress" class="tournaments-empty"></div>
-            <div class="players-actions">
-                <button id="btn-import-confirm" onclick="appliquerRestauration()">Restaurer</button>
             </div>
         </div>
 
@@ -293,10 +270,11 @@
     </div>
 
     <script src="js/core.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/joueurs.js"></script>
     <script src="js/poule.js"></script>
     <script src="js/finales.js"></script>
     <script src="js/tournois.js"></script>
-    <script src="js/sauvegarde.js"></script>
     <script src="js/sync.js"></script>
 </body>
 </html>

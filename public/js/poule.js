@@ -27,37 +27,76 @@ function generateRoundRobinRounds(playerIds) {
     return rounds;
 }
 
-function updatePlayerInputs() {
+// Les <option> d'un emplacement de partant. `ref` est le joueur déjà choisi.
+function optionsJoueursHtml(ref) {
+    const choisi = (valeur) => (valeur === ref ? ' selected' : '');
+    let html = '<option value=""' + (ref ? '' : ' selected') + '>— choisir un joueur —</option>';
+    for (const j of joueurs) {
+        html += '<option value="' + escapeHtml(j.id) + '"' + choisi(j.id) + '>' +
+            escapeHtml(j.nom) + (j.elo != null ? ' (' + j.elo + ')' : '') + '</option>';
+    }
+    html += '<option value="' + REF_NOUVEAU + '">➕ Nouveau joueur…</option>';
+    return html;
+}
+
+// Choisir « Nouveau joueur… » crée la fiche sans quitter l'inscription ;
+// la page Joueurs reste l'endroit où on les gère vraiment.
+async function choisirJoueur(select) {
+    if (select.value !== REF_NOUVEAU) return;
+    select.value = '';
+    const nom = prompt('Nom du nouveau joueur :');
+    if (nom == null) return;
+    const fiche = await ajouterJoueur(nom);
+    if (!fiche) return;
+
+    const dejaChoisis = Array.from(document.querySelectorAll('.player-ref')).map(el => el.value);
+    updatePlayerInputs(dejaChoisis);
+    Array.from(document.querySelectorAll('.player-ref'))[Number(select.dataset.index)].value = fiche.id;
+}
+
+// Un emplacement par partant, chacun pointant vers une fiche de la liste des
+// joueurs. L'Elo ne se saisit plus ici : il appartient à la fiche.
+function updatePlayerInputs(refsChoisies) {
     const count = parseInt(document.getElementById('player-count').value);
     const container = document.getElementById('player-inputs');
+    // Sans argument, on conserve les choix déjà faits : changer le nombre de
+    // partants ne doit pas effacer la sélection.
+    const refs = refsChoisies ||
+        Array.from(document.querySelectorAll('.player-ref')).map(el => el.value);
+
     container.innerHTML = '';
-    
+
     for (let i = 0; i < count; i++) {
         const group = document.createElement('div');
         group.className = 'player-input-group';
         group.innerHTML = `
             <div class="form-group" style="margin-bottom: 0;">
                 <label>Partant n°${i + 1}</label>
-                <input type="text" class="player-name" placeholder="Nom du partant" value="Partant ${i + 1}">
-            </div>
-            <div class="form-group" style="margin-bottom: 0;">
-                <label>Elo (optionnel)</label>
-                <input type="number" class="player-elo" placeholder="Ex. 1500" min="0" step="1">
+                <select class="player-ref" data-index="${i}" onchange="choisirJoueur(this)">
+                    ${optionsJoueursHtml(refs[i] || '')}
+                </select>
             </div>
         `;
         container.appendChild(group);
     }
 }
 
-document.getElementById('player-count').addEventListener('change', updatePlayerInputs);
+// La fonction prend un argument : on ne lui passe pas l'évènement du <select>.
+document.getElementById('player-count').addEventListener('change', () => updatePlayerInputs());
 updatePlayerInputs();
 
 async function startTournament() {
-    const names = Array.from(document.querySelectorAll('.player-name')).map(el => el.value.trim());
-    const elos = Array.from(document.querySelectorAll('.player-elo')).map(el => el.value.trim() === '' ? null : parseInt(el.value));
-    
-    if (names.some(name => !name)) {
-        alert('Tous les noms doivent être remplis');
+    const refs = Array.from(document.querySelectorAll('.player-ref')).map(el => el.value);
+
+    if (refs.some(ref => !ref)) {
+        alert('Choisis un joueur pour chaque partant.');
+        return;
+    }
+
+    const doublon = refs.find((ref, i) => refs.indexOf(ref) !== i);
+    if (doublon) {
+        const fiche = joueurParId(doublon);
+        alert('« ' + (fiche ? fiche.nom : doublon) + ' » occupe deux places : chaque partant doit être un joueur différent.');
         return;
     }
 
@@ -93,19 +132,26 @@ async function startTournament() {
         }
         tournamentId = slug;
         history.replaceState(null, '', '#' + tournamentId);
+        noterTournoiCourant();
         remoteVersion = 0; // nouvelle clé côté serveur
     }
 
     tournament.name = rawName || null;
     updateTournamentTitle();
 
-    tournament.players = names.map((name, idx) => ({
-        id: idx,
-        name: name,
-        elo: elos[idx],
-        points: 0,
-        matches: 0
-    }));
+    // `ref` est ce qui fait foi ; nom et Elo sont recopiés pour que le tournoi
+    // reste lisible hors ligne, mais la fiche les écrase à chaque chargement.
+    tournament.players = refs.map((ref, idx) => {
+        const fiche = joueurParId(ref);
+        return {
+            id: idx,
+            ref: ref,
+            name: fiche ? fiche.nom : NOM_JOUEUR_ABSENT,
+            elo: fiche ? fiche.elo : null,
+            points: 0,
+            matches: 0
+        };
+    });
 
     // Sans cela, les demi-finales et la finale de la manche précédente survivraient
     // à la régénération de la poule, dans un état incohérent avec elle.

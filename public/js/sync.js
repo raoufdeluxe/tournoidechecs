@@ -39,7 +39,7 @@ function currentState() {
 function saveState() {
     // Copie locale immédiate (fonctionne même hors-ligne)
     try {
-        localStorage.setItem(storageKey(), JSON.stringify(currentState()));
+        localStorage.setItem(storageKey(tournamentId), JSON.stringify(currentState()));
     } catch (e) {
         console.warn('Sauvegarde locale impossible :', e);
     }
@@ -146,6 +146,8 @@ function applyState(state) {
     }
 
     tournament = state.tournament;
+    // Les noms viennent des fiches : un renommage fait ailleurs apparaît ici.
+    resoudreJoueursDuTournoi();
     updateTournamentTitle();
     document.getElementById('tournament-name').value = tournament.name || '';
 
@@ -179,6 +181,14 @@ function applyState(state) {
 }
 
 async function loadState() {
+    // Les fiches d'abord : sans elles, un tournoi s'afficherait avec les noms
+    // recopiés lors de son inscription, pas avec les noms à jour.
+    await chargerJoueurs();
+
+    // L'écran d'inscription a été dessiné avant l'arrivée des fiches : ses
+    // menus déroulants seraient vides. On les redessine, choix conservés.
+    updatePlayerInputs();
+
     // 1) On tente d'abord la version partagée sur Cloudflare (la plus à jour, tous appareils confondus)
     try {
         const res = await fetch(stateUrl());
@@ -199,7 +209,7 @@ async function loadState() {
 
     // 2) Repli sur la copie locale (mode hors-ligne, ou Worker injoignable)
     try {
-        const raw = localStorage.getItem(storageKey());
+        const raw = localStorage.getItem(storageKey(tournamentId));
         if (!raw) return false;
         return applyState(JSON.parse(raw));
     } catch (e) {

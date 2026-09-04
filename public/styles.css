@@ -960,3 +960,67 @@ button.success:hover {
     margin-bottom: 5px;
     font-family: var(--font-sport);
 }
+
+/* Liste des joueurs réutilisables */
+.joueur-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+}
+.joueur-row:last-of-type { border-bottom: none; }
+.joueur-row--nouveau { border-top: 2px solid var(--border); margin-top: 6px; }
+.joueur-row .joueur-nom { flex: 1 1 auto; min-width: 0; }
+.joueur-row .joueur-elo { flex: 0 0 110px; }
+.joueur-row button { flex: none; width: auto; min-width: 0; padding: 8px 14px; font-size: 13px; }
+
+@media (max-width: 600px) {
+    .joueur-row { flex-wrap: wrap; }
+    .joueur-row .joueur-nom { flex: 1 1 100%; }
+    .joueur-row .joueur-elo { flex: 1 1 auto; }
+}
+
+
+/* Navigation entre les trois pages */
+.nav-pages {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+.nav-lien {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+}
+.nav-lien:hover { border-color: var(--accent); }
+.nav-lien[aria-current="page"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.card-intro {
+    margin: -6px 0 16px;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+/* Une ligne de la page Tournois : nom éditable + informations */
+.tournoi-edition { flex: 1 1 auto; min-width: 0; }
+.tournoi-edition .tournoi-nom {
+    width: 100%;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+/* Le menu de l'accueil mêle boutons et liens */
+a.menu-item { display: block; text-decoration: none; }
