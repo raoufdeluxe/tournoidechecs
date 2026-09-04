@@ -843,7 +843,9 @@ input.journee-numero {
 }
 input.journee-numero::-webkit-inner-spin-button,
 input.journee-numero::-webkit-outer-spin-button { appearance: none; margin: 0; }
-.journee-total { flex: none; color: var(--text-secondary); font-weight: 500; }
+/* Le dénominateur d'une progression — « / 6 », « / 30 » — s'efface derrière
+   la valeur qui bouge. */
+.sur-total { flex: none; color: var(--text-secondary); font-weight: 500; }
 .journee-titre .badge { margin-left: 2px; }
 
 .summary-grid {

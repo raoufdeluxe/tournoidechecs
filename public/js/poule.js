@@ -408,14 +408,12 @@ function renderParties() {
     const total = tournoi.totalRounds;
     const current = tournoi.currentRound;
     const roundMatches = tournoi.matches.filter(m => m.round === current);
-    const leg = current <= total / 2 ? 1 : 2;
     const allPlayed = tournoi.matches.every(m => m.played);
 
     const champJournee = document.getElementById('round-input');
     champJournee.value = current;
     champJournee.max = total;
     document.getElementById('round-total').textContent = '/ ' + total;
-    document.getElementById('round-leg').textContent = leg === 1 ? 'Aller' : 'Retour';
 
     // Les flèches ne font que feuilleter : elles s'éteignent au bout du calendrier.
     document.getElementById('prev-round-btn').disabled = current <= 1;
@@ -464,12 +462,10 @@ function renderCartePartie(match) {
             <div class="match-card" style="margin: 0 0 12px;">
                 <div class="player-result ${getClasseResultat(match, true)}">
                     ${getIconeResultat(match, true)}${buildCasaque(p1.id)}${escapeHtml(p1.name)}
-                    ${buildBadgeTerrain(match, true)}
                 </div>
                 <div class="vs-indicator">vs</div>
                 <div class="player-result ${getClasseResultat(match, false)}">
                     ${getIconeResultat(match, false)}${buildCasaque(p2.id)}${escapeHtml(p2.name)}
-                    ${buildBadgeTerrain(match, false)}
                 </div>
             </div>
             ${buildReglagesPartie(match,

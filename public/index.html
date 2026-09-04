@@ -100,12 +100,11 @@
 
                 <div class="summary-grid">
                     <div class="summary-card">
-                        <div class="summary-card-value" id="matches-played">0</div>
+                        <div class="summary-card-value">
+                            <span id="matches-played">0</span>
+                            <span class="sur-total">/ <span id="matches-total">0</span></span>
+                        </div>
                         <div class="summary-card-label">Manches jouées</div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="summary-card-value" id="matches-total">0</div>
-                        <div class="summary-card-label">Manches au programme</div>
                     </div>
                 </div>
 
@@ -120,8 +119,7 @@
                         <input type="number" id="round-input" class="journee-numero" min="1"
                                inputmode="numeric" aria-label="Aller à la journée"
                                onchange="goToJournee(this.value)">
-                        <span class="journee-total" id="round-total"></span>
-                        <span class="badge badge-primary" id="round-leg"></span>
+                        <span class="sur-total" id="round-total"></span>
                     </h3>
                     <button type="button" class="journee-fleche" id="next-round-btn"
                             onclick="nextJournee()" aria-label="Journée suivante">›</button>
