@@ -1,0 +1,22 @@
+{
+  "name": "Grand Prix des Échecs",
+  "short_name": "Grand Prix",
+  "description": "Poule qualificative, demi-finales et grande finale — tournois d'échecs entre amis.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#251038",
+  "theme_color": "#251038",
+  "icons": [
+    { "src": "icones/icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icones/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icones/icone-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Tournois", "url": "tournois", "description": "La liste des tournois enregistrés" },
+    { "name": "Joueurs", "url": "joueurs", "description": "Les fiches réutilisables" }
+  ]
+}

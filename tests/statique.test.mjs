@@ -163,3 +163,44 @@ describe('les messages restent dans la page', () => {
     });
 
 });
+
+describe('le manifeste de l\'application installable', () => {
+    const manifeste = JSON.parse(lireFichier('public/manifest.json'));
+
+    test('il déclare ce qu\'il faut pour être installé', () => {
+        assert.equal(manifeste.name, 'Grand Prix des Échecs');
+        assert.ok(manifeste.short_name.length <= 12, 'le nom court doit tenir sous une icône');
+        assert.equal(manifeste.display, 'standalone');
+        assert.ok(manifeste.start_url, 'sans point de départ, l\'application s\'ouvre n\'importe où');
+    });
+
+    test('les tailles d\'icône attendues sont présentes, dont une masquable', () => {
+        const tailles = manifeste.icons.map(i => i.sizes);
+        assert.ok(tailles.includes('192x192'));
+        assert.ok(tailles.includes('512x512'));
+        assert.ok(manifeste.icons.some(i => i.purpose === 'maskable'),
+            'sans elle, Android rogne le motif dans un cercle');
+    });
+
+    test('chaque icône annoncée existe vraiment', () => {
+        // Un chemin faux ne fait rien échouer : l'installation est simplement
+        // refusée, sans un mot. C'est le genre de panne qu'on ne voit jamais.
+        for (const icone of manifeste.icons) {
+            assert.ok(existsSync(racine + 'public/' + icone.src), `icône absente : ${icone.src}`);
+        }
+    });
+
+    test('chaque page annonce le manifeste et la couleur de la barre', () => {
+        for (const page of PAGES) {
+            const source = lireFichier('public/' + page);
+            assert.match(source, /rel="manifest"/, `${page} n'annonce pas le manifeste`);
+            assert.match(source, /name="theme-color"/, `${page} ne pose pas la couleur de barre`);
+        }
+    });
+
+    test('les raccourcis mènent à des pages existantes', () => {
+        for (const raccourci of manifeste.shortcuts || []) {
+            assert.ok(PAGES.includes(raccourci.url + '.html'), `raccourci mort : ${raccourci.url}`);
+        }
+    });
+});
