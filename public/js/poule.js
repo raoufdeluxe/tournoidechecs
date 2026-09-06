@@ -447,10 +447,11 @@ function getCoteDomicile(match) {
 
 function buildBadgeTerrain(match, isPlayer1) {
     const home = getCoteDomicile(match);
-    if (!home) return '<span class="venue venue-neutral">⚑ Terrain neutre</span>';
+    if (!home) return '<span class="venue venue-neutral" title="Terrain neutre">⚑︎</span>';
+    // Le pion dit le terrain sans un mot : blanc chez soi, noir en visite.
     return (home === 'p1') === isPlayer1
-        ? '<span class="venue venue-home">🏠 Domicile</span>'
-        : '<span class="venue venue-away">✈️ Extérieur</span>';
+        ? '<span class="venue venue-home" title="Domicile">♙︎</span>'
+        : '<span class="venue venue-away" title="Extérieur">♟︎</span>';
 }
 
 function renderCartePartie(match) {

@@ -586,18 +586,20 @@ a.menu-item { display: block; text-decoration: none; }
     .standings-table th, .standings-table td { padding: var(--e2) var(--e2); font-size: var(--t2); }
 }
 
+/* Le terrain se lit à la pièce : pion blanc chez soi, pion noir en visite.
+   Le glyphe porte lui-même la distinction — l'un est creux, l'autre plein — donc
+   les deux prennent l'encre du nom qu'ils suivent ; seul le fanion du terrain
+   neutre se colore. La pile de polices est celle qui porte les pièces d'échecs,
+   et le sélecteur U+FE0E dans le balisage écarte la version émoji. */
 .venue {
-    display: block;
-    margin-top: var(--e1);
-    /* exactement la moitié du nom, quelle que soit la taille de celui-ci */
-    font-size: 0.5em;
-    font-weight: 700;
-    font-family: var(--font-sport);
-    letter-spacing: 0.02em;
+    display: inline-block;
+    margin-left: var(--e1);
+    font-size: 1.1em;
+    line-height: 1;
+    vertical-align: baseline;
+    font-family: 'Segoe UI Symbol', 'Apple Symbols', 'Noto Sans Symbols 2', 'DejaVu Sans', serif;
 }
 
-.venue-home { color: var(--success); }
-.venue-away { color: var(--text-secondary); }
 .venue-neutral { color: var(--warning); }
 .standings-table { width: 100%; border-collapse: collapse; margin-top: var(--e5); }
 
@@ -764,15 +766,12 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
 .sur-total { flex: none; color: var(--text-secondary); font-weight: 500; }
 .journee-titre .badge { margin-left: var(--e1); }
 
-/* Deux mentions que seul le grand écran peut se permettre. Sur un téléphone,
-   « Domicile / Extérieur » se répète sous chaque nom des trente duels et pousse
-   le reste hors de vue ; le badge de manche vole la place au numéro de journée.
-   Les demies et la finale gardent la mention en toutes tailles : elle n'y paraît
-   que deux fois. Un seul balisage, servi partout — c'est la largeur qui décide. */
-#matches-container .venue, .journee-titre .badge { display: none; }
+/* Une mention que seul le grand écran peut se permettre : sur un téléphone, le
+   badge de manche vole la place au numéro de journée. Le terrain, lui, tient
+   maintenant dans un pion et reste affiché en toutes tailles. */
+.journee-titre .badge { display: none; }
 
 @media (min-width: 701px) {
-    #matches-container .venue { display: block; }
     .journee-titre .badge { display: inline-block; }
 }
 
