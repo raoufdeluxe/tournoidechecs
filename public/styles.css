@@ -828,6 +828,10 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
 /* La pastille reçoit la couleur du partant, la seule chose qui reste calculée. */
 .graphe-pastille { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
 
+/* Casaque du second tour de palette : creuse comme le trait de sa ligne est
+   pointillé. La couleur seule ne suffit plus au-delà de huit partants. */
+.graphe-pastille--creuse { background: none; border: 3px solid; }
+
 /* Le cadre d'un duel de poule : les deux adversaires, les réglages, le résultat. */
 
 .carte-partie { margin-bottom: var(--e4); }

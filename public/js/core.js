@@ -32,10 +32,30 @@ function escapeHtml(value) {
         ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-// Palette des "casaques" (couleurs de course) attribuées à chaque partant
-const COULEURS_CASAQUE = ['#6B2D8C', '#1B8A5A', '#D4A017', '#C1272D', '#B8860B', '#8E44AD', '#2E8B57', '#A0522D'];
+// Palette des "casaques" (couleurs de course) attribuées à chaque partant.
+// Huit teintes tenues à l'écart les unes des autres : chaque paire reste
+// séparée sur le fond crème, y compris pour un œil daltonien (ΔE OKLab ≥ 8 en
+// protanopie et deutéranopie, ≥ 15 en vision normale, contraste ≥ 3:1).
+// L'ordre est fixe — une casaque appartient au partant, pas à son rang.
+// Au-delà de huit, la palette se répète : aucune neuvième teinte ne tiendrait
+// l'écart, c'est le trait du graphe qui départage les jumeaux de couleur.
+const COULEURS_CASAQUE = [
+    '#862C92', // violet
+    '#0E8050', // vert
+    '#BF860C', // or
+    '#C23E16', // rouge
+    '#0062C7', // bleu
+    '#159CB7', // turquoise
+    '#E85E8D', // rose
+    '#9077F1'  // lavande
+];
 function getCouleurCasaque(id) {
     return COULEURS_CASAQUE[id % COULEURS_CASAQUE.length];
+}
+// Vrai pour les partants du second tour de palette : ceux qui partagent leur
+// couleur avec un autre et ont besoin d'un second signe pour s'en distinguer.
+function isCasaqueRepetee(id) {
+    return id >= COULEURS_CASAQUE.length;
 }
 function buildCasaque(id) {
     return `<span class="silk-dot" style="background:${getCouleurCasaque(id)};"></span>`;

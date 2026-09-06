@@ -381,17 +381,24 @@ function renderGrapheProgression() {
         xLabelsHtml += `<text x="${xFor(r)}" y="${height - padB + 16}" font-size="10" fill="var(--text-secondary)" text-anchor="middle">J${r}</text>`;
     }
 
-    // Une ligne par partant, colorée avec sa casaque
+    // Une ligne par partant, colorée avec sa casaque. Passé huit partants les
+    // casaques se répètent : les seconds prennent le trait pointillé et la
+    // pastille creuse, de quoi les séparer de leur jumeau de couleur.
     let linesHtml = '';
     let legendHtml = '';
     data.forEach(d => {
         const color = getCouleurCasaque(d.id);
+        const repetee = isCasaqueRepetee(d.id);
+        const trait = repetee ? ' stroke-dasharray="7 5"' : '';
         const points = d.series.map((pts, idx) => `${xFor(idx + 1)},${yFor(pts)}`).join(' ');
-        linesHtml += `<polyline points="${points}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+        linesHtml += `<polyline points="${points}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"${trait}/>`;
         d.series.forEach((pts, idx) => {
             linesHtml += `<circle cx="${xFor(idx + 1)}" cy="${yFor(pts)}" r="2.5" fill="${color}"/>`;
         });
-        legendHtml += `<span class="graphe-legende-item"><span class="graphe-pastille" style="background:${color};"></span>${escapeHtml(d.name)}</span>`;
+        const pastille = repetee
+            ? `<span class="graphe-pastille graphe-pastille--creuse" style="border-color:${color};"></span>`
+            : `<span class="graphe-pastille" style="background:${color};"></span>`;
+        legendHtml += `<span class="graphe-legende-item">${pastille}${escapeHtml(d.name)}</span>`;
     });
 
     container.innerHTML = `
