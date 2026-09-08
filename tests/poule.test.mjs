@@ -112,6 +112,45 @@ describe('generateCalendrier — aller/retour', () => {
     });
 });
 
+describe('l\'encart des matchs et sa matrice', () => {
+    const resume = (app) => app.ev('document.getElementById("matchs-resume").textContent');
+    const matrice = (app) => app.ev('document.getElementById("matrice-matchs").innerHTML');
+    const cases = (app) => [...matrice(app).matchAll(/<td[^>]*title="([^"]*)"/g)].map(m => m[1]);
+
+    test('sans calendrier, l\'encart n\'a rien à annoncer et disparaît', () => {
+        const app = chargerApp();
+        app.ev('renderVoletMatchs()');
+        assert.equal(app.ev('document.getElementById("volet-matchs").hidden'), true);
+    });
+
+    test('l\'encart annonce les duels joués sur le total', () => {
+        const app = pouleGeneree(noms(4));
+        app.ev('renderVoletMatchs()');
+        assert.equal(app.ev('document.getElementById("volet-matchs").hidden'), false);
+        assert.equal(resume(app), 'Matchs : 0/12');
+        jouerPoule(app, { '0-1': 'p1' });   // l'aller et le retour
+        app.ev('renderVoletMatchs()');
+        assert.equal(resume(app), 'Matchs : 2/12');
+    });
+
+    test('la matrice a une case par duel du calendrier, et aucune sur la diagonale', () => {
+        const app = pouleGeneree(noms(4));
+        app.ev('renderVoletMatchs()');
+        assert.equal(cases(app).length, app.json('tournoi.matches').length,
+            'autant de cases renseignées que de duels');
+        assert.equal(new Set(cases(app)).size, cases(app).length, 'aucun duel montré deux fois');
+    });
+
+    test('chaque case dit qui reçoit et si le duel est joué', () => {
+        const app = pouleGeneree(noms(4));
+        jouerPoule(app, { '0-1-leg1': 'p1' });
+        app.ev('renderVoletMatchs()');
+        // À l'aller, le premier nommé reçoit : J0 reçoit J1, et pas l'inverse.
+        assert.ok(cases(app).includes('J0 reçoit J1 — joué'));
+        assert.ok(cases(app).includes('J1 reçoit J0 — à jouer'), 'le retour reste dû');
+    });
+});
+
 describe('computeClassement', () => {
     test('barème : victoire 1 pt, nulle 0,5 pt, défaite 0', () => {
         const app = pouleGeneree(noms(4));

@@ -308,6 +308,9 @@ function showResultats(champion, runner) {
 function showEcran(screenId) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(screenId).classList.add('active');
+    // L'encart des matchs est commun à tous les écrans : il suit le tournoi,
+    // pas l'écran qu'on regarde.
+    renderVoletMatchs();
     // Rien a remettre a zero tant qu'aucun tournoi n'est lance.
     saveEtat();
 }

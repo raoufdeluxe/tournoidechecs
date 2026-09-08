@@ -49,8 +49,8 @@ La **3e place** ne se joue pas : c'est le mieux classé en poule parmi les deux 
   plutôt que d'en écraser une en silence.
 - **Fonctionne hors-ligne.** Copie locale immédiate en `localStorage`, réessai automatique
   avec back-off (1s, 2s, 4s… plafonné à 30s), reprise dès le retour du réseau.
-- **Classement vivant.** Table des scores, barre de progression, cartes de résumé et
-  **graphe de progression journée après journée**.
+- **Classement vivant.** Table des scores sur l'ensemble du tournoi, barre de progression,
+  matrice des duels joués et restants, et **graphe de progression journée après journée**.
 - **De 4 à 16 partants**, nombre impair géré (journée de repos), Elo optionnel par joueur.
 - **Cadence et type par partie** — 10 min (défaut), 5 min, 3 min ou 24 h ;
   classique (défaut) ou Chess960. Chaque partie a les siens : une poule peut

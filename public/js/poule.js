@@ -218,9 +218,66 @@ function renderPoule() {
 function updateProgression() {
     const total = tournoi.matches.length;
     const played = tournoi.matches.filter(m => m.played).length;
-    document.getElementById('matches-played').textContent = played;
-    document.getElementById('matches-total').textContent = total;
-    document.getElementById('progress-fill').style.width = ((played / total) * 100) + '%';
+    document.getElementById('progress-fill').style.width = (total ? (played / total) * 100 : 0) + '%';
+    renderVoletMatchs();
+}
+
+// Le duel où `recevant` reçoit `visiteur` : l'aller si c'est lui le premier
+// nommé de la paire, le retour sinon — la règle qu'énonce getCoteDomicile.
+function getDuel(recevant, visiteur) {
+    const id = recevant < visiteur
+        ? `${recevant}-${visiteur}-leg1`
+        : `${visiteur}-${recevant}-leg2`;
+    return tournoi.matches.find(m => m.id === id);
+}
+
+// La matrice du calendrier : une ligne par partant qui reçoit, une colonne par
+// adversaire. Chaque duel de l'aller et du retour a donc sa case, et l'on voit
+// d'un coup ce qui est joué et ce qui reste.
+function buildMatriceMatchs() {
+    const partants = tournoi.players;
+    const numero = (p) => p.id + 1;
+
+    const entetes = partants.map(p =>
+        `<th scope="col" title="${escapeHtml(p.name)}">${numero(p)}</th>`).join('');
+
+    const lignes = partants.map(recevant => {
+        const cases = partants.map(visiteur => {
+            if (recevant.id === visiteur.id) return '<td class="matrice-repos"></td>';
+            const duel = getDuel(recevant.id, visiteur.id);
+            const joue = !!(duel && duel.played);
+            const titre = `${recevant.name} reçoit ${visiteur.name} — ${joue ? 'joué' : 'à jouer'}`;
+            return `<td${joue ? ' class="matrice-joue"' : ''} title="${escapeHtml(titre)}">${joue ? '✓' : '·'}</td>`;
+        }).join('');
+        return `<tr><th scope="row">${buildCasaque(recevant.id)}${numero(recevant)}. ${escapeHtml(recevant.name)}</th>${cases}</tr>`;
+    }).join('');
+
+    return `
+        <div class="table-scroll">
+            <table class="matrice">
+                <thead><tr><th scope="col">Reçoit</th>${entetes}</tr></thead>
+                <tbody>${lignes}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+// L'encart des matchs vit à côté du règlement, hors des écrans : il se remet à
+// jour à chaque résultat saisi comme à chaque changement d'écran. Sans
+// calendrier, il n'a rien à annoncer et disparaît.
+function renderVoletMatchs() {
+    const volet = document.getElementById('volet-matchs');
+    if (!volet) return;
+
+    // Un état d'avant le calendrier — ou d'un ancien format — n'a pas de duels.
+    const duels = tournoi.matches || [];
+    const total = duels.length;
+    volet.hidden = total === 0;
+    if (!total) return;
+
+    const joues = duels.filter(m => m.played).length;
+    document.getElementById('matchs-resume').textContent = `Matchs : ${joues}/${total}`;
+    document.getElementById('matrice-matchs').innerHTML = buildMatriceMatchs();
 }
 
 // Le classement général, toutes journées confondues : celui du tournoi tel

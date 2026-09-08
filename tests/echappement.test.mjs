@@ -30,6 +30,12 @@ describe('phase de poule', () => {
         assert.match(carte, /Victoire — &lt;img/, 'le menu de résultat aussi');
     });
 
+    test('la matrice des matchs, en-têtes et infobulles comprises', () => {
+        const app = pouleGeneree(noms(4));
+        app.ev('renderVoletMatchs()');
+        assertEchappe(app.ev('document.getElementById("matrice-matchs").innerHTML'), 'matrice des matchs');
+    });
+
     test('la légende du graphe de progression', () => {
         const app = pouleGeneree(noms(4));
         app.ev('renderGrapheProgression()');

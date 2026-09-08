@@ -436,11 +436,23 @@ a.menu-item { display: block; text-decoration: none; }
     vertical-align: middle;
 }
 
-/* Le règlement, replié sous le nom du tournoi. <details> suffit : ouvrir et
-   fermer un panneau n'appelle pas de JavaScript. */
-.reglement { max-width: 1200px; margin: -8px auto var(--e5); color: rgba(255, 255, 255, 0.75); font-size: var(--t2); }
+/* Les volets repliés sous le nom du tournoi — le règlement, le compte des
+   matchs. <details> suffit : ouvrir et fermer un panneau n'appelle pas de
+   JavaScript. Fermés, ils tiennent côte à côte ; ouvert, un volet prend toute
+   la largeur et renvoie l'autre à la ligne. */
+.volets {
+    max-width: 1200px;
+    margin: -8px auto var(--e5);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--e3);
+    color: rgba(255, 255, 255, 0.75);
+    font-size: var(--t2);
+}
 
-.reglement > summary {
+.volet[open] { flex: 1 0 100%; }
+
+.volet > summary {
     width: fit-content;
     padding: var(--e2) var(--e4);
     border-radius: var(--r2);
@@ -452,9 +464,9 @@ a.menu-item { display: block; text-decoration: none; }
     border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
-.reglement > summary:hover { background: rgba(255, 255, 255, 0.14); }
+.volet > summary:hover { background: rgba(255, 255, 255, 0.14); }
 
-.reglement-corps {
+.volet-corps {
     --fond: rgba(255, 255, 255, 0.05);
     --bord: rgba(255, 255, 255, 0.12);
     --retrait: var(--e4) var(--e5);
@@ -462,9 +474,28 @@ a.menu-item { display: block; text-decoration: none; }
     line-height: 1.55;
 }
 
-.reglement-corps h3 { margin-top: var(--e4); font-family: var(--font-sport); font-size: var(--t2); color: white; }
-.reglement-corps h3:first-child { margin-top: 0; }
-.reglement-corps p { margin-top: var(--e1); }
+.volet-corps h3 { margin-top: var(--e4); font-family: var(--font-sport); font-size: var(--t2); color: white; }
+.volet-corps h3:first-child { margin-top: 0; }
+.volet-corps p { margin-top: var(--e1); }
+
+/* La matrice du calendrier : une ligne par partant qui reçoit, une colonne par
+   adversaire. La diagonale reste vide — on ne se reçoit pas soi-même. */
+.matrice { border-collapse: collapse; font-size: var(--t1); }
+
+.matrice th, .matrice td {
+    padding: var(--e1) var(--e2);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    text-align: center;
+}
+
+/* Le retrait que .table-scroll ménage pour ce qui suit : dans un volet, la
+   matrice est seule et il ne resterait qu'un blanc au bas du panneau. */
+.volet-corps .table-scroll { margin-bottom: 0; }
+
+.matrice th { color: white; font-weight: 600; white-space: nowrap; }
+.matrice tbody th { text-align: left; }
+.matrice-joue { background: rgba(255, 255, 255, 0.18); color: white; }
+.matrice-repos { background: rgba(0, 0, 0, 0.22); }
 
 /* Messages de la page (à la place des alert du navigateur) */
 
@@ -762,22 +793,6 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
 @media (min-width: 701px) {
     .journee-titre .badge { display: inline-block; }
 }
-
-/* Un compteur sous la barre de progression, qui redit la même chose en chiffres :
-   il se tient en retrait. Les encarts se serrent autour de leur contenu au lieu
-   de s'étirer sur toute la largeur, et restent centrés sous la barre. */
-.summary-grid {
-    display: grid;
-    grid-auto-flow: column;
-    justify-content: center;
-    gap: var(--e3);
-    margin-bottom: var(--e5);
-}
-
-.summary-card { --retrait: var(--e3); text-align: center; }
-
-.summary-card-value { font-size: var(--t4); font-weight: 700; color: var(--primary); }
-.summary-card-label { font-size: var(--t1); color: var(--text-secondary); font-weight: 600; }
 
 /* Réglages d'une partie : cadence et variante */
 .partie-reglages { display: flex; gap: var(--e3); margin-bottom: var(--e3); }

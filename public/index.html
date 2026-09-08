@@ -30,17 +30,25 @@
             </nav>
         </header>
 
-        <details class="reglement">
-            <summary>Règlement</summary>
-            <div class="surface reglement-corps">
-                <h3>Poule qualificative — championnat en journées</h3>
-                <p>Chaque partant affronte tous les autres une fois à l'aller, une fois au retour — un duel par journée. Celui qui reçoit à l'aller se déplace au retour. Victoire = 1 pt, Nulle = 0,5 pt, Défaite = 0 pt. Les 4 premiers au classement se qualifient.</p>
-                <h3>Demi-finales — 1er vs 4e / 2e vs 3e</h3>
-                <p>Chaque demi-finale se joue en 2 manches, une chez chacun. En cas d'égalité : le partant au plus bas Elo est qualifié ; à défaut d'Elo, une manche décisive (belle) est ajoutée ; si la belle est nulle elle aussi, le mieux classé en poule passe.</p>
-                <h3>Grande finale — la der des ders, 2 manches</h3>
-                <p>Les deux finalistes s'affrontent pour le titre, une manche chez chacun (la belle éventuelle sur terrain neutre). En cas d'égalité, même règle qu'en demies : Elo le plus bas, puis manche décisive (belle), puis classement de la poule.</p>
-            </div>
-        </details>
+        <div class="volets">
+            <details class="volet">
+                <summary>Règlement</summary>
+                <div class="surface volet-corps">
+                    <h3>Poule qualificative — championnat en journées</h3>
+                    <p>Chaque partant affronte tous les autres une fois à l'aller, une fois au retour — un duel par journée. Celui qui reçoit à l'aller se déplace au retour. Victoire = 1 pt, Nulle = 0,5 pt, Défaite = 0 pt. Les 4 premiers au classement se qualifient.</p>
+                    <h3>Demi-finales — 1er vs 4e / 2e vs 3e</h3>
+                    <p>Chaque demi-finale se joue en 2 manches, une chez chacun. En cas d'égalité : le partant au plus bas Elo est qualifié ; à défaut d'Elo, une manche décisive (belle) est ajoutée ; si la belle est nulle elle aussi, le mieux classé en poule passe.</p>
+                    <h3>Grande finale — la der des ders, 2 manches</h3>
+                    <p>Les deux finalistes s'affrontent pour le titre, une manche chez chacun (la belle éventuelle sur terrain neutre). En cas d'égalité, même règle qu'en demies : Elo le plus bas, puis manche décisive (belle), puis classement de la poule.</p>
+                </div>
+            </details>
+
+            <!-- Le compte des duels joués, et la matrice de ce qui reste dès qu'on l'ouvre. -->
+            <details class="volet" id="volet-matchs" hidden>
+                <summary id="matchs-resume">Matchs</summary>
+                <div class="surface volet-corps" id="matrice-matchs"></div>
+            </details>
+        </div>
 
         <div id="sync-conflict" class="sync-conflict" hidden>
             <strong>Le tournoi a été modifié sur un autre appareil.</strong>
@@ -98,16 +106,6 @@
                 <div class="progress-labels">
                     <span>🏁 Départ</span>
                     <span>🏆 Arrivée</span>
-                </div>
-
-                <div class="summary-grid">
-                    <div class="surface summary-card">
-                        <div class="summary-card-value">
-                            <span id="matches-played">0</span>
-                            <span class="sur-total">/ <span id="matches-total">0</span></span>
-                        </div>
-                        <div class="summary-card-label">Manches jouées</div>
-                    </div>
                 </div>
 
 
