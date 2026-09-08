@@ -194,20 +194,25 @@ describe('loadJoueurs', () => {
 describe('addJoueur — POST /joueurs', () => {
     test('la fiche est créée par le serveur, qui lui donne son identifiant', async () => {
         const app = await appAvecFiches([], { version: 2 });
-        const fiche = await app.ev('addJoueur("Vince", 1450)');
+        const fiche = await app.ev('addJoueur("Vince")');
         const requete = app.requetes.at(-1);
         assert.equal(requete.methode, 'POST');
         assert.equal(requete.chemin, '/api/joueurs');
-        assert.deepEqual(requete.corps, { nom: 'Vince', elo: 1450 });
-        assert.deepEqual(app.json('joueurs'), [{ id: 'j-serveur1', nom: 'Vince', elo: 1450 }]);
+        assert.deepEqual(requete.corps, { nom: 'Vince', pseudo: null });
+        assert.deepEqual(app.json('joueurs'), [{ id: 'j-serveur1', nom: 'Vince', elo: null }]);
         assert.equal(app.ev('joueursVersion'), 3, 'la version renvoyée fait foi');
     });
 
-    test('le nom est nettoyé et l\'Elo optionnel', async () => {
+    test('le nom est nettoyé, et une fiche naît sans classement', async () => {
         const app = await appAvecFiches([]);
         await app.ev('addJoueur("  Vince  ")');
-        assert.deepEqual(app.requetes.at(-1).corps, { nom: 'Vince', elo: null });
-        assert.equal(app.json('joueurs')[0].elo, null);
+        assert.deepEqual(app.requetes.at(-1).corps, { nom: 'Vince', pseudo: null });
+    });
+
+    test('le pseudo chess.com part avec la fiche', async () => {
+        const app = await appAvecFiches([]);
+        await app.ev('addJoueur("Vince", "  Vince_Deluxe  ")');
+        assert.equal(app.requetes.at(-1).corps.pseudo, 'Vince_Deluxe');
     });
 
     test('un nom vide ne part même pas au serveur', async () => {

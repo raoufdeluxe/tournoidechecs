@@ -30,6 +30,21 @@ describe('phase de poule', () => {
         assert.match(carte, /Victoire — &lt;img/, 'le menu de résultat aussi');
     });
 
+    test('le résumé d\'une partie chess.com', async () => {
+        // Ce nom-là ne vient même pas d'une fiche : c'est un pseudo choisi sur
+        // chess.com, que le Worker nous rapporte tel quel.
+        const app = pouleGeneree(noms(4));
+        app.bac.fetch = async () => ({
+            ok: true,
+            json: async () => ({ analyse: { resultat: '1-0', blancs: PIEGE, coups: 3 } }),
+        });
+        const duel = app.json('tournoi.matches.filter(m => m.round === tournoi.currentRound)')[0];
+        await app.ev(`setLienManche("poule:${duel.id}", "https://www.chess.com/game/live/1")`);
+        app.ev('document.getElementById("matches-container").children.length = 0; renderParties()');
+        assertEchappe(app.ev('document.getElementById("matches-container").children[0].innerHTML'),
+            'résumé de la partie');
+    });
+
     test('la matrice des matchs, en-têtes et infobulles comprises', () => {
         const app = pouleGeneree(noms(4));
         app.ev('renderVoletMatchs()');
@@ -75,6 +90,10 @@ describe('phases finales', () => {
         `);
         assertEchappe(app.ev('document.getElementById("final-matches-container").children[0].innerHTML'), 'finale');
         assertEchappe(app.ev('document.getElementById("finalistes-list").innerHTML'), 'tableau des finalistes');
+
+        app.ev('setResultatManche("finale:0", "p1"); setResultatManche("finale:1", "p1");');
+        assertEchappe(app.ev('document.getElementById("final-result-placeholder").innerHTML'),
+            'annonce du champion');
     });
 
     test('le podium et le classement final', () => {

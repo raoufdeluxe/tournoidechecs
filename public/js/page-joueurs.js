@@ -1,7 +1,11 @@
 // Page /joueurs : la liste des joueurs et son édition, rien d'autre.
 //
 // Les fiches vivent hors des tournois ; cette page est le seul endroit où on
-// les crée, les renomme, change leur Elo ou les supprime.
+// les crée, les renomme, change leur pseudo, ou les supprime.
+//
+// Le pseudo est celui de chess.com. Il sert deux fois : c'est par lui qu'une
+// partie jouée en ligne se rattache à ses deux partants, et c'est de lui que
+// vient l'Elo — le classement ne se tape pas, il se synchronise.
 
 function renderJoueurs() {
     const conteneur = document.getElementById('joueurs-editor');
@@ -13,38 +17,72 @@ function renderJoueurs() {
         return;
     }
 
-    conteneur.innerHTML = joueurs.map(j => `
+    conteneur.innerHTML = joueurs.map(j => {
+        const id = escapeHtml(j.id);
+        return `
         <div class="joueur-row">
-            <input type="text" class="joueur-nom" maxlength="64" value="${escapeHtml(j.nom)}" data-id="${escapeHtml(j.id)}">
-            <input type="number" class="joueur-elo" placeholder="Elo" min="0" step="1" value="${j.elo == null ? '' : j.elo}">
-            ${buildBoutonPicto('supprimer', 'Supprimer', `removeJoueur('${escapeHtml(j.id)}')`, 'danger joueur-supprimer')}
+            <input type="text" class="joueur-nom" maxlength="64" value="${escapeHtml(j.nom)}" data-id="${id}">
+            <input type="text" class="joueur-pseudo" maxlength="32" placeholder="Pseudo chess.com" data-id="${id}"
+                   value="${escapeHtml(j.pseudo || '')}">
+            <span class="joueur-elo" data-id="${id}">${j.elo == null ? '—' : j.elo}</span>
+            ${buildBoutonPicto('synchroniser', 'Synchroniser avec chess.com', `synchroniserFiche('${id}')`, 'secondary joueur-sync')}
+            ${buildBoutonPicto('supprimer', 'Supprimer', `removeJoueur('${id}')`, 'danger joueur-supprimer')}
         </div>
-    `).join('');
-}
-
-function readElo(champ) {
-    const brut = champ.value.trim();
-    if (brut === '') return null;
-    const valeur = parseInt(brut, 10);
-    return Number.isFinite(valeur) ? valeur : null;
+    `;
+    }).join('');
 }
 
 async function addJoueurFromForm() {
     const champNom = document.getElementById('joueur-nouveau-nom');
-    const champElo = document.getElementById('joueur-nouveau-elo');
+    const champPseudo = document.getElementById('joueur-nouveau-pseudo');
 
-    const fiche = await addJoueur(champNom.value, readElo(champElo));
+    const fiche = await addJoueur(champNom.value, champPseudo.value);
     if (!fiche) return;
 
     champNom.value = '';
-    champElo.value = '';
+    champPseudo.value = '';
     renderJoueurs();
     champNom.focus();
 }
 
+// Les champs d'une fiche, retrouvés par son identifiant. Le formulaire d'ajout
+// porte les mêmes classes mais n'a pas de fiche : ses champs sont ainsi écartés.
+function champsDesFiches(classe) {
+    return Array.from(document.querySelectorAll(classe)).filter(c => c.dataset && c.dataset.id);
+}
+
+function champDeLaFiche(classe, id) {
+    return champsDesFiches(classe).find(c => c.dataset.id === id) || null;
+}
+
+// Synchronise une fiche avec chess.com : le pseudo tel qu'il est saisi dans la
+// ligne, et le classement que le site lui donne. L'Elo ne se tapant nulle part,
+// ce bouton l'enregistre lui-même — il n'y a pas de valeur en attente à garder.
+async function synchroniserFiche(id) {
+    const champPseudo = champDeLaFiche('.joueur-pseudo', id);
+    if (!champPseudo) return;
+
+    const pseudo = champPseudo.value.trim();
+    if (!pseudo) {
+        notifyErreur('Renseigne d\'abord le pseudo chess.com de ce joueur.');
+        return;
+    }
+
+    const classement = await fetchClassementChessCom(pseudo);
+    if (!classement) {
+        notifyErreur('chess.com ne donne aucun classement pour « ' + pseudo + ' ».');
+        return;
+    }
+
+    if (!await updateJoueur(id, { pseudo, elo: classement.elo })) return;
+
+    renderJoueurs();
+    notifySucces(pseudo + ' — Elo ' + classement.format + ' : ' + classement.elo + '.');
+}
+
 async function saveJoueursFromForm() {
-    const noms = Array.from(document.querySelectorAll('.joueur-nom'));
-    const elos = Array.from(document.querySelectorAll('.joueur-elo'));
+    const noms = champsDesFiches('.joueur-nom');
+    const pseudos = champsDesFiches('.joueur-pseudo');
 
     const modifications = [];
     for (let i = 0; i < noms.length; i++) {
@@ -53,7 +91,7 @@ async function saveJoueursFromForm() {
             notifyErreur('Tous les noms doivent être remplis.');
             return;
         }
-        modifications.push({ id: noms[i].dataset.id, nom, elo: readElo(elos[i]) });
+        modifications.push({ id: noms[i].dataset.id, nom, pseudo: pseudos[i].value.trim() });
     }
 
     const resultat = await saveFiches(modifications);

@@ -49,6 +49,8 @@ La **3e place** ne se joue pas : c'est le mieux classé en poule parmi les deux 
   plutôt que d'en écraser une en silence.
 - **Fonctionne hors-ligne.** Copie locale immédiate en `localStorage`, réessai automatique
   avec back-off (1s, 2s, 4s… plafonné à 30s), reprise dès le retour du réseau.
+- **Le lien de la partie en ligne** sur chaque manche, avec le résumé que
+  chess.com en donne (cadence, coups, vainqueur, ouverture).
 - **Classement vivant.** Table des scores sur l'ensemble du tournoi, barre de progression,
   matrice des duels joués et restants, et **graphe de progression journée après journée**.
 - **De 4 à 16 partants**, nombre impair géré (journée de repos), Elo optionnel par joueur.
@@ -106,14 +108,27 @@ ce qui survit au renommage du Worker comme à l'ajout d'un domaine perso.
 | `POST /api/etat?id=<id>` | corps `{ baseVersion, state }` → `200 { version }`, ou `409` + état courant |
 | `DELETE /api/etat?id=<id>` | supprime définitivement le tournoi |
 
+**Une partie jouée en ligne**
+
+| Route | Réponse |
+|---|---|
+| `GET /api/analyse?partie=<url chess.com>` | `{ analyse: { blancs, noirs, resultat, fin, coups, cadence, ouverture } }` |
+
+Le navigateur ne peut pas interroger chess.com lui-même : la réponse du site ne
+porte aucun en-tête CORS. Le Worker fait l'aller-retour, ne garde que ces dix
+champs, et ne transmet jamais l'adresse reçue telle quelle — il n'en relève que
+le mode (`live` ou `daily`) et l'identifiant, puis reconstruit l'appel. Un lien
+qui ne mène pas à une partie chess.com est refusé (`400`) sans que le site soit
+dérangé ; une partie introuvable rend `404`, un site en panne `502`.
+
 **Les joueurs** — création, modification et suppression fiche par fiche :
 
 | Route | Réponse |
 |---|---|
 | `GET /api/joueurs` | `{ version, updatedAt, joueurs }` |
-| `POST /api/joueurs` | corps `{ nom, elo? }` → `201 { version, joueur }`, ou `409` si le nom est pris |
+| `POST /api/joueurs` | corps `{ nom, elo?, pseudo? }` → `201 { version, joueur }`, ou `409` si le nom est pris |
 | `GET /api/joueurs/<id>` | `{ version, joueur }`, ou `404` |
-| `PATCH /api/joueurs/<id>` | corps `{ nom?, elo? }` → `200 { version, joueur }` |
+| `PATCH /api/joueurs/<id>` | corps `{ nom?, elo?, pseudo? }` → `200 { version, joueur }` |
 | `DELETE /api/joueurs/<id>` | `200 { version, deleted }`, ou `404` |
 | `PUT /api/joueurs` | corps `{ baseVersion, joueurs }` — remplace toute la liste (restauration) |
 
@@ -331,6 +346,29 @@ avec les valeurs par défaut, et leur enregistrement n'est pas réécrit tant qu
 n'y touche pas — une valeur inconnue (page d'une autre version) est ignorée de la
 même façon, la partie gardant son réglage.
 
+### Le lien de la partie en ligne
+
+Sous le résultat, un champ garde l'adresse de la partie telle qu'elle a été jouée
+— chess.com, lichess ou ailleurs. Seule une adresse `http(s)` est retenue, à
+l'écriture **comme à la lecture** : le lien finit dans un `href`, et l'état d'un
+tournoi s'écrit depuis n'importe quel appareil qui en a l'adresse.
+
+Si le lien mène à une partie chess.com, l'application en rapporte un résumé —
+cadence, nombre de coups, vainqueur et manière, code d'ouverture — enregistré à
+côté du lien et affiché sous lui :
+
+> 3 min · 41 coups · Bob l'emporte par abandon · ouverture D02
+
+**Le résumé nomme tes partants, pas des pseudos.** La partie désigne ses joueurs
+par leur pseudo chess.com ; l'application les rapproche des fiches (voir plus
+bas) pour savoir lequel des deux partants a gagné. Faute de correspondance —
+fiches sans pseudo, partie entre d'autres joueurs — elle s'en tient aux couleurs :
+« victoire des blancs ». Un pseudo ne s'affiche que sur la page Joueurs.
+
+Quand les deux partants sont reconnus, **un résultat encore vide se remplit tout
+seul**. Un résultat déjà saisi, lui, n'est jamais écrasé : c'est le résumé qui
+signale le désaccord, et le menu qui fait foi.
+
 ---
 
 ## Les joueurs, hors des tournois
@@ -353,9 +391,29 @@ tournois. Un tournoi ne retient qu'un **renvoi** (`ref`) vers la fiche :
 Supprimer une fiche ne casse donc rien : les tournois où ce joueur figure
 continuent d'afficher son nom, marqué comme absent de la liste.
 
-L'Elo appartient à la fiche : il se saisit sur la page `/joueurs`, plus sur
-l'écran d'inscription. Le départage « Elo le plus bas » utilise la valeur courante
-de la fiche.
+L'Elo appartient à la fiche, et **ne se saisit nulle part** : il vient de
+chess.com. Sur `/joueurs`, il s'affiche en clair au bout de la ligne — un tiret
+tant qu'il n'y en a pas. Le départage « Elo le plus bas » utilise la valeur
+courante de la fiche. Un joueur sans compte chess.com n'a donc pas de classement,
+et ne peut pas être départagé par lui : c'est la belle qui tranche.
+
+### Le pseudo chess.com
+
+Chaque fiche porte en plus, si on veut, le **pseudo chess.com** du joueur — lettres,
+chiffres, tiret et souligné, comme le site les admet. Il sert à deux choses, et
+**ne s'affiche que sur cette page** :
+
+- le bouton de **synchronisation** à côté du champ enregistre le pseudo tel qu'il
+  est saisi et **le classement que chess.com lui donne** — le rapide d'abord,
+  sinon le blitz, le bullet, le 24 h. L'Elo ne se tapant nulle part, ce bouton
+  l'enregistre lui-même ; il n'y a pas de valeur en attente à confirmer ;
+- il **rattache une partie jouée en ligne à ses deux partants** : quand le lien
+  d'une manche mène à une partie entre ces deux pseudos, l'application sait qui a
+  gagné (voir *Le lien de la partie en ligne*).
+
+Cette page interroge `api.chess.com` **directement** : cette API-là autorise le
+navigateur à la lire. La page d'une partie, elle, ne le permet pas — d'où le
+détour par le Worker pour le résumé.
 
 Un partant se renomme **sur `/joueurs`**, jamais dans le tournoi : son nom
 appartient à la fiche. Les **tournois d'avant les fiches** n'ont pas de `ref` :

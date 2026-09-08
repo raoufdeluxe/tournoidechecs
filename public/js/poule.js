@@ -233,7 +233,7 @@ function buildMatriceMatchs() {
     const numero = (p) => p.id + 1;
 
     const entetes = partants.map(p =>
-        `<th scope="col" title="${escapeHtml(p.name)}">${numero(p)}</th>`).join('');
+        `<th scope="col" title="${escapeHtml([p.name, buildInfobullePartant(p)].filter(Boolean).join(' · '))}">${numero(p)}</th>`).join('');
 
     const lignes = partants.map(recevant => {
         const cases = partants.map(visiteur => {
@@ -243,7 +243,7 @@ function buildMatriceMatchs() {
             const titre = `${recevant.name} reçoit ${visiteur.name} — ${joue ? 'joué' : 'à jouer'}`;
             return `<td${joue ? ' class="matrice-joue"' : ''} title="${escapeHtml(titre)}">${joue ? '✓' : '·'}</td>`;
         }).join('');
-        return `<tr><th scope="row">${buildCasaque(recevant.id)}${numero(recevant)}. ${escapeHtml(recevant.name)}</th>${cases}</tr>`;
+        return `<tr><th scope="row">${buildCasaque(recevant.id)}${numero(recevant)}. ${buildNomPartant(recevant.id)}</th>${cases}</tr>`;
     }).join('');
 
     return `
@@ -360,7 +360,7 @@ function renderClassement() {
         return `
         <tr>
             <td><strong>${idx + 1}</strong></td>
-            <td>${buildCasaque(p.id)}${escapeHtml(p.name)}${p.absent ? buildTagFicheAbsente() : ''}${tagRestantes}</td>
+            <td>${buildCasaque(p.id)}${buildNomPartant(p.id)}${p.absent ? buildTagFicheAbsente() : ''}${tagRestantes}</td>
             <td class="cell-points">${p.points.toFixed(1)}</td>
             <td class="cell-nombre">${p.matches}</td>
         </tr>
@@ -441,7 +441,7 @@ function renderGrapheProgression() {
         const pastille = repetee
             ? `<span class="graphe-pastille graphe-pastille--creuse" style="border-color:${color};"></span>`
             : `<span class="graphe-pastille" style="background:${color};"></span>`;
-        legendHtml += `<span class="graphe-legende-item">${pastille}${escapeHtml(d.name)}</span>`;
+        legendHtml += `<span class="graphe-legende-item">${pastille}${buildNomPartant(d.id)}</span>`;
     });
 
     container.innerHTML = `

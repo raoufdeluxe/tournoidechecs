@@ -55,12 +55,14 @@
         <div class="surface card">
             <h2 class="card-title">👥 Joueurs</h2>
             <p class="card-intro">Ces joueurs sont réutilisables d'un tournoi à l'autre.
-               Renommer quelqu'un ici le renomme dans tous ses tournois, passés compris.</p>
+               Renommer quelqu'un ici le renomme dans tous ses tournois, passés compris.
+               Le classement ne se saisit pas : il vient de chess.com, par le bouton
+               de synchronisation de chaque fiche.</p>
             <div id="joueurs-editor"></div>
 
             <div class="joueur-row joueur-row--nouveau">
                 <input type="text" id="joueur-nouveau-nom" class="joueur-nom" maxlength="64" placeholder="Nom du joueur">
-                <input type="number" id="joueur-nouveau-elo" class="joueur-elo" placeholder="Elo" min="0" step="1">
+                <input type="text" id="joueur-nouveau-pseudo" class="joueur-pseudo" maxlength="32" placeholder="Pseudo chess.com">
                 <button class="secondary" onclick="addJoueurFromForm()">Ajouter</button>
             </div>
 

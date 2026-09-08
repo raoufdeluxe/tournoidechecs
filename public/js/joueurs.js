@@ -71,7 +71,9 @@ async function readMessageErreur(res, defaut) {
 
 // Le serveur attribue l'identifiant et refuse les homonymes : deux appareils
 // qui ajoutent en même temps ne peuvent ni se marcher dessus ni créer un doublon.
-async function addJoueur(nom, elo) {
+// L'Elo ne se saisit pas : il vient de chess.com, par le bouton de
+// synchronisation de la fiche. Une fiche naît donc sans classement.
+async function addJoueur(nom, pseudo) {
     const propre = String(nom || '').trim();
     if (!propre) return null;
 
@@ -80,7 +82,10 @@ async function addJoueur(nom, elo) {
         res = await fetch(URL_JOUEURS, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nom: propre, elo: elo == null ? null : elo })
+            body: JSON.stringify({
+                nom: propre,
+                pseudo: pseudo == null ? null : String(pseudo).trim(),
+            })
         });
     } catch (e) {
         notifyErreur('Ajout impossible : le serveur est injoignable.');
@@ -103,7 +108,7 @@ async function addJoueur(nom, elo) {
     return data.joueur;
 }
 
-// Modifie une fiche. `champs` peut porter `nom`, `elo`, ou les deux.
+// Modifie une fiche. `champs` peut porter `nom`, `elo`, `pseudo`, ou plusieurs.
 async function updateJoueur(id, champs) {
     let res;
     try {
@@ -159,16 +164,19 @@ async function removeFiche(id) {
 }
 
 // Applique plusieurs modifications d'un coup (le bouton « Enregistrer » du
-// panneau). Seules les fiches réellement changées partent au serveur.
+// panneau). Seules les fiches réellement changées partent au serveur. L'Elo n'en
+// est pas : il ne se tape pas, il se rapporte de chess.com.
 async function saveFiches(modifications) {
     let touche = false;
 
-    for (const { id, nom, elo } of modifications) {
+    for (const { id, nom, pseudo } of modifications) {
         const fiche = getJoueur(id);
         if (!fiche) continue;
         const nouveauNom = nom == null ? fiche.nom : nom;
-        if (fiche.nom === nouveauNom && fiche.elo === elo) continue;
-        if (!await updateJoueur(id, { nom: nouveauNom, elo })) return false;
+        // Le pseudo absent de la fiche et le champ vide sont la même chose.
+        const nouveauPseudo = pseudo == null ? (fiche.pseudo || '') : pseudo;
+        if (fiche.nom === nouveauNom && (fiche.pseudo || '') === nouveauPseudo) continue;
+        if (!await updateJoueur(id, { nom: nouveauNom, pseudo: nouveauPseudo })) return false;
         touche = true;
     }
     return touche ? 'modifie' : 'inchange';

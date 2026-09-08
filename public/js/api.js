@@ -15,9 +15,53 @@ const API_RACINE = location.protocol === 'file:'
 const URL_ETAT = API_RACINE + '/etat';
 const URL_JOUEURS = API_RACINE + '/joueurs';
 const URL_TOURNOIS = API_RACINE + '/tournois';
+const URL_ANALYSE = API_RACINE + '/analyse';
 
 const urlEtat = (id) => URL_ETAT + '?id=' + encodeURIComponent(id);
 const urlJoueur = (id) => URL_JOUEURS + '/' + encodeURIComponent(id);
+
+// Le résumé d'une partie jouée en ligne, que le Worker va chercher pour nous —
+// chess.com ne se laisse pas lire depuis le navigateur. Pas de résumé n'est pas
+// une erreur : le champ accepte d'autres sites, et une partie peut être privée.
+async function fetchAnalyse(lien) {
+    try {
+        const res = await fetch(URL_ANALYSE + '?partie=' + encodeURIComponent(lien));
+        if (!res.ok) return null;
+        return (await res.json()).analyse || null;
+    } catch (e) {
+        return null;
+    }
+}
+
+// Le classement d'un joueur sur chess.com. Celle-ci, contrairement à la page
+// d'une partie, autorise le navigateur à la lire : elle répond avec l'en-tête
+// CORS qu'il faut, le Worker n'a donc rien à faire ici.
+//
+// Un joueur a un classement par format. On prend le premier renseigné dans cet
+// ordre : la cadence par défaut d'une partie est de 10 min, donc du rapide.
+const URL_CHESS_COM = 'https://api.chess.com/pub/player/';
+const FORMATS_CHESS_COM = [
+    ['chess_rapid', 'rapide'],
+    ['chess_blitz', 'blitz'],
+    ['chess_bullet', 'bullet'],
+    ['chess_daily', 'en 24 h'],
+];
+
+async function fetchClassementChessCom(pseudo) {
+    let res;
+    try {
+        res = await fetch(URL_CHESS_COM + encodeURIComponent(String(pseudo).toLowerCase()) + '/stats');
+        if (!res.ok) return null;
+        const stats = await res.json();
+        for (const [cle, format] of FORMATS_CHESS_COM) {
+            const note = stats[cle] && stats[cle].last && stats[cle].last.rating;
+            if (Number.isFinite(note)) return { elo: note, format };
+        }
+        return null;
+    } catch (e) {
+        return null;
+    }
+}
 
 // Les identifiants de tournoi comme de joueur suivent ce motif, que le Worker
 // applique de son côté : ce qui est refusé ici le serait aussi là-bas.

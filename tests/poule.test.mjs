@@ -258,6 +258,42 @@ describe('les manches restantes affichées au classement', () => {
     });
 });
 
+describe('l\'infobulle d\'un nom de partant', () => {
+    // Ce que le survol révèle : le classement et le pseudo chess.com, qui ne
+    // s'affichent nulle part en clair hors de la page Joueurs.
+    const infobulles = (app) => {
+        app.ev('renderClassement()');
+        const html = app.ev('document.getElementById("standings-body").innerHTML');
+        return Object.fromEntries([...html.matchAll(/title="([^"]*)">([^<]*)</g)].map(m => [m[2], m[1]]));
+    };
+    const avecFiches = (fiches) => {
+        const app = pouleGeneree(noms(4));
+        app.set('joueurs', fiches);
+        fiches.forEach((f, i) => app.ev(`tournoi.players[${i}].ref = ${JSON.stringify(f.id)}`));
+        return app;
+    };
+
+    test('le pseudo et l\'Elo au survol du nom', () => {
+        const app = avecFiches([{ id: 'j-aa', nom: 'J0', elo: 1450, pseudo: 'Zero_CC' }]);
+        assert.equal(infobulles(app).J0, 'Zero_CC - 1450');
+    });
+
+    test('seulement ce qui est renseigné', () => {
+        const app = avecFiches([
+            { id: 'j-aa', nom: 'J0', elo: null, pseudo: 'Zero_CC' },
+            { id: 'j-bb', nom: 'J1', elo: 1200, pseudo: null },
+        ]);
+        const vu = infobulles(app);
+        assert.equal(vu.J0, 'Zero_CC');
+        assert.equal(vu.J1, '1200');
+    });
+
+    test('sans fiche, le nom reste un nom : pas d\'infobulle vide', () => {
+        const app = pouleGeneree(noms(4));
+        assert.deepEqual(infobulles(app), {});
+    });
+});
+
 describe('la carte d\'un duel, repliée puis ouverte', () => {
     // Le conteneur est vidé avant chaque rendu : le DOM factice empile les cartes
     // au lieu de les remplacer, on lirait sinon un rendu périmé.
@@ -299,6 +335,87 @@ describe('la carte d\'un duel, repliée puis ouverte', () => {
         assert.match(html, /value="https:\/\/www\.chess\.com\/game\/live\/42"/, 'le champ le rappelle');
         assert.match(html, /href="https:\/\/www\.chess\.com\/game\/live\/42"[^>]*target="_blank"/,
             'et un lien l\'ouvre dans un autre onglet');
+    });
+
+    test('le résumé de la partie chess.com accompagne le lien', async () => {
+        const app = pouleGeneree(noms(4));
+        app.bac.fetch = async () => ({
+            ok: true,
+            json: async () => ({ analyse: {
+                blancs: 'Alice', noirs: 'Bob',
+                resultat: '0-1', fin: 'échec et mat', coups: 32, cadence: '5 min', ouverture: 'C50',
+            } }),
+        });
+        const duel = duelAffiche(app);
+        await app.ev(`setLienManche("poule:${duel.id}", "https://www.chess.com/game/live/1")`);
+
+        const vu = texte(carte(app));
+        // Aucune fiche ne porte ces pseudos : la partie se dit par ses couleurs.
+        assert.match(vu, /5 min · 32 coups · victoire des noirs par échec et mat · ouverture C50/);
+        assert.doesNotMatch(vu, /Alice|Bob/, 'et les pseudos chess.com ne s\'affichent pas');
+    });
+
+    test('les pseudos des fiches désignent le vainqueur, et remplissent le résultat', async () => {
+        const app = pouleGeneree(noms(4));
+        const duel = duelAffiche(app);
+        // Les deux partants ont une fiche, chacune avec son pseudo chess.com.
+        app.set('joueurs', [
+            { id: 'j-aa', nom: 'Alice', elo: null, pseudo: 'Alice_CC' },
+            { id: 'j-bb', nom: 'Bob', elo: null, pseudo: 'Bob_CC' },
+        ]);
+        app.ev(`tournoi.players[${duel.player1}].ref = 'j-aa'; tournoi.players[${duel.player1}].name = 'Alice';`);
+        app.ev(`tournoi.players[${duel.player2}].ref = 'j-bb'; tournoi.players[${duel.player2}].name = 'Bob';`);
+        // Le second partant tient les blancs et gagne.
+        app.bac.fetch = async () => ({ ok: true, json: async () => ({ analyse: {
+            blancs: 'bob_cc', noirs: 'ALICE_CC', resultat: '1-0', fin: 'abandon', coups: 20, cadence: '3 min',
+        } }) });
+
+        await app.ev(`setLienManche("poule:${duel.id}", "https://www.chess.com/game/live/1")`);
+
+        assert.equal(app.json(`tournoi.matches.find(m => m.id === "${duel.id}")`).player2Score, 1,
+            'le résultat est repris de la partie');
+        const vu = texte(carte(app));
+        assert.match(vu, /Bob l'emporte par abandon/, 'et le résumé nomme le partant, pas son pseudo');
+        assert.doesNotMatch(vu, /_CC/, 'le pseudo chess.com ne s\'affiche nulle part');
+    });
+
+    test('un résultat déjà saisi n\'est pas écrasé : le désaccord est signalé', async () => {
+        const app = pouleGeneree(noms(4));
+        const duel = duelAffiche(app);
+        app.set('joueurs', [
+            { id: 'j-aa', nom: 'Alice', elo: null, pseudo: 'Alice_CC' },
+            { id: 'j-bb', nom: 'Bob', elo: null, pseudo: 'Bob_CC' },
+        ]);
+        app.ev(`tournoi.players[${duel.player1}].ref = 'j-aa'; tournoi.players[${duel.player2}].ref = 'j-bb';`);
+        app.appel('setResultatManche', `poule:${duel.id}`, 'p1');
+        app.bac.fetch = async () => ({ ok: true, json: async () => ({ analyse: {
+            blancs: 'Bob_CC', noirs: 'Alice_CC', resultat: '1-0', coups: 20, cadence: '3 min',
+        } }) });
+
+        await app.ev(`setLienManche("poule:${duel.id}", "https://www.chess.com/game/live/1")`);
+
+        assert.equal(app.json(`tournoi.matches.find(m => m.id === "${duel.id}")`).player1Score, 1,
+            'le résultat saisi reste');
+        assert.match(texte(carte(app)), /en désaccord avec le résultat saisi/);
+    });
+
+    test('vider le lien emporte le résumé avec lui', async () => {
+        const app = pouleGeneree(noms(4));
+        app.bac.fetch = async () => ({ ok: true, json: async () => ({ analyse: { resultat: '1-0', blancs: 'Alice' } }) });
+        const duel = duelAffiche(app);
+        await app.ev(`setLienManche("poule:${duel.id}", "https://www.chess.com/game/live/1")`);
+        await app.ev(`setLienManche("poule:${duel.id}", "")`);
+        assert.doesNotMatch(texte(carte(app)), /l'emporte/);
+    });
+
+    test('un lien hors chess.com garde le lien, sans résumé', async () => {
+        const app = pouleGeneree(noms(4));
+        app.bac.fetch = async () => ({ ok: false, json: async () => ({}) });
+        const duel = duelAffiche(app);
+        await app.ev(`setLienManche("poule:${duel.id}", "https://lichess.org/abcd")`);
+        const html = carte(app);
+        assert.match(html, /href="https:\/\/lichess\.org\/abcd"/, 'le lien reste');
+        assert.doesNotMatch(html, /partie-analyse/, 'mais rien à résumer');
     });
 
     test('une adresse invalide est refusée et dite dans la page', () => {

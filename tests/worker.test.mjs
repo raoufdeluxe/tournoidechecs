@@ -17,6 +17,77 @@ const etat = (nom, nbJoueurs = 2) => ({
 const enveloppe = (version, state, updatedAt = '2026-01-01T00:00:00.000Z') =>
     JSON.stringify({ version, updatedAt, state });
 
+describe('GET /api/analyse — le résumé d\'une partie chess.com', () => {
+    // Le Worker interroge chess.com pour le navigateur, qui ne peut pas le faire
+    // lui-même. On lui substitue ici la réponse du site.
+    const avecChessCom = async (reponse, chemin) => {
+        const vrai = globalThis.fetch;
+        const appels = [];
+        globalThis.fetch = async (url) => { appels.push(String(url)); return reponse(); };
+        try {
+            return { ...(await appeler(worker, fauxKV(), 'GET', chemin)), appels };
+        } finally {
+            globalThis.fetch = vrai;
+        }
+    };
+    const partieChessCom = (game) => () =>
+        new Response(JSON.stringify({ game }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
+    const PARTIE = {
+        plyCount: 81,
+        gameEndReason: 'resigned',
+        pgnHeaders: {
+            White: 'Hikaru', Black: 'nemo', Result: '1-0', ECO: 'D02', TimeControl: '180',
+        },
+    };
+
+    test('les deux pseudos, le score, la cadence, les coups et la fin', async () => {
+        const r = await avecChessCom(partieChessCom(PARTIE),
+            '/api/analyse?partie=' + encodeURIComponent('https://www.chess.com/game/live/172385979790'));
+        assert.equal(r.status, 200);
+        assert.deepEqual(r.body.analyse, {
+            blancs: 'Hikaru', noirs: 'nemo',
+            resultat: '1-0', fin: 'abandon', coups: 41, cadence: '3 min', ouverture: 'D02',
+        });
+    });
+
+    test('l\'adresse appelée est reconstruite depuis le seul identifiant', async () => {
+        const r = await avecChessCom(partieChessCom(PARTIE),
+            '/api/analyse?partie=' + encodeURIComponent('https://www.chess.com/game/daily/42?x=1#y'));
+        assert.deepEqual(r.appels, ['https://www.chess.com/callback/daily/game/42']);
+    });
+
+    test('les cadences se disent en français, y compris par correspondance', async () => {
+        const cadenceDe = async (controle) => {
+            const r = await avecChessCom(
+                partieChessCom({ ...PARTIE, pgnHeaders: { ...PARTIE.pgnHeaders, TimeControl: controle } }),
+                '/api/analyse?partie=' + encodeURIComponent('https://www.chess.com/game/live/1'));
+            return r.body.analyse.cadence;
+        };
+        assert.equal(await cadenceDe('180'), '3 min');
+        assert.equal(await cadenceDe('180+2'), '3 min +2 s');
+        assert.equal(await cadenceDe('30'), '30 s');
+        assert.equal(await cadenceDe('1/259200'), '3 jours par coup');
+    });
+
+    test('un lien qui ne mène pas à une partie chess.com est refusé sans appel', async () => {
+        for (const lien of ['https://lichess.org/abc', 'https://www.chess.com/member/erik', 'pas une url']) {
+            const r = await avecChessCom(partieChessCom(PARTIE),
+                '/api/analyse?partie=' + encodeURIComponent(lien));
+            assert.equal(r.status, 400, lien);
+            assert.deepEqual(r.appels, [], 'chess.com n\'a pas été dérangé');
+        }
+    });
+
+    test('une partie introuvable le dit, un site en panne aussi', async () => {
+        const chemin = '/api/analyse?partie=' + encodeURIComponent('https://www.chess.com/game/live/1');
+        const absente = await avecChessCom(() => new Response('', { status: 404 }), chemin);
+        assert.equal(absente.status, 404);
+        const panne = await avecChessCom(() => { throw new Error('hors ligne'); }, chemin);
+        assert.equal(panne.status, 502);
+    });
+});
+
 describe('routage', () => {
     test('une route inconnue répond 404', async () => {
         const r = await appeler(worker, fauxKV(), 'GET', '/nawak');
@@ -295,6 +366,18 @@ describe('/joueurs — administration des joueurs', () => {
             assert.equal((await appeler(worker, fauxKV(), 'POST', '/api/joueurs', 'pas du json')).status, 400);
         });
 
+        test('le pseudo chess.com est retenu à la création', async () => {
+            const kv = fauxKV();
+            const r = await appeler(worker, kv, 'POST', '/api/joueurs', { nom: 'Raf', pseudo: 'Raf_Deluxe' });
+            assert.equal(r.status, 201);
+            assert.equal(r.body.joueur.pseudo, 'Raf_Deluxe');
+        });
+
+        test('une fiche sans pseudo en porte un vide, pas d\'absence de champ', async () => {
+            const kv = fauxKV();
+            assert.equal((await appeler(worker, kv, 'POST', '/api/joueurs', { nom: 'Raf' })).body.joueur.pseudo, null);
+        });
+
         test('liste pleine : 409', async () => {
             const kv = fauxKV({ players: JSON.stringify({
                 version: 1, updatedAt: null,
@@ -304,13 +387,13 @@ describe('/joueurs — administration des joueurs', () => {
         });
     });
 
-    describe('PATCH /joueurs/<id> — nom et Elo', () => {
+    describe('PATCH /joueurs/<id> — nom, Elo et pseudo', () => {
         test('renomme sans toucher à l\'Elo', async () => {
             const kv = fauxKV();
             const { joueur } = await creer(kv, 'Raf', 1200);
             const r = await appeler(worker, kv, 'PATCH', '/api/joueurs/' + joueur.id, { nom: 'Raphael' });
             assert.equal(r.status, 200);
-            assert.deepEqual(r.body.joueur, { id: joueur.id, nom: 'Raphael', elo: 1200 });
+            assert.deepEqual(r.body.joueur, { id: joueur.id, nom: 'Raphael', elo: 1200, pseudo: null });
             assert.equal(r.body.version, 2);
         });
 
@@ -318,7 +401,7 @@ describe('/joueurs — administration des joueurs', () => {
             const kv = fauxKV();
             const { joueur } = await creer(kv, 'Raf', 1200);
             const r = await appeler(worker, kv, 'PATCH', '/api/joueurs/' + joueur.id, { elo: 1610 });
-            assert.deepEqual(r.body.joueur, { id: joueur.id, nom: 'Raf', elo: 1610 });
+            assert.deepEqual(r.body.joueur, { id: joueur.id, nom: 'Raf', elo: 1610, pseudo: null });
         });
 
         test('efface l\'Elo avec null', async () => {
@@ -332,7 +415,7 @@ describe('/joueurs — administration des joueurs', () => {
             const kv = fauxKV();
             const { joueur } = await creer(kv, 'Raf');
             const r = await appeler(worker, kv, 'PATCH', '/api/joueurs/' + joueur.id, { nom: 'Raphael', elo: 1610 });
-            assert.deepEqual(r.body.joueur, { id: joueur.id, nom: 'Raphael', elo: 1610 });
+            assert.deepEqual(r.body.joueur, { id: joueur.id, nom: 'Raphael', elo: 1610, pseudo: null });
         });
 
         test('l\'identifiant ne change jamais : les renvois des tournois restent valides', async () => {
@@ -362,6 +445,25 @@ describe('/joueurs — administration des joueurs', () => {
             assert.equal(r.status, 200);
         });
 
+        test('enregistre le pseudo chess.com, et l\'efface quand on le vide', async () => {
+            const kv = fauxKV();
+            const { joueur } = await creer(kv, 'Raf');
+            const poser = (pseudo) => appeler(worker, kv, 'PATCH', '/api/joueurs/' + joueur.id, { pseudo });
+            assert.equal((await poser('Raf_Deluxe')).body.joueur.pseudo, 'Raf_Deluxe');
+            assert.equal((await poser('  Raf_Deluxe  ')).body.joueur.pseudo, 'Raf_Deluxe', 'les espaces tombent');
+            assert.equal((await poser('')).body.joueur.pseudo, null);
+        });
+
+        test('un pseudo qui n\'en est pas un est refusé (400)', async () => {
+            const kv = fauxKV();
+            const { joueur } = await creer(kv, 'Raf');
+            // chess.com n'admet que lettres, chiffres, tiret et souligné.
+            for (const mauvais of ['raf deluxe', '<img src=x>', 'https://chess.com/raf', 'a'.repeat(33), 12]) {
+                const r = await appeler(worker, kv, 'PATCH', '/api/joueurs/' + joueur.id, { pseudo: mauvais });
+                assert.equal(r.status, 400, JSON.stringify(mauvais));
+            }
+        });
+
         for (const [nom, corps] of [['un nom vide', { nom: '' }], ['un Elo non numérique', { elo: 'fort' }]]) {
             test(`refuse ${nom} (400)`, async () => {
                 const kv = fauxKV();
@@ -369,7 +471,7 @@ describe('/joueurs — administration des joueurs', () => {
                 const r = await appeler(worker, kv, 'PATCH', '/api/joueurs/' + joueur.id, corps);
                 assert.equal(r.status, 400);
                 assert.deepEqual((await appeler(worker, kv, 'GET', '/api/joueurs')).body.joueurs[0],
-                    { id: joueur.id, nom: 'Raf', elo: 1200 }, 'la fiche est intacte');
+                    { id: joueur.id, nom: 'Raf', elo: 1200, pseudo: null }, 'la fiche est intacte');
             });
         }
     });
@@ -438,7 +540,7 @@ describe('/joueurs — administration des joueurs', () => {
             const kv = fauxKV();
             const { joueur } = await creer(kv, 'Raf', 1200);
             const r = await appeler(worker, kv, 'GET', '/api/joueurs/' + joueur.id);
-            assert.deepEqual(r.body.joueur, { id: joueur.id, nom: 'Raf', elo: 1200 });
+            assert.deepEqual(r.body.joueur, { id: joueur.id, nom: 'Raf', elo: 1200, pseudo: null });
         });
 
         test('une méthode non gérée répond 405', async () => {

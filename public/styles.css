@@ -845,6 +845,10 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
 
 .partie-lien-ouvrir:hover { background: var(--primary-light); border-color: var(--primary); }
 
+/* Ce que chess.com dit de la partie : une mention, pas une information de plus
+   à lire — le résultat qui compte est celui du menu au-dessus. */
+.partie-analyse { margin-top: var(--e2); font-size: var(--t1); color: var(--text-secondary); }
+
 /* Sur un téléphone, la carte du duel s'empile déjà : le bouton passe sous le
    champ et y prend toute la largeur. Coincé à droite d'une adresse longue, il
    ne laissait au champ que quelques caractères et ne se visait pas au pouce. */
@@ -1081,13 +1085,16 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
 .joueur-row:last-of-type { border-bottom: none; }
 .joueur-row--nouveau { border-top: 2px solid var(--border); margin-top: var(--e2); }
 .joueur-row .joueur-nom { flex: 1 1 auto; min-width: 0; }
-.joueur-row .joueur-elo { flex: 0 0 110px; }
+.joueur-row .joueur-pseudo { flex: 0 1 190px; min-width: 0; }
+/* Le classement se lit, il ne se tape pas : il vient de chess.com. */
+.joueur-row .joueur-elo { flex: 0 0 60px; text-align: right; color: var(--text-secondary); font-weight: 600; }
+.joueur-sync { color: var(--primary); }
 .joueur-row button:not(.bouton-picto) { padding: var(--e2) var(--e4); font-size: var(--t2); }
 
 @media (max-width: 600px) {
     .joueur-row { flex-wrap: wrap; }
     .joueur-row .joueur-nom { flex: 1 1 100%; }
-    .joueur-row .joueur-elo { flex: 1 1 auto; }
+    .joueur-row .joueur-pseudo { flex: 1 1 auto; }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════

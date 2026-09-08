@@ -126,6 +126,7 @@ function setLien(match, valeur) {
     const propre = String(valeur == null ? '' : valeur).trim();
     if (propre === '') {
         delete match.lien;
+        delete match.analyse;
         return true;
     }
     if (!MOTIF_LIEN.test(propre)) return false;
@@ -168,17 +169,106 @@ function setVarianteManche(chemin, valeur) {
     if (setVariante(resolveManche(chemin).match, valeur)) saveEtat();
 }
 
-// Le lien accepté, la carte se redessine : c'est ainsi qu'apparaît « Ouvrir ».
-function setLienManche(chemin, valeur) {
-    const { match, render } = resolveManche(chemin);
-    if (setLien(match, valeur)) render();
-    else notifyErreur('Le lien doit être une adresse commençant par http:// ou https://');
+// Le lien accepté, la carte se redessine aussitôt : c'est ainsi qu'apparaît
+// « Ouvrir ». Le résumé de la partie arrive après, si chess.com en a un à
+// donner — on ne fait pas attendre la saisie pour ça.
+async function setLienManche(chemin, valeur) {
+    const { match, render, apresResultat } = resolveManche(chemin);
+    if (!setLien(match, valeur)) {
+        notifyErreur('Le lien doit être une adresse commençant par http:// ou https://');
+        return;
+    }
+
+    delete match.analyse;
+    render();
+
+    const lien = getLien(match);
+    if (!lien) return;
+
+    const analyse = await fetchAnalyse(lien);
+    // Le lien a pu changer pendant l'aller-retour : on ne colle pas le résumé
+    // d'une partie sur une autre.
+    if (!analyse || getLien(match) !== lien) return;
+
+    match.analyse = analyse;
+
+    // Les pseudos des fiches disent lequel des deux partants a gagné : autant
+    // remplir le résultat s'il ne l'est pas encore. Déjà saisi, on n'y touche
+    // pas — c'est la ligne du résumé qui signalera un désaccord.
+    const reconnu = resolveResultatAnalyse(match, analyse);
+    if (reconnu && !match.played) {
+        applyResultat(match, reconnu);
+        apresResultat();
+        return;
+    }
+
+    render();
 }
 
 function setResultatManche(chemin, valeur) {
     const { match, apresResultat } = resolveManche(chemin);
     applyResultat(match, valeur);
     apresResultat();
+}
+
+// Le pseudo chess.com d'un partant, tel que sa fiche le porte. Il ne sort jamais
+// d'ici : il sert à reconnaître les joueurs d'une partie en ligne, pas à les
+// nommer — seule la page Joueurs affiche un pseudo.
+function getPseudoPartant(partantId) {
+    const partant = (tournoi.players || [])[partantId];
+    if (!partant || !partant.ref || typeof getJoueur !== 'function') return '';
+    const fiche = getJoueur(partant.ref);
+    return (fiche && fiche.pseudo) || '';
+}
+
+// Ce que le résumé dit du résultat de CETTE manche : 'p1', 'p2', 'draw'. Rien si
+// les pseudos de la partie ne sont pas ceux des deux partants — c'est alors une
+// partie entre d'autres joueurs, ou des fiches sans pseudo.
+function resolveResultatAnalyse(match, analyse) {
+    if (!analyse) return '';
+    const meme = (a, b) => !!a && !!b && String(a).toLowerCase() === String(b).toLowerCase();
+    const p1 = getPseudoPartant(match.player1);
+    const p2 = getPseudoPartant(match.player2);
+
+    let premierEnBlanc;
+    if (meme(p1, analyse.blancs) && meme(p2, analyse.noirs)) premierEnBlanc = true;
+    else if (meme(p1, analyse.noirs) && meme(p2, analyse.blancs)) premierEnBlanc = false;
+    else return '';
+
+    if (analyse.resultat === '1/2-1/2') return 'draw';
+    if (analyse.resultat === '1-0') return premierEnBlanc ? 'p1' : 'p2';
+    if (analyse.resultat === '0-1') return premierEnBlanc ? 'p2' : 'p1';
+    return '';
+}
+
+// Ce que chess.com dit de la partie, en une ligne. Le vainqueur porte le nom de
+// ton partant quand les pseudos le désignent ; sinon la partie se dit par ses
+// couleurs, faute de savoir qui est qui. Tout ce qui vient de là-bas est
+// échappé : le résumé transite par l'état partagé.
+function buildPhraseAnalyse(match, analyse) {
+    const dit = (valeur) => escapeHtml(String(valeur));
+    const reconnu = resolveResultatAnalyse(match, analyse);
+
+    let issue;
+    if (reconnu === 'draw' || analyse.resultat === '1/2-1/2') issue = 'partie nulle';
+    else if (reconnu) issue = `${buildNomPartant(reconnu === 'p1' ? match.player1 : match.player2)} l'emporte`;
+    else if (analyse.resultat === '1-0') issue = 'victoire des blancs';
+    else if (analyse.resultat === '0-1') issue = 'victoire des noirs';
+    else issue = null;
+    if (issue && analyse.fin) issue += ` par ${dit(analyse.fin)}`;
+
+    // Le menu fait foi : si le résumé le contredit, on le dit plutôt que de
+    // changer le résultat dans le dos de qui l'a saisi.
+    const saisi = getResultatManche(match);
+    const desaccord = reconnu && saisi && reconnu !== saisi;
+
+    return [
+        analyse.cadence ? dit(analyse.cadence) : null,
+        analyse.coups ? `${dit(analyse.coups)} coups` : null,
+        issue,
+        analyse.ouverture ? `ouverture ${dit(analyse.ouverture)}` : null,
+        desaccord ? '<strong>en désaccord avec le résultat saisi</strong>' : null,
+    ].filter(Boolean).join(' · ');
 }
 
 // Le lien de la partie en ligne, sous le résultat : le champ pour l'écrire, et
@@ -196,6 +286,7 @@ function buildLienPartie(match, chemin) {
             ${lien ? `<a class="partie-lien-ouvrir" href="${escapeHtml(lien)}"
                          target="_blank" rel="noopener">Ouvrir ↗</a>` : ''}
         </div>
+        ${lien && match.analyse ? `<p class="partie-analyse">${buildPhraseAnalyse(match, match.analyse)}</p>` : ''}
     `;
 }
 
@@ -224,6 +315,9 @@ function buildReglagesPartie(match, chemin) {
 const PICTOS = {
     renommer: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
     ouvrir:   '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+    // Les deux flèches en cercle de la synchronisation.
+    synchroniser:'<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>'
+              + '<path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
     supprimer:'<path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/>'
               + '<path d="M19 6v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6"/><path d="M10 11v6"/><path d="M14 11v6"/>'
 };
@@ -237,6 +331,28 @@ function buildBoutonPicto(picto, libelle, action, classe) {
                      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
                      focusable="false">${PICTOS[picto]}</svg>
             </button>`;
+}
+
+// Ce qu'on sait d'un partant en plus de son nom : son pseudo chess.com et son
+// classement, « Raf_Deluxe - 1431 ». La fiche fait foi — le tournoi n'en garde
+// qu'une copie de repli.
+function buildInfobullePartant(partant) {
+    const fiche = (partant.ref && typeof getJoueur === 'function') ? getJoueur(partant.ref) : null;
+    const elo = fiche && fiche.elo != null ? fiche.elo : partant.elo;
+    const pseudo = fiche && fiche.pseudo;
+    return [pseudo || null, elo != null ? elo : null].filter(v => v != null).join(' - ');
+}
+
+// Le nom d'un partant, partout où il s'affiche : au survol, l'infobulle dit son
+// pseudo et son Elo. Sans rien à dire de plus, le nom reste un nom — une
+// infobulle vide se remarquerait pour rien.
+function buildNomPartant(partantId) {
+    const partant = (tournoi.players || [])[partantId];
+    if (!partant) return '';
+    const infobulle = buildInfobullePartant(partant);
+    return infobulle
+        ? `<span title="${escapeHtml(infobulle)}">${escapeHtml(partant.name)}</span>`
+        : escapeHtml(partant.name);
 }
 
 function buildTagFicheAbsente() {
@@ -346,7 +462,7 @@ function buildCarteDuel(match, chemin, { modifieur = '', casaques = false } = {}
     const cote = (premier) => {
         const p = partants[premier ? 0 : 1];
         return `<div class="player-result ${getClasseResultat(match, premier)}">
-                    ${casaques ? buildCasaque(p.id) : ''}${escapeHtml(p.name)}
+                    ${casaques ? buildCasaque(p.id) : ''}${buildNomPartant(p.id)}
                     ${buildBadgeTerrain(match, premier)}
                 </div>`;
     };
@@ -379,16 +495,20 @@ function renderBarreProgression(elementId, duels) {
         (duels.length ? (joues / duels.length) * 100 : 0) + '%';
 }
 
+// Le résultat d'une manche dans la langue du menu : 'p1', 'p2', 'draw', ou rien
+// tant qu'elle n'est pas jouée.
+function getResultatManche(match) {
+    if (!match.played) return '';
+    if (match.player1Score > match.player2Score) return 'p1';
+    if (match.player2Score > match.player1Score) return 'p2';
+    return 'draw';
+}
+
 // Génère les <option> du menu déroulant de résultat, avec la sélection courante.
 // `p1Name` et `p2Name` sont insérés tels quels : à l'appelant de les échapper,
 // comme il le fait déjà pour les afficher ailleurs dans la même carte.
 function buildOptionsResultat(match, p1Name, p2Name) {
-    let selected = '';
-    if (match.played) {
-        if (match.player1Score > match.player2Score) selected = 'p1';
-        else if (match.player2Score > match.player1Score) selected = 'p2';
-        else selected = 'draw';
-    }
+    const selected = getResultatManche(match);
     return `
         <option value="" ${selected === '' ? 'selected' : ''}>Résultat à définir…</option>
         <option value="p1" ${selected === 'p1' ? 'selected' : ''}>🏆 Victoire — ${p1Name}</option>

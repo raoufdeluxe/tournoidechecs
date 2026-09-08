@@ -31,7 +31,7 @@ async function pageJoueurs(fiches = [], { panne = null } = {}) {
                 if (etat.joueurs.some(j => j.nom.toLowerCase() === nom.toLowerCase())) {
                     return erreur(409, { error: 'Ce joueur existe déjà' });
                 }
-                const joueur = { id: 'j-' + (++compteur), nom, elo: corps.elo ?? null };
+                const joueur = { id: 'j-' + (++compteur), nom, elo: corps.elo ?? null, pseudo: corps.pseudo || null };
                 etat.joueurs.push(joueur);
                 return ok({ version: ++etat.version, joueur }, 201);
             }
@@ -40,6 +40,7 @@ async function pageJoueurs(fiches = [], { panne = null } = {}) {
                 if (i === -1) return erreur(404, {});
                 if (corps.nom !== undefined) etat.joueurs[i].nom = corps.nom;
                 if (corps.elo !== undefined) etat.joueurs[i].elo = corps.elo;
+                if (corps.pseudo !== undefined) etat.joueurs[i].pseudo = corps.pseudo || null;
                 return ok({ version: ++etat.version, joueur: etat.joueurs[i] });
             }
             if (methode === 'DELETE') {
@@ -59,16 +60,20 @@ async function pageJoueurs(fiches = [], { panne = null } = {}) {
 const editeur = (app) => app.ev('document.getElementById("joueurs-editor").innerHTML');
 
 describe('affichage de la liste', () => {
-    test('une ligne modifiable par joueur, avec son Elo', async () => {
+    test('une ligne par joueur : nom et pseudo modifiables, Elo affiché', async () => {
         const app = await pageJoueurs([
-            { id: 'j-aa', nom: 'Alice', elo: 1500 },
-            { id: 'j-bb', nom: 'Bob', elo: null },
+            { id: 'j-aa', nom: 'Alice', elo: 1500, pseudo: 'Alice_CC' },
+            { id: 'j-bb', nom: 'Bob', elo: null, pseudo: null },
         ]);
         const html = editeur(app);
-        // Chaque joueur est modifiable : son nom, son Elo, et un moyen de le retirer.
         assert.match(html, /value="Alice"[^>]*data-id="j-aa"/);
-        assert.match(html, /value="1500"/, 'son Elo est là, prêt à être modifié');
+        assert.match(html, /value="Alice_CC"/, 'son pseudo est modifiable');
+        // Le classement se lit, il ne se tape pas : il vient de chess.com.
+        assert.match(html, />1500</, 'son Elo est affiché');
+        assert.doesNotMatch(html, /<input[^>]*value="1500"/, 'et n\'est pas un champ de saisie');
+        assert.match(html, />—</, 'sans classement, un tiret');
         assert.equal((html.match(/removeJoueur/g) || []).length, 2, 'un retrait par joueur');
+        assert.equal((html.match(/synchroniserFiche/g) || []).length, 2, 'une synchro par joueur');
     });
 
     test('liste vide : on invite à ajouter le premier', async () => {
@@ -97,35 +102,43 @@ describe('affichage de la liste', () => {
 });
 
 describe('ajouter un joueur', () => {
-    async function avecChamps(app, nom, elo) {
+    async function avecChamps(app, nom, pseudo = '') {
         app.ev(`document.getElementById('joueur-nouveau-nom').value = ${JSON.stringify(nom)};`);
-        app.ev(`document.getElementById('joueur-nouveau-elo').value = ${JSON.stringify(elo)};`);
+        app.ev(`document.getElementById('joueur-nouveau-pseudo').value = ${JSON.stringify(pseudo)};`);
         await app.ev('addJoueurFromForm()');
     }
 
     test('la fiche est créée et la liste réaffichée', async () => {
         const app = await pageJoueurs([]);
-        await avecChamps(app, 'Vince', '1450');
-        assert.deepEqual(app.serveur.joueurs.map(j => ({ nom: j.nom, elo: j.elo })), [{ nom: 'Vince', elo: 1450 }]);
+        await avecChamps(app, 'Vince');
+        assert.deepEqual(app.serveur.joueurs.map(j => j.nom), ['Vince']);
         assert.match(editeur(app), /value="Vince"/);
     });
 
     test('les champs sont vidés pour enchaîner', async () => {
         const app = await pageJoueurs([]);
-        await avecChamps(app, 'Vince', '1450');
-        assert.equal(app.ev('document.getElementById("joueur-nouveau-nom").value'), '');
-        assert.equal(app.ev('document.getElementById("joueur-nouveau-elo").value'), '');
+        await avecChamps(app, 'Vince', 'Vince_Deluxe');
+        for (const champ of ['nom', 'pseudo']) {
+            assert.equal(app.ev(`document.getElementById("joueur-nouveau-${champ}").value`), '', champ);
+        }
     });
 
-    test('sans Elo, la fiche part quand même', async () => {
+    test('le pseudo chess.com saisi accompagne la fiche', async () => {
         const app = await pageJoueurs([]);
-        await avecChamps(app, 'Vince', '');
+        await avecChamps(app, 'Vince', 'Vince_Deluxe');
+        assert.equal(app.serveur.joueurs[0].pseudo, 'Vince_Deluxe');
+        assert.match(editeur(app), /value="Vince_Deluxe"/, 'et se retrouve dans la liste');
+    });
+
+    test('une fiche naît sans classement : il viendra de chess.com', async () => {
+        const app = await pageJoueurs([]);
+        await avecChamps(app, 'Vince');
         assert.equal(app.serveur.joueurs[0].elo, null);
     });
 
     test('un homonyme est refusé et rien n\'est vidé', async () => {
         const app = await pageJoueurs([{ id: 'j-aa', nom: 'Vince', elo: null }]);
-        await avecChamps(app, 'vince', '');
+        await avecChamps(app, 'vince');
         assert.equal(app.serveur.joueurs.length, 1);
         assert.match(app.alertes.at(-1), /déjà dans la liste/);
         assert.equal(app.ev('document.getElementById("joueur-nouveau-nom").value'), 'vince');
@@ -134,15 +147,76 @@ describe('ajouter un joueur', () => {
     test('un nom vide ne part pas au serveur', async () => {
         const app = await pageJoueurs([]);
         app.oublierAppels();
-        await avecChamps(app, '   ', '');
+        await avecChamps(app, '   ');
         assert.equal(app.serveur.joueurs.length, 0);
     });
 });
 
+describe('synchroniser une fiche avec chess.com', () => {
+    // La page interroge chess.com directement : cette API-là autorise le
+    // navigateur, contrairement à la page d'une partie.
+    async function pageAvecChessCom(reponse, pseudo = 'Raf_Deluxe') {
+        const app = await pageJoueurs([{ id: 'j-aa', nom: 'Raf', elo: null, pseudo }]);
+        app.definirElements('.joueur-pseudo', [{ value: pseudo, dataset: { id: 'j-aa' } }]);
+        const vrai = app.bac.fetch;
+        app.bac.fetch = async (url, init) => (String(url).includes('api.chess.com') ? reponse(url) : vrai(url, init));
+        return app;
+    }
+    const stats = (corps) => () => ({ ok: true, status: 200, json: async () => corps });
+
+    test('le classement rapide est enregistré sur la fiche', async () => {
+        const app = await pageAvecChessCom(stats({ chess_rapid: { last: { rating: 1904 } } }));
+        app.oublierAppels();
+        await app.ev('synchroniserFiche("j-aa")');
+        assert.equal(app.serveur.joueurs[0].elo, 1904);
+        assert.equal(app.serveur.joueurs[0].pseudo, 'Raf_Deluxe');
+        assert.match(app.alertes.at(-1), /Raf_Deluxe — Elo rapide : 1904/);
+        assert.match(editeur(app), />1904</, 'et la ligne l\'affiche');
+    });
+
+    test('à défaut de rapide, le blitz, puis le bullet', async () => {
+        const app = await pageAvecChessCom(stats({
+            chess_bullet: { last: { rating: 1500 } }, chess_blitz: { last: { rating: 1700 } },
+        }));
+        await app.ev('synchroniserFiche("j-aa")');
+        assert.equal(app.serveur.joueurs[0].elo, 1700);
+        assert.match(app.alertes.at(-1), /Elo blitz/);
+    });
+
+    test('le pseudo tapé à l\'instant est celui qu\'on synchronise', async () => {
+        const app = await pageAvecChessCom(stats({ chess_rapid: { last: { rating: 1800 } } }));
+        app.definirElements('.joueur-pseudo', [{ value: 'Autre_CC', dataset: { id: 'j-aa' } }]);
+        await app.ev('synchroniserFiche("j-aa")');
+        assert.equal(app.serveur.joueurs[0].pseudo, 'Autre_CC');
+    });
+
+    test('sans pseudo saisi, on le dit et chess.com n\'est pas dérangé', async () => {
+        let appele = false;
+        const app = await pageAvecChessCom(() => { appele = true; return stats({})(); }, '');
+        await app.ev('synchroniserFiche("j-aa")');
+        assert.match(app.alertes.at(-1), /Renseigne d'abord le pseudo/);
+        assert.equal(appele, false);
+    });
+
+    test('pseudo inconnu ou joueur sans classement : rien n\'est enregistré', async () => {
+        for (const reponse of [() => ({ ok: false, status: 404, json: async () => ({}) }), stats({ tactics: {} })]) {
+            const app = await pageAvecChessCom(reponse);
+            app.oublierAppels();
+            await app.ev('synchroniserFiche("j-aa")');
+            assert.equal(app.serveur.joueurs[0].elo, null);
+            assert.deepEqual(app.requetes.filter(r => r.methode === 'PATCH'), []);
+            assert.match(app.alertes.at(-1), /aucun classement/);
+        }
+    });
+});
+
 describe('enregistrer les modifications', () => {
+    // Chaque champ porte l'identifiant de sa fiche : c'est par lui que la page
+    // les rassemble, et que les champs du formulaire d'ajout restent dehors.
     function champs(app, valeurs) {
-        app.definirElements('.joueur-nom', valeurs.map(v => ({ value: v.nom, dataset: { id: v.id } })));
-        app.definirElements('.joueur-elo', valeurs.map(v => ({ value: v.elo })));
+        for (const [classe, cle] of [['.joueur-nom', 'nom'], ['.joueur-pseudo', 'pseudo']]) {
+            app.definirElements(classe, valeurs.map(v => ({ value: v[cle] ?? '', dataset: { id: v.id } })));
+        }
     }
 
     test('seules les fiches réellement changées partent au serveur', async () => {
@@ -150,25 +224,50 @@ describe('enregistrer les modifications', () => {
             { id: 'j-aa', nom: 'Alice', elo: 1500 },
             { id: 'j-bb', nom: 'Bob', elo: null },
         ]);
-        champs(app, [{ id: 'j-aa', nom: 'Alice', elo: '1500' }, { id: 'j-bb', nom: 'Robert', elo: '1200' }]);
+        champs(app, [{ id: 'j-aa', nom: 'Alice' }, { id: 'j-bb', nom: 'Robert' }]);
         await app.ev('saveJoueursFromForm()');
 
         const patchs = app.requetes.filter(r => r.methode === 'PATCH');
         assert.deepEqual(patchs.map(r => r.chemin), ['/api/joueurs/j-bb']);
         assert.deepEqual(app.serveur.joueurs.map(j => j.nom), ['Alice', 'Robert']);
-        assert.equal(app.serveur.joueurs[1].elo, 1200);
     });
 
-    test('effacer le champ Elo enlève le classement', async () => {
-        const app = await pageJoueurs([{ id: 'j-aa', nom: 'Alice', elo: 1500 }]);
-        champs(app, [{ id: 'j-aa', nom: 'Alice', elo: '' }]);
+    test('un pseudo saisi seul est bien une modification', async () => {
+        const app = await pageJoueurs([{ id: 'j-aa', nom: 'Alice', elo: 1500, pseudo: null }]);
+        champs(app, [{ id: 'j-aa', nom: 'Alice', pseudo: 'Alice_CC' }]);
         await app.ev('saveJoueursFromForm()');
-        assert.equal(app.serveur.joueurs[0].elo, null);
+
+        const patchs = app.requetes.filter(r => r.methode === 'PATCH');
+        assert.deepEqual(patchs.map(r => r.chemin), ['/api/joueurs/j-aa'], 'la fiche part au serveur');
+        assert.equal(patchs[0].corps.pseudo, 'Alice_CC');
+        assert.equal(app.serveur.joueurs[0].pseudo, 'Alice_CC');
+    });
+
+    test('effacer le pseudo l\'enlève de la fiche', async () => {
+        const app = await pageJoueurs([{ id: 'j-aa', nom: 'Alice', elo: null, pseudo: 'Alice_CC' }]);
+        champs(app, [{ id: 'j-aa', nom: 'Alice', pseudo: '' }]);
+        await app.ev('saveJoueursFromForm()');
+        assert.equal(app.serveur.joueurs[0].pseudo, null);
+    });
+
+    test('un pseudo inchangé ne renvoie rien au serveur', async () => {
+        const app = await pageJoueurs([{ id: 'j-aa', nom: 'Alice', elo: null, pseudo: 'Alice_CC' }]);
+        champs(app, [{ id: 'j-aa', nom: 'Alice', pseudo: 'Alice_CC' }]);
+        await app.ev('saveJoueursFromForm()');
+        assert.deepEqual(app.requetes.filter(r => r.methode === 'PATCH'), []);
+    });
+
+    test('enregistrer ne touche pas au classement, qui ne se tape pas', async () => {
+        const app = await pageJoueurs([{ id: 'j-aa', nom: 'Alice', elo: 1500 }]);
+        champs(app, [{ id: 'j-aa', nom: 'Alicia' }]);
+        await app.ev('saveJoueursFromForm()');
+        assert.equal(app.serveur.joueurs[0].elo, 1500, 'l\'Elo survit au renommage');
+        assert.equal(app.requetes.at(-1).corps.elo, undefined, 'et n\'est même pas envoyé');
     });
 
     test('un nom vidé bloque tout l\'enregistrement', async () => {
         const app = await pageJoueurs([{ id: 'j-aa', nom: 'Alice', elo: null }]);
-        champs(app, [{ id: 'j-aa', nom: '  ', elo: '' }]);
+        champs(app, [{ id: 'j-aa', nom: '  ' }]);
         await app.ev('saveJoueursFromForm()');
         assert.match(app.alertes.at(-1), /noms doivent être remplis/);
         assert.deepEqual(app.requetes.filter(r => r.methode === 'PATCH'), []);

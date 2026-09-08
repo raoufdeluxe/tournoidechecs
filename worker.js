@@ -6,11 +6,12 @@
 // même chemin qu'une page ne serait jamais atteinte.
 //
 //   GET    /api/joueurs       -> { version, updatedAt, joueurs }   les joueurs réutilisables
-//   POST   /api/joueurs       -> corps { nom, elo? }      crée une fiche -> 201 { version, joueur }
-//   PATCH  /api/joueurs/<id>  -> corps { nom?, elo? }     modifie la fiche
+//   POST   /api/joueurs       -> corps { nom, elo?, pseudo? }   crée une fiche -> 201 { version, joueur }
+//   PATCH  /api/joueurs/<id>  -> corps { nom?, elo?, pseudo? }  modifie la fiche
 //   DELETE /api/joueurs/<id>  ->                          supprime la fiche
 //   PUT    /api/joueurs       -> corps { baseVersion, joueurs }   remplace la liste (restauration)
 //   GET    /api/tournois      -> { tournaments: [...], complete }  liste des tournois
+//   GET    /api/analyse?partie=<url chess.com>  -> résumé d'une partie jouée en ligne
 //   GET    /api/etat?id=<id>  -> { version, updatedAt, state }  (state vaut null si rien n'est enregistré)
 //   POST   /api/etat?id=<id>  -> corps { baseVersion, state }
 //   DELETE /api/etat?id=<id>  -> supprime définitivement le tournoi
@@ -33,6 +34,22 @@ const ID_PATTERN = /^[a-z0-9-]{1,64}$/;
 const PLAYERS_KEY = "players";
 const MAX_JOUEURS = 200;
 
+// Le pseudo chess.com d'un joueur, s'il en a un : c'est par lui qu'on reconnaît
+// les partants d'une partie jouée en ligne. Le site n'accepte que lettres,
+// chiffres, tiret et souligné — on s'en tient là, ce qui écarte au passage
+// tout ce qui ressemblerait à une adresse ou à du balisage.
+const MOTIF_PSEUDO = /^[A-Za-z0-9_-]{1,32}$/;
+
+// Rend le pseudo à écrire, ou undefined si la valeur reçue n'en est pas un.
+// Un champ vidé efface le pseudo : c'est une valeur, pas une erreur.
+function lirePseudo(valeur) {
+  if (valeur == null) return null;
+  if (typeof valeur !== "string") return undefined;
+  const propre = valeur.trim();
+  if (propre === "") return null;
+  return MOTIF_PSEUDO.test(propre) ? propre : undefined;
+}
+
 function rosterValide(joueurs) {
   if (!Array.isArray(joueurs) || joueurs.length > MAX_JOUEURS) return false;
   const vus = new Set();
@@ -43,6 +60,7 @@ function rosterValide(joueurs) {
     vus.add(j.id);
     if (typeof j.nom !== "string" || !j.nom.trim() || j.nom.length > 64) return false;
     if (j.elo != null && (typeof j.elo !== "number" || !Number.isFinite(j.elo))) return false;
+    if (j.pseudo != null && lirePseudo(j.pseudo) === undefined) return false;
   }
   return true;
 }
@@ -100,6 +118,62 @@ function corsHeaders() {
     "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
     "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
+  };
+}
+
+// --- Analyse d'une partie jouée sur chess.com --------------------------------
+//
+// Le navigateur ne peut pas lire chess.com lui-même : la réponse n'y porte
+// aucun en-tête CORS. Le Worker fait donc l'aller-retour et ne rend que le
+// résumé, quelques champs, plutôt que la partie entière.
+const MOTIF_PARTIE = /^https?:\/\/(?:www\.)?chess\.com\/game\/(live|daily)\/(\d+)/i;
+
+// Les raisons de fin que rend chess.com, dites en français. Une raison inconnue
+// (nouveau mode, nouvelle règle) se rend telle quelle plutôt que d'être perdue.
+const FINS = {
+  checkmated: "échec et mat",
+  resigned: "abandon",
+  timeout: "temps écoulé",
+  abandoned: "partie abandonnée",
+  agreed: "nulle par accord",
+  repetition: "nulle par répétition",
+  stalemate: "pat",
+  insufficient: "matériel insuffisant",
+  timevsinsufficient: "temps écoulé, matériel insuffisant",
+  "50move": "règle des 50 coups",
+};
+
+// « 180 » -> 3 min ; « 180+2 » -> 3 min +2 s ; « 1/259200 » -> 3 jours par coup.
+function cadenceLisible(controle) {
+  const brut = String(controle || "");
+  const parJour = brut.match(/^1\/(\d+)$/);
+  if (parJour) {
+    const jours = Math.round(Number(parJour[1]) / 86400);
+    return jours <= 1 ? "1 jour par coup" : jours + " jours par coup";
+  }
+  const [base, increment] = brut.split("+");
+  const secondes = Number(base);
+  if (!Number.isFinite(secondes) || secondes <= 0) return brut;
+  const minutes = secondes / 60;
+  const duree = minutes >= 1 ? (Number.isInteger(minutes) ? minutes + " min" : minutes.toFixed(1) + " min")
+                             : secondes + " s";
+  return increment ? duree + " +" + increment + " s" : duree;
+}
+
+function resumeDeLaPartie(donnees) {
+  const partie = (donnees && donnees.game) || {};
+  const entetes = partie.pgnHeaders || {};
+  const coups = Number(partie.plyCount);
+  return {
+    // Les pseudos ne servent qu'à reconnaître les partants : ils ne s'affichent
+    // pas, seule la page Joueurs montre un pseudo chess.com.
+    blancs: entetes.White || null,
+    noirs: entetes.Black || null,
+    resultat: entetes.Result || null,
+    fin: FINS[partie.gameEndReason] || partie.gameEndReason || null,
+    coups: Number.isFinite(coups) ? Math.ceil(coups / 2) : null,
+    cadence: cadenceLisible(entetes.TimeControl || partie.timeControl),
+    ouverture: entetes.ECO || null,
   };
 }
 
@@ -195,7 +269,17 @@ export default {
             return json({ error: "Ce joueur existe déjà", joueur: current.joueurs.find((j) => j.nom.toLowerCase() === nom.toLowerCase()) }, 409);
           }
 
-          const joueur = { id: nouvelIdJoueur(current.joueurs), nom, elo: corps.elo == null ? null : corps.elo };
+          const pseudo = lirePseudo(corps.pseudo);
+          if (pseudo === undefined) {
+            return json({ error: "Pseudo chess.com invalide" }, 400);
+          }
+
+          const joueur = {
+            id: nouvelIdJoueur(current.joueurs),
+            nom,
+            elo: corps.elo == null ? null : corps.elo,
+            pseudo,
+          };
           const next = await ecrire([...current.joueurs, joueur]);
           return json({ version: next.version, updatedAt: next.updatedAt, joueur }, 201);
         }
@@ -250,6 +334,12 @@ export default {
           joueur.elo = corps.elo == null ? null : corps.elo;
         }
 
+        if (corps.pseudo !== undefined) {
+          const pseudo = lirePseudo(corps.pseudo);
+          if (pseudo === undefined) return json({ error: "Pseudo chess.com invalide" }, 400);
+          joueur.pseudo = pseudo;
+        }
+
         const joueurs = [...current.joueurs];
         joueurs[index] = joueur;
         const next = await ecrire(joueurs);
@@ -291,6 +381,44 @@ export default {
         String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
 
       return json({ tournaments, complete: listing.list_complete });
+    }
+
+    // --- Résumé d'une partie jouée en ligne ----------------------------------
+    if (url.pathname === "/api/analyse") {
+      if (request.method !== "GET") {
+        return new Response("Method not allowed", { status: 405, headers: corsHeaders() });
+      }
+
+      const partie = MOTIF_PARTIE.exec(url.searchParams.get("partie") || "");
+      if (!partie) {
+        return json({ error: "Ce lien n'est pas une partie chess.com." }, 400);
+      }
+
+      // L'adresse appelée est reconstruite à partir du seul identifiant relevé :
+      // rien de ce qu'on nous a passé n'atteint chess.com tel quel.
+      const source = `https://www.chess.com/callback/${partie[1]}/game/${partie[2]}`;
+      let reponse;
+      try {
+        reponse = await fetch(source, { headers: { "User-Agent": "grand-prix-des-echecs" } });
+      } catch (e) {
+        return json({ error: "chess.com est injoignable." }, 502);
+      }
+
+      if (reponse.status === 404) {
+        return json({ error: "Cette partie est introuvable sur chess.com." }, 404);
+      }
+      if (!reponse.ok) {
+        return json({ error: "chess.com n'a pas répondu comme prévu." }, 502);
+      }
+
+      let donnees;
+      try {
+        donnees = await reponse.json();
+      } catch (e) {
+        return json({ error: "chess.com n'a pas répondu comme prévu." }, 502);
+      }
+
+      return json({ analyse: resumeDeLaPartie(donnees) });
     }
 
     // /state reste accepté au même titre, pour la même raison.
