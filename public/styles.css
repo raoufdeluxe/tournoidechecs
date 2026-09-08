@@ -568,16 +568,6 @@ a.menu-item { display: block; text-decoration: none; }
    Classement, journées, duels, graphe de progression.
    ══════════════════════════════════════════════════════════════════════════════ */
 
-/* Portée du classement, en rappel discret du titre : il compte tout le tournoi,
-   pas la journée qu'on feuillette juste en dessous. */
-
-.standings-round {
-    font-family: 'Inter', sans-serif;
-    font-weight: 500;
-    font-size: var(--t2);
-    color: var(--text-secondary);
-}
-
 /* Sur téléphone, « Manches » (le nombre de rencontres jouées) est la colonne
    la moins utile : on la masque plutôt que d'imposer un défilement latéral.
    Elle réapparaît dès qu'il y a la place. */
@@ -773,17 +763,21 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
     .journee-titre .badge { display: inline-block; }
 }
 
+/* Un compteur sous la barre de progression, qui redit la même chose en chiffres :
+   il se tient en retrait. Les encarts se serrent autour de leur contenu au lieu
+   de s'étirer sur toute la largeur, et restent centrés sous la barre. */
 .summary-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: var(--e4);
+    grid-auto-flow: column;
+    justify-content: center;
+    gap: var(--e3);
     margin-bottom: var(--e5);
 }
 
-.summary-card { --retrait: var(--e5); text-align: center; }
+.summary-card { --retrait: var(--e3); text-align: center; }
 
-.summary-card-value { font-size: var(--t5); font-weight: 700; color: var(--primary); margin-bottom: var(--e2); }
-.summary-card-label { font-size: var(--t2); color: var(--text-secondary); font-weight: 600; }
+.summary-card-value { font-size: var(--t4); font-weight: 700; color: var(--primary); }
+.summary-card-label { font-size: var(--t1); color: var(--text-secondary); font-weight: 600; }
 
 /* Réglages d'une partie : cadence et variante */
 .partie-reglages { display: flex; gap: var(--e3); margin-bottom: var(--e3); }

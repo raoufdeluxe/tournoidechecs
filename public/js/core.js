@@ -130,11 +130,11 @@ function buildReglagesPartie(match, onCadence, onVariante) {
         <div class="partie-reglages">
             <label class="partie-reglage">
                 <span class="partie-reglage-titre">Cadence</span>
-                <select class="partie-cadence" onchange="${onCadence}">${buildOptions(CADENCES, getCadence(match))}</select>
+                <select onchange="${onCadence}">${buildOptions(CADENCES, getCadence(match))}</select>
             </label>
             <label class="partie-reglage">
                 <span class="partie-reglage-titre">Type</span>
-                <select class="partie-variante" onchange="${onVariante}">${buildOptions(VARIANTES, getVariante(match))}</select>
+                <select onchange="${onVariante}">${buildOptions(VARIANTES, getVariante(match))}</select>
             </label>
         </div>
     `;

@@ -71,23 +71,9 @@ function element(id, caches) {
         contains: () => false,
         querySelector: () => element(),
         querySelectorAll: () => [],
-        getContext: () => contexte2d(),
         getBoundingClientRect: () => ({ x: 0, y: 0, width: 800, height: 400, top: 0, left: 0, right: 800, bottom: 400 }),
     };
     return el;
-}
-
-// Faux contexte canvas : toute méthode appelée ne fait rien.
-function contexte2d() {
-    return new Proxy({}, {
-        get(cible, prop) {
-            if (prop in cible) return cible[prop];
-            if (prop === 'canvas') return element();
-            if (prop === 'measureText') return () => ({ width: 10 });
-            return () => {};
-        },
-        set(cible, prop, valeur) { cible[prop] = valeur; return true; },
-    });
 }
 
 /**

@@ -269,7 +269,7 @@ function showResultats(champion, runner) {
     podium.innerHTML = `
         <div class="podium-titre">📣 Photo-finish confirmée</div>
         <div class="podium-marches">
-            <div class="podium-place podium-place--argent">
+            <div class="podium-place">
                 <div class="medal medal-silver podium-medaille">2</div>
                 <div class="podium-nom">${buildCasaque(runner.id)}${escapeHtml(runner.name)}</div>
                 <div class="podium-rang">Dauphin</div>
@@ -281,7 +281,7 @@ function showResultats(champion, runner) {
                 <div class="podium-rang">Champion</div>
                 <div class="podium-emoji">🏆</div>
             </div>
-            <div class="podium-place podium-place--bronze">
+            <div class="podium-place">
                 <div class="medal medal-bronze podium-medaille">3</div>
                 <div class="podium-nom">${third ? buildCasaque(third.id) + escapeHtml(third.name) : 'Demi-finalistes'}</div>
                 <div class="podium-rang">${third ? 'Troisième' : ''}</div>
