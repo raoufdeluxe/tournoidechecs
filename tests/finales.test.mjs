@@ -44,13 +44,13 @@ describe('finalizePoule — la qualification', () => {
 describe('demi-finales', () => {
     test('2-0 : le vainqueur des manches est qualifié', () => {
         const { app, classement } = pouleTerminee(6);
-        app.ev('setResultatDemie(0, 0, "p1"); setResultatDemie(0, 1, "p1");');
+        app.ev('setResultatManche("demie:0:0", "p1"); setResultatManche("demie:0:1", "p1");');
         assert.equal(app.json('tournoi.semifinalMatches')[0].winner, classement[0]);
     });
 
     test('1-1 sans Elo : une belle est ajoutée, personne n\'est encore qualifié', () => {
         const { app } = pouleTerminee(6);
-        app.ev('setResultatDemie(0, 0, "p1"); setResultatDemie(0, 1, "p2");');
+        app.ev('setResultatManche("demie:0:0", "p1"); setResultatManche("demie:0:1", "p2");');
         const demie = app.json('tournoi.semifinalMatches')[0];
         assert.equal(demie.matches.length, 3);
         assert.equal(demie.matches[2].num, 3);
@@ -59,7 +59,7 @@ describe('demi-finales', () => {
 
     test('la belle n\'est ajoutée qu\'une seule fois', () => {
         const { app } = pouleTerminee(6);
-        app.ev('setResultatDemie(0, 0, "p1"); setResultatDemie(0, 1, "p2");');
+        app.ev('setResultatManche("demie:0:0", "p1"); setResultatManche("demie:0:1", "p2");');
         app.ev('checkDemiesTerminees(); checkDemiesTerminees();');
         assert.equal(app.json('tournoi.semifinalMatches')[0].matches.length, 3);
     });
@@ -68,7 +68,7 @@ describe('demi-finales', () => {
         // Elos décroissants : le 1er de la poule aura toujours un Elo plus haut que le 4e.
         const elos = [2000, 1900, 1800, 1700, 1600, 1500];
         const { app, classement } = pouleTerminee(6, elos);
-        app.ev('setResultatDemie(0, 0, "p1"); setResultatDemie(0, 1, "p2");');
+        app.ev('setResultatManche("demie:0:0", "p1"); setResultatManche("demie:0:1", "p2");');
         const demie = app.json('tournoi.semifinalMatches')[0];
         assert.equal(demie.matches.length, 2, 'pas de belle quand l\'Elo tranche');
         const [a, b] = demie.players;
@@ -78,9 +78,9 @@ describe('demi-finales', () => {
 
     test('effacer un résultat déqualifie', () => {
         const { app } = pouleTerminee(6);
-        app.ev('setResultatDemie(0, 0, "p1"); setResultatDemie(0, 1, "p1");');
+        app.ev('setResultatManche("demie:0:0", "p1"); setResultatManche("demie:0:1", "p1");');
         assert.notEqual(app.json('tournoi.semifinalMatches')[0].winner, null);
-        app.ev('setResultatDemie(0, 1, "")');
+        app.ev('setResultatManche("demie:0:1", "")');
         assert.equal(app.json('tournoi.semifinalMatches')[0].winner, null);
     });
 });
@@ -90,10 +90,10 @@ describe('le score affiché d\'une demi-finale', () => {
         const { app } = pouleTerminee(6);
         const affiche = () => app.ev('document.getElementById("semi1-content").innerHTML');
 
-        app.ev('setResultatDemie(0, 0, "draw")');
+        app.ev('setResultatManche("demie:0:0", "draw")');
         assert.match(affiche(), /0\.5 pt \| .*0\.5 pt/, 'la nulle vaut une demi-manche à chacun');
 
-        app.ev('setResultatDemie(0, 1, "p1")');
+        app.ev('setResultatManche("demie:0:1", "p1")');
         assert.match(affiche(), /1\.5 pt \| .*0\.5 pt/, 'la victoire ajoute une manche');
     });
 });
@@ -102,8 +102,8 @@ describe('le score affiché d\'une demi-finale', () => {
 function finaleLancee(elos = []) {
     const { app, classement } = pouleTerminee(6, elos);
     app.ev(`
-        setResultatDemie(0, 0, "p1"); setResultatDemie(0, 1, "p1");
-        setResultatDemie(1, 0, "p1"); setResultatDemie(1, 1, "p1");
+        setResultatManche("demie:0:0", "p1"); setResultatManche("demie:0:1", "p1");
+        setResultatManche("demie:1:0", "p1"); setResultatManche("demie:1:1", "p1");
         startFinale();
     `);
     return { app, classement };
@@ -120,14 +120,14 @@ describe('Grande Finale', () => {
 
     test('2-0 : le champion est proclamé, le finaliste est vice-champion', () => {
         const { app, classement } = finaleLancee();
-        app.ev('setResultatFinale(0, "p1"); setResultatFinale(1, "p1"); finalizeFinale();');
+        app.ev('setResultatManche("finale:0", "p1"); setResultatManche("finale:1", "p1"); finalizeFinale();');
         assert.equal(app.ev('tournoi.championId'), classement[0]);
         assert.equal(app.ev('tournoi.runnerId'), classement[1]);
     });
 
     test('1-1 sans Elo : belle ajoutée, pas de champion tant qu\'elle n\'est pas jouée', () => {
         const { app } = finaleLancee();
-        app.ev('setResultatFinale(0, "p1"); setResultatFinale(1, "p2");');
+        app.ev('setResultatManche("finale:0", "p1"); setResultatManche("finale:1", "p2");');
         assert.equal(app.json('tournoi.finalMatches').length, 3);
         app.ev('finalizeFinale()');
         assert.equal(app.ev('tournoi.championId ?? null'), null);
@@ -139,14 +139,14 @@ describe('Grande Finale', () => {
     test('1-1 avec Elos : l\'outsider est sacré sans belle', () => {
         const elos = [2000, 1900, 1800, 1700, 1600, 1500];
         const { app, classement } = finaleLancee(elos);
-        app.ev('setResultatFinale(0, "p1"); setResultatFinale(1, "p2"); finalizeFinale();');
+        app.ev('setResultatManche("finale:0", "p1"); setResultatManche("finale:1", "p2"); finalizeFinale();');
         assert.equal(app.json('tournoi.finalMatches').length, 2);
         assert.equal(app.ev('tournoi.championId'), classement[1], 'le moins bien classé Elo');
     });
 
     test('le podium est complet : champion, vice-champion et 3e distincts', () => {
         const { app } = finaleLancee();
-        app.ev('setResultatFinale(0, "p1"); setResultatFinale(1, "p1"); finalizeFinale();');
+        app.ev('setResultatManche("finale:0", "p1"); setResultatManche("finale:1", "p1"); finalizeFinale();');
         const podium = app.json('[tournoi.championId, tournoi.runnerId, tournoi.thirdId]');
         assert.equal(new Set(podium).size, 3);
         assert.ok(podium.every(id => id != null));
@@ -154,7 +154,7 @@ describe('Grande Finale', () => {
 
     test('la 3e place revient au mieux classé des deux perdants de demies', () => {
         const { app, classement } = finaleLancee();
-        app.ev('setResultatFinale(0, "p1"); setResultatFinale(1, "p1"); finalizeFinale();');
+        app.ev('setResultatManche("finale:0", "p1"); setResultatManche("finale:1", "p1"); finalizeFinale();');
         // Perdants des demies : le 4e (contre le 1er) et le 3e (contre le 2e).
         assert.equal(app.ev('tournoi.thirdId'), classement[2]);
     });
@@ -170,8 +170,8 @@ describe('cadence et type en phase finale', () => {
 
     test('régler une manche de demie n\'affecte pas l\'autre', () => {
         const { app } = pouleTerminee(6);
-        app.appel('setCadenceDemie', 0, 0, '5');
-        app.appel('setVarianteDemie', 0, 0, '960');
+        app.appel('setCadenceManche', 'demie:0:0', '5');
+        app.appel('setVarianteManche', 'demie:0:0', '960');
         const demie = app.json('tournoi.semifinalMatches')[0];
         assert.deepEqual([demie.matches[0].cadence, demie.matches[0].variante], ['5', '960']);
         assert.deepEqual([demie.matches[1].cadence, demie.matches[1].variante], ['10', 'classique']);
@@ -179,9 +179,9 @@ describe('cadence et type en phase finale', () => {
 
     test('la belle d\'une demie reprend le format de la manche 1', () => {
         const { app } = pouleTerminee(6);
-        app.appel('setCadenceDemie', 0, 0, '3');
-        app.appel('setVarianteDemie', 0, 0, '960');
-        app.ev('setResultatDemie(0, 0, "p1"); setResultatDemie(0, 1, "p2");');
+        app.appel('setCadenceManche', 'demie:0:0', '3');
+        app.appel('setVarianteManche', 'demie:0:0', '960');
+        app.ev('setResultatManche("demie:0:0", "p1"); setResultatManche("demie:0:1", "p2");');
         const manches = app.json('tournoi.semifinalMatches')[0].matches;
         assert.equal(manches.length, 3);
         assert.deepEqual([manches[2].cadence, manches[2].variante], ['3', '960']);
@@ -190,8 +190,8 @@ describe('cadence et type en phase finale', () => {
     test('la Grande Finale naît avec les valeurs par défaut, réglables', () => {
         const { app } = finaleLancee();
         assert.ok(app.json('tournoi.finalMatches').every(m => m.cadence === '10' && m.variante === 'classique'));
-        app.appel('setCadenceFinale', 1, '24h');
-        app.appel('setVarianteFinale', 1, '960');
+        app.appel('setCadenceManche', 'finale:1', '24h');
+        app.appel('setVarianteManche', 'finale:1', '960');
         const finale = app.json('tournoi.finalMatches');
         assert.deepEqual([finale[1].cadence, finale[1].variante], ['24h', '960']);
         assert.deepEqual([finale[0].cadence, finale[0].variante], ['10', 'classique']);
@@ -199,7 +199,7 @@ describe('cadence et type en phase finale', () => {
 
     test('un réglage inconnu ne change rien', () => {
         const { app } = finaleLancee();
-        app.appel('setCadenceFinale', 0, 'blitz');
+        app.appel('setCadenceManche', 'finale:0', 'blitz');
         assert.equal(app.json('tournoi.finalMatches')[0].cadence, '10');
     });
 });
@@ -207,7 +207,7 @@ describe('cadence et type en phase finale', () => {
 describe('« Nouveau tournoi » depuis les résultats', () => {
     test('repart à vide, sans réserver d\'adresse', async () => {
         const { app } = finaleLancee();
-        app.ev('setResultatFinale(0, "p1"); setResultatFinale(1, "p1"); finalizeFinale();');
+        app.ev('setResultatManche("finale:0", "p1"); setResultatManche("finale:1", "p1"); finalizeFinale();');
         app.repondreConfirm(true);
         await app.ev('startNouveauTournoi()');
 

@@ -62,15 +62,15 @@ describe('phases finales', () => {
 
     test('le nom du qualifié annoncé', () => {
         const app = pouleTerminee();
-        app.ev('setResultatDemie(0, 0, "p1"); setResultatDemie(0, 1, "p1");');
+        app.ev('setResultatManche("demie:0:0", "p1"); setResultatManche("demie:0:1", "p1");');
         assertEchappe(app.ev('document.getElementById("semi1-content").innerHTML'), 'annonce du qualifié');
     });
 
     test('la Grande Finale', () => {
         const app = pouleTerminee();
         app.ev(`
-            setResultatDemie(0, 0, "p1"); setResultatDemie(0, 1, "p1");
-            setResultatDemie(1, 0, "p1"); setResultatDemie(1, 1, "p1");
+            setResultatManche("demie:0:0", "p1"); setResultatManche("demie:0:1", "p1");
+            setResultatManche("demie:1:0", "p1"); setResultatManche("demie:1:1", "p1");
             startFinale();
         `);
         assertEchappe(app.ev('document.getElementById("final-matches-container").children[0].innerHTML'), 'finale');
@@ -80,10 +80,10 @@ describe('phases finales', () => {
     test('le podium et le classement final', () => {
         const app = pouleTerminee(6, true);
         app.ev(`
-            setResultatDemie(0, 0, "p1"); setResultatDemie(0, 1, "p1");
-            setResultatDemie(1, 0, "p1"); setResultatDemie(1, 1, "p1");
+            setResultatManche("demie:0:0", "p1"); setResultatManche("demie:0:1", "p1");
+            setResultatManche("demie:1:0", "p1"); setResultatManche("demie:1:1", "p1");
             startFinale();
-            setResultatFinale(0, "p1"); setResultatFinale(1, "p1"); finalizeFinale();
+            setResultatManche("finale:0", "p1"); setResultatManche("finale:1", "p1"); finalizeFinale();
         `);
         assertEchappe(app.ev('document.getElementById("final-standings-body").innerHTML'), 'classement final');
         assertEchappe(app.ev('document.getElementById("podium").innerHTML'), 'podium');

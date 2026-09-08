@@ -26,12 +26,12 @@ export function pouleGeneree(noms, elos = []) {
 export function jouerPoule(app, resultats) {
     for (const [cle, valeur] of Object.entries(resultats)) {
         const ids = /leg[12]$/.test(cle) ? [cle] : [`${cle}-leg1`, `${cle}-leg2`];
-        for (const id of ids) app.appel('setResultatPartie', id, valeur);
+        for (const id of ids) app.appel('setResultatManche', `poule:${id}`, valeur);
     }
 }
 
 /** Joue tout ce qui reste de la poule en victoire du premier nommé. */
 export function completerPoule(app) {
     const restants = app.json('tournoi.matches.filter(m => !m.played).map(m => m.id)');
-    for (const id of restants) app.appel('setResultatPartie', id, 'p1');
+    for (const id of restants) app.appel('setResultatManche', `poule:${id}`, 'p1');
 }

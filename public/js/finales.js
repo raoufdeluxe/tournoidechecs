@@ -33,12 +33,7 @@ function renderDemie(index, elemPrefix) {
         html += `
             <div class="demie-manche">
                 <div class="demie-manche-titre">Match ${match.num}</div>
-                ${buildCarteDuel(match, {
-                    modifieur: 'carte-duel--compact',
-                    onResultat: `setResultatDemie(${index}, ${mIdx}, this.value)`,
-                    onCadence: `setCadenceDemie(${index}, ${mIdx}, this.value)`,
-                    onVariante: `setVarianteDemie(${index}, ${mIdx}, this.value)`,
-                })}
+                ${buildCarteDuel(match, `demie:${index}:${mIdx}`, { modifieur: 'carte-duel--compact' })}
             </div>
         `;
     });
@@ -58,22 +53,6 @@ function renderDemie(index, elemPrefix) {
     }
     
     contentDiv.innerHTML = html;
-}
-
-function setResultatDemie(semiIdx, matchIdx, value) {
-    const semifinal = tournoi.semifinalMatches[semiIdx];
-    const match = semifinal.matches[matchIdx];
-    
-    applyResultat(match, value);
-    checkDemiesTerminees();
-}
-
-function setCadenceDemie(semiIdx, matchIdx, valeur) {
-    if (setCadence(tournoi.semifinalMatches[semiIdx].matches[matchIdx], valeur)) saveEtat();
-}
-
-function setVarianteDemie(semiIdx, matchIdx, valeur) {
-    if (setVariante(tournoi.semifinalMatches[semiIdx].matches[matchIdx], valeur)) saveEtat();
 }
 
 // La barre se redessine avec les demies, à la fin : une belle ajoutée juste
@@ -128,11 +107,7 @@ function renderFinale() {
         div.innerHTML = `
             <div class="finale-manche">
                 <div class="finale-manche-titre">Match ${match.num}</div>
-                ${buildCarteDuel(match, {
-                    onResultat: `setResultatFinale(${idx}, this.value)`,
-                    onCadence: `setCadenceFinale(${idx}, this.value)`,
-                    onVariante: `setVarianteFinale(${idx}, this.value)`,
-                })}
+                ${buildCarteDuel(match, `finale:${idx}`)}
             </div>
         `;
         
@@ -167,19 +142,6 @@ function checkFinaleTerminee() {
 
     document.getElementById('finalize-finals-btn').disabled =
         resolveDuel(tournoi.finalMatches, f1, f2).winner === null;
-}
-
-function setResultatFinale(idx, value) {
-    applyResultat(tournoi.finalMatches[idx], value);
-    checkFinaleTerminee();
-}
-
-function setCadenceFinale(idx, valeur) {
-    if (setCadence(tournoi.finalMatches[idx], valeur)) saveEtat();
-}
-
-function setVarianteFinale(idx, valeur) {
-    if (setVariante(tournoi.finalMatches[idx], valeur)) saveEtat();
 }
 
 function finalizeFinale() {

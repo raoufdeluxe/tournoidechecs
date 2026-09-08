@@ -187,7 +187,7 @@ button.bouton-picto svg { width: 20px; height: 20px; }
 .form-group { margin-bottom: var(--e5); }
 label { display: block; margin-bottom: var(--e2); font-weight: 500; color: var(--text-primary); }
 
-input[type="number"], input[type="text"], select {
+input[type="number"], input[type="text"], input[type="url"], select {
     width: 100%;
     padding: var(--e3);
     border: 1px solid var(--border);
@@ -198,7 +198,7 @@ input[type="number"], input[type="text"], select {
     color: var(--text-primary);
 }
 
-input[type="number"]:focus, input[type="text"]:focus, select:focus {
+input[type="number"]:focus, input[type="text"]:focus, input[type="url"]:focus, select:focus {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px var(--primary-light);
@@ -741,15 +741,6 @@ a.menu-item { display: block; text-decoration: none; }
     margin-bottom: var(--e5);
 }
 
-.result-hint {
-    margin-top: var(--e2);
-    font-size: var(--t1);
-    color: var(--text-secondary);
-    display: flex;
-    align-items: center;
-    gap: var(--e2);
-}
-
 /* Feuilletage des journées : le numéro au centre, une flèche de chaque côté. */
 
 .journee-nav {
@@ -830,7 +821,37 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
     font-weight: 700;
 }
 
-.partie-reglage select { width: 100%; padding: var(--e2) var(--e3); font-size: var(--t2); }
+.partie-reglage select, .partie-reglage input { width: 100%; padding: var(--e2) var(--e3); font-size: var(--t2); }
+
+/* Le lien de la partie en ligne, sous le résultat : le champ prend la largeur,
+   le bouton d'ouverture se range à sa droite, aligné sur lui. */
+.partie-lien { display: flex; gap: var(--e3); align-items: flex-end; margin-top: var(--e3); }
+
+/* Le bouton d'ouverture se range à droite du champ, à la même hauteur que lui :
+   même retrait, même corps, même cadre — c'est une action, pas un mot souligné
+   au milieu d'un formulaire. */
+.partie-lien-ouvrir {
+    flex: none;
+    padding: var(--e2) var(--e3);
+    border: 1px solid var(--border);
+    border-radius: var(--r2);
+    background: var(--bg-light);
+    font-size: var(--t2);
+    font-weight: 600;
+    color: var(--primary);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.partie-lien-ouvrir:hover { background: var(--primary-light); border-color: var(--primary); }
+
+/* Sur un téléphone, la carte du duel s'empile déjà : le bouton passe sous le
+   champ et y prend toute la largeur. Coincé à droite d'une adresse longue, il
+   ne laissait au champ que quelques caractères et ne se visait pas au pouce. */
+@media (max-width: 700px) {
+    .partie-lien { flex-direction: column; align-items: stretch; gap: var(--e2); }
+    .partie-lien-ouvrir { text-align: center; }
+}
 
 /* Largeur des colonnes du classement : le nom prend ce qui reste. */
 .standings-table th:first-child { width: 40px; }

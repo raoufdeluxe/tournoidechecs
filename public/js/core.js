@@ -111,24 +111,105 @@ function setVariante(match, valeur) {
     return true;
 }
 
+// Le lien vers la partie jouée en ligne (chess.com et consorts). Il finit dans
+// un href, et l'état d'un tournoi s'écrit depuis n'importe quel appareil ayant
+// l'adresse : on ne retient qu'une vraie adresse http(s) — un « javascript: »
+// glissé là s'exécuterait au clic. Le contrôle vaut à l'écriture comme à la
+// lecture, pour ne pas poser dans la page ce qu'un état ancien contiendrait.
+const MOTIF_LIEN = /^https?:\/\/\S+$/i;
+
+const getLien = (match) => (MOTIF_LIEN.test(match.lien || '') ? match.lien : '');
+
+// Un champ vidé efface le lien ; une adresse qui n'en est pas une est refusée,
+// et la partie garde celui qu'elle avait.
+function setLien(match, valeur) {
+    const propre = String(valeur == null ? '' : valeur).trim();
+    if (propre === '') {
+        delete match.lien;
+        return true;
+    }
+    if (!MOTIF_LIEN.test(propre)) return false;
+    match.lien = propre;
+    return true;
+}
+
 function buildOptions(choix, courant) {
     return choix.map(c =>
         '<option value="' + c.valeur + '"' + (c.valeur === courant ? ' selected' : '') + '>' +
         c.libelle + '</option>').join('');
 }
 
-// Les deux menus d'une partie. `onCadence` et `onVariante` sont le corps des
-// gestionnaires : chaque phase désigne sa partie à sa façon.
-function buildReglagesPartie(match, onCadence, onVariante) {
+// --- Une manche, où qu'elle soit ------------------------------------------
+//
+// La poule désigne ses duels par leur identifiant, une demie par sa manche, la
+// finale par son rang. Un seul chemin dit les trois — 'poule:0-1-leg1',
+// 'demie:0:1', 'finale:1' — et les cartes n'ont plus qu'à le porter.
+// Le résolveur rend la manche visée et ce qu'il faut faire après l'avoir
+// touchée : la poule se redessine, une demie vérifie s'il faut une belle, la
+// finale si le titre est joué. Ces fonctions-là vivent dans poule.js et
+// finales.js, que seul l'accueil charge — seul endroit où une carte existe.
+function resolveManche(chemin) {
+    const [phase, a, b] = String(chemin).split(':');
+    if (phase === 'demie') {
+        return { match: tournoi.semifinalMatches[a].matches[b], render: renderDemies, apresResultat: checkDemiesTerminees };
+    }
+    if (phase === 'finale') {
+        return { match: tournoi.finalMatches[a], render: renderFinale, apresResultat: checkFinaleTerminee };
+    }
+    return { match: tournoi.matches.find(m => m.id === a), render: renderPoule, apresResultat: renderPoule };
+}
+
+// Cadence et type : le menu montre déjà la valeur choisie, rien à redessiner.
+function setCadenceManche(chemin, valeur) {
+    if (setCadence(resolveManche(chemin).match, valeur)) saveEtat();
+}
+
+function setVarianteManche(chemin, valeur) {
+    if (setVariante(resolveManche(chemin).match, valeur)) saveEtat();
+}
+
+// Le lien accepté, la carte se redessine : c'est ainsi qu'apparaît « Ouvrir ».
+function setLienManche(chemin, valeur) {
+    const { match, render } = resolveManche(chemin);
+    if (setLien(match, valeur)) render();
+    else notifyErreur('Le lien doit être une adresse commençant par http:// ou https://');
+}
+
+function setResultatManche(chemin, valeur) {
+    const { match, apresResultat } = resolveManche(chemin);
+    applyResultat(match, valeur);
+    apresResultat();
+}
+
+// Le lien de la partie en ligne, sous le résultat : le champ pour l'écrire, et
+// de quoi l'ouvrir dès qu'il y en a un.
+function buildLienPartie(match, chemin) {
+    const lien = getLien(match);
+    return `
+        <div class="partie-lien">
+            <label class="partie-reglage">
+                <span class="partie-reglage-titre">Lien de la partie</span>
+                <input type="url" value="${escapeHtml(lien)}"
+                       onchange="setLienManche('${chemin}', this.value)"
+                       placeholder="https://www.chess.com/game/live/…">
+            </label>
+            ${lien ? `<a class="partie-lien-ouvrir" href="${escapeHtml(lien)}"
+                         target="_blank" rel="noopener">Ouvrir ↗</a>` : ''}
+        </div>
+    `;
+}
+
+// Les deux menus d'une partie.
+function buildReglagesPartie(match, chemin) {
     return `
         <div class="partie-reglages">
             <label class="partie-reglage">
                 <span class="partie-reglage-titre">Cadence</span>
-                <select onchange="${onCadence}">${buildOptions(CADENCES, getCadence(match))}</select>
+                <select onchange="setCadenceManche('${chemin}', this.value)">${buildOptions(CADENCES, getCadence(match))}</select>
             </label>
             <label class="partie-reglage">
                 <span class="partie-reglage-titre">Type</span>
-                <select onchange="${onVariante}">${buildOptions(VARIANTES, getVariante(match))}</select>
+                <select onchange="setVarianteManche('${chemin}', this.value)">${buildOptions(VARIANTES, getVariante(match))}</select>
             </label>
         </div>
     `;
@@ -259,7 +340,7 @@ function addBelle(matches) {
 // Ouverte, elle donne la cadence, le type et le résultat. Poule, demi-finales et
 // finale s'en servent ; ne changent que le serrage de la carte, la casaque à
 // côté des noms et les gestionnaires, que chaque phase écrit à sa façon.
-function buildCarteDuel(match, { modifieur = '', casaques = false, onResultat, onCadence, onVariante }) {
+function buildCarteDuel(match, chemin, { modifieur = '', casaques = false } = {}) {
     const partants = [tournoi.players[match.player1], tournoi.players[match.player2]];
 
     const cote = (premier) => {
@@ -281,11 +362,11 @@ function buildCarteDuel(match, { modifieur = '', casaques = false, onResultat, o
                 <span class="carte-duel-chevron" aria-hidden="true">▾</span>
             </summary>
             <div class="carte-duel-corps">
-                ${buildReglagesPartie(match, onCadence, onVariante)}
-                <select class="result-select" onchange="${onResultat}">
+                ${buildReglagesPartie(match, chemin)}
+                <select class="result-select" onchange="setResultatManche('${chemin}', this.value)">
                     ${buildOptionsResultat(match, escapeHtml(partants[0].name), escapeHtml(partants[1].name))}
                 </select>
-                ${match.played ? '<div class="result-hint">✓ Résultat enregistré — modifiable à tout moment</div>' : ''}
+                ${buildLienPartie(match, chemin)}
             </div>
         </details>
     `;

@@ -176,6 +176,48 @@ describe('getClasseResultat', () => {
     });
 });
 
+describe('le lien vers la partie en ligne', () => {
+    const partie = (lien) => ({ player1: 0, player2: 1, lien });
+
+    test('une adresse http(s) est retenue et ressort telle quelle', () => {
+        const app = chargerApp();
+        app.set('globalThis.m', partie());
+        assert.equal(app.ev('setLien(m, "https://www.chess.com/game/live/123")'), true);
+        assert.equal(app.ev('getLien(m)'), 'https://www.chess.com/game/live/123');
+    });
+
+    test('les espaces autour de l\'adresse collée sont retirés', () => {
+        const app = chargerApp();
+        app.set('globalThis.m', partie());
+        app.ev('setLien(m, "  https://lichess.org/abc  ")');
+        assert.equal(app.ev('getLien(m)'), 'https://lichess.org/abc');
+    });
+
+    test('ce qui n\'est pas une adresse http(s) est refusé, le lien en place est gardé', () => {
+        const app = chargerApp();
+        app.set('globalThis.m', partie('https://www.chess.com/game/live/1'));
+        for (const mauvais of ['javascript:alert(1)', 'chess.com/game/2', 'data:text/html,<script>']) {
+            assert.equal(app.ev(`setLien(m, ${JSON.stringify(mauvais)})`), false, mauvais);
+        }
+        assert.equal(app.ev('getLien(m)'), 'https://www.chess.com/game/live/1');
+    });
+
+    test('vider le champ efface le lien', () => {
+        const app = chargerApp();
+        app.set('globalThis.m', partie('https://www.chess.com/game/live/1'));
+        assert.equal(app.ev('setLien(m, "   ")'), true);
+        assert.equal(app.ev('getLien(m)'), '');
+    });
+
+    test('un lien piégé venu de l\'état enregistré n\'est pas rendu', () => {
+        // L'état d'un tournoi s'écrit depuis tout appareil ayant l'adresse :
+        // ce qu'on y trouve n'est pas forcément passé par le champ de saisie.
+        const app = chargerApp();
+        app.set('globalThis.m', partie('javascript:alert(1)'));
+        assert.equal(app.ev('getLien(m)'), '');
+    });
+});
+
 describe('getCouleurCasaque — une casaque par partant', () => {
     test('la couleur est stable et la palette boucle', () => {
         const app = chargerApp();
@@ -238,12 +280,10 @@ describe('cadence et variante d\'une partie', () => {
     test('les menus marquent le réglage courant', () => {
         const app = chargerApp();
         app.set('globalThis.m', { cadence: '3', variante: '960' });
-        const html = app.ev('buildReglagesPartie(m, "a()", "b()")');
+        const html = app.ev('buildReglagesPartie(m, "poule:0-1-leg1")');
         assert.match(html, /value="3" selected/);
         assert.match(html, /value="960" selected/);
         assert.doesNotMatch(html, /value="10" selected/);
-        assert.match(html, /onchange="a\(\)"/);
-        assert.match(html, /onchange="b\(\)"/);
     });
 
     test('la belle reprend le format du duel', () => {

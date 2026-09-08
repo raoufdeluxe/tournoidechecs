@@ -259,10 +259,13 @@ describe('les manches restantes affichées au classement', () => {
 });
 
 describe('la carte d\'un duel, repliée puis ouverte', () => {
+    // Le conteneur est vidé avant chaque rendu : le DOM factice empile les cartes
+    // au lieu de les remplacer, on lirait sinon un rendu périmé.
     const carte = (app) => {
-        app.ev('renderParties()');
+        app.ev('document.getElementById("matches-container").children.length = 0; renderParties()');
         return app.ev('document.getElementById("matches-container").children[0].innerHTML');
     };
+    const duelAffiche = (app) => app.json('tournoi.matches.filter(m => m.round === tournoi.currentRound)')[0];
     const affiche = (html) => html.slice(0, html.indexOf('</summary>'));
     const pli = (html) => html.slice(html.indexOf('</summary>'));
     const texte = (html) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
@@ -270,7 +273,7 @@ describe('la carte d\'un duel, repliée puis ouverte', () => {
     test('repliée, elle ne montre que les deux partants', () => {
         const app = pouleGeneree(noms(4));
         const html = carte(app);
-        const duel = app.json('tournoi.matches.filter(m => m.round === 1)')[0];
+        const duel = duelAffiche(app);
         const partants = app.json('tournoi.players');
         const vu = texte(affiche(html));
         assert.ok(vu.includes(partants[duel.player1].name), 'le premier partant');
@@ -279,12 +282,31 @@ describe('la carte d\'un duel, repliée puis ouverte', () => {
             'cadence, type et résultat attendent qu\'on l\'ouvre');
     });
 
-    test('ouverte, elle donne la cadence, le type et le résultat', () => {
+    test('ouverte, elle donne la cadence, le type, le résultat et le lien', () => {
         const app = pouleGeneree(noms(4));
         const cache = texte(pli(carte(app)));
         assert.match(cache, /10 min/, 'la cadence');
         assert.match(cache, /Chess960/, 'le type de partie');
         assert.match(cache, /Victoire —/, 'le menu de résultat');
+        assert.match(cache, /Lien de la partie/, 'le champ du lien');
+    });
+
+    test('le lien enregistré se retrouve dans le champ, avec de quoi l\'ouvrir', () => {
+        const app = pouleGeneree(noms(4));
+        const duel = duelAffiche(app);
+        app.appel('setLienManche', `poule:${duel.id}`, 'https://www.chess.com/game/live/42');
+        const html = carte(app);
+        assert.match(html, /value="https:\/\/www\.chess\.com\/game\/live\/42"/, 'le champ le rappelle');
+        assert.match(html, /href="https:\/\/www\.chess\.com\/game\/live\/42"[^>]*target="_blank"/,
+            'et un lien l\'ouvre dans un autre onglet');
+    });
+
+    test('une adresse invalide est refusée et dite dans la page', () => {
+        const app = pouleGeneree(noms(4));
+        const duel = duelAffiche(app);
+        app.appel('setLienManche', `poule:${duel.id}`, 'javascript:alert(1)');
+        assert.match(app.alertes.at(-1), /http:\/\/ ou https:\/\//);
+        assert.doesNotMatch(carte(app), /javascript:/);
     });
 });
 
@@ -344,8 +366,8 @@ describe('cadence et type des parties de la poule', () => {
     test('le réglage d\'un duel n\'affecte pas les autres', () => {
         const app = pouleGeneree(noms(4));
         const [premier, second] = app.json('tournoi.matches').map(m => m.id);
-        app.appel('setCadencePartie', premier, '3');
-        app.appel('setVariantePartie', premier, '960');
+        app.appel('setCadenceManche', `poule:${premier}`, '3');
+        app.appel('setVarianteManche', `poule:${premier}`, '960');
 
         const matches = app.json('tournoi.matches');
         assert.deepEqual(
@@ -359,15 +381,15 @@ describe('cadence et type des parties de la poule', () => {
     test('un réglage inconnu ne change rien', () => {
         const app = pouleGeneree(noms(4));
         const id = app.json('tournoi.matches')[0].id;
-        app.appel('setCadencePartie', id, '1h');
+        app.appel('setCadenceManche', `poule:${id}`, '1h');
         assert.equal(app.json('tournoi.matches')[0].cadence, '10');
     });
 
     test('le réglage survit à la saisie d\'un résultat', () => {
         const app = pouleGeneree(noms(4));
         const id = app.json('tournoi.matches')[0].id;
-        app.appel('setCadencePartie', id, '24h');
-        app.appel('setResultatPartie', id, 'p1');
+        app.appel('setCadenceManche', `poule:${id}`, '24h');
+        app.appel('setResultatManche', `poule:${id}`, 'p1');
         const match = app.json('tournoi.matches').find(m => m.id === id);
         assert.equal(match.cadence, '24h');
         assert.equal(match.played, true);

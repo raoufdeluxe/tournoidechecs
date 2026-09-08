@@ -507,28 +507,9 @@ function buildBadgeTerrain(match, isPlayer1) {
 function renderCartePartie(match) {
     const div = document.createElement('div');
     div.className = 'carte-partie';
-    div.innerHTML = buildCarteDuel(match, {
-        casaques: true,
-        onResultat: `setResultatPartie('${match.id}', this.value)`,
-        onCadence: `setCadencePartie('${match.id}', this.value)`,
-        onVariante: `setVariantePartie('${match.id}', this.value)`,
-    });
+    div.innerHTML = buildCarteDuel(match, `poule:${match.id}`, { casaques: true });
 
     document.getElementById('matches-container').appendChild(div);
-}
-
-function setCadencePartie(matchId, valeur) {
-    if (setCadence(tournoi.matches.find(m => m.id === matchId), valeur)) saveEtat();
-}
-
-function setVariantePartie(matchId, valeur) {
-    if (setVariante(tournoi.matches.find(m => m.id === matchId), valeur)) saveEtat();
-}
-
-function setResultatPartie(matchId, value) {
-    const match = tournoi.matches.find(m => m.id === matchId);
-    applyResultat(match, value);
-    renderPoule();
 }
 
 function nextJournee() {
