@@ -4,7 +4,6 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { chargerApp } from './aide/app.mjs';
 
-const MOTIF_ID = /^[a-z0-9-]{1,64}$/; // celui qu'exige le Worker
 
 const reponse = (status, corps) => ({
     ok: status >= 200 && status < 300,

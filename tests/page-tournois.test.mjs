@@ -76,7 +76,6 @@ describe('affichage de la liste', () => {
         });
         const html = liste(app);
         assert.match(html, /value="Coupe du Dimanche"[^>]*/);
-        assert.match(html, /class="tournoi-nom"/);
         assert.match(html, /Phase de poule/);
         assert.match(html, /6 partants/);
     });

@@ -283,7 +283,7 @@ function showResultats(champion, runner) {
             </div>
             <div class="podium-place podium-place--bronze">
                 <div class="medal medal-bronze podium-medaille">3</div>
-                <div class="podium-nom">${third ? buildCasaque(third.id) + third.name : 'Demi-finalistes'}</div>
+                <div class="podium-nom">${third ? buildCasaque(third.id) + escapeHtml(third.name) : 'Demi-finalistes'}</div>
                 <div class="podium-rang">${third ? 'Troisième' : ''}</div>
                 <div class="podium-emoji">🥉</div>
             </div>

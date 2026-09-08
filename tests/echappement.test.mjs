@@ -39,8 +39,10 @@ describe('phase de poule', () => {
 });
 
 describe('phases finales', () => {
-    function pouleTerminee(nbJoueurs = 6) {
-        const app = pouleGeneree(noms(nbJoueurs));
+    // Tous piégés : sur le podium, la marche qui reçoit le nom n'est pas la même
+    // selon les résultats — un seul nom piégé laisserait passer les deux autres.
+    function pouleTerminee(nbJoueurs = 6, tous = false) {
+        const app = pouleGeneree(tous ? Array(nbJoueurs).fill(PIEGE) : noms(nbJoueurs));
         completerPoule(app);
         app.ev('finalizePoule()');
         return app;
@@ -70,7 +72,7 @@ describe('phases finales', () => {
     });
 
     test('le podium et le classement final', () => {
-        const app = pouleTerminee();
+        const app = pouleTerminee(6, true);
         app.ev(`
             setResultatDemie(0, 0, "p1"); setResultatDemie(0, 1, "p1");
             setResultatDemie(1, 0, "p1"); setResultatDemie(1, 1, "p1");

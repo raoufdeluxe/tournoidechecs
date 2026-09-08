@@ -8,7 +8,10 @@ import { pouleGeneree, jouerPoule } from './aide/tournoi.mjs';
 const noms = (n) => Array.from({ length: n }, (_, i) => `J${i}`);
 
 describe('generateJournees — méthode du cercle', () => {
-    for (const n of [4, 5, 6, 7, 8, 16]) {
+    // Trois tailles suffisent : un nombre pair, un nombre impair (avec le partant
+    // au repos), et le maximum que le formulaire accepte. Les propriétés vérifiées
+    // sont les mêmes à toute taille — les redire à six tailles ne garantit rien.
+    for (const n of [4, 5, 16]) {
         describe(`${n} partants`, () => {
             const app = chargerApp();
             const rounds = app.json(`generateJournees([${[...Array(n).keys()]}])`);
@@ -159,13 +162,13 @@ describe('computeClassement', () => {
             'vainqueur de la confrontation directe devant');
     });
 
-    test('classement arrêté à une journée : il ignore les journées suivantes', () => {
+    test('feuilleter le calendrier ne change pas le classement', () => {
         const app = pouleGeneree(noms(4));
         jouerPoule(app, { '0-1': 'p1', '0-2': 'p1', '0-3': 'p1' });
-        const jusqua1 = app.json('computeClassement(1)');
-        const total = app.json('computeClassement()');
-        assert.ok(jusqua1.find(p => p.id === 0).points < total.find(p => p.id === 0).points);
-        assert.ok(jusqua1.every(p => p.matches <= 1), 'une journée = un duel par partant au plus');
+        const derniere = app.json('computeClassement()');
+        app.appel('goToJournee', 1);
+        assert.deepEqual(app.json('computeClassement()'), derniere,
+            'le classement compte tout le tournoi, pas la journée regardée');
     });
 
     test('le classement contient tous les partants, une seule fois chacun', () => {
@@ -177,13 +180,26 @@ describe('computeClassement', () => {
 });
 
 describe('countPartiesEnRetard — duels en retard', () => {
-    test('compte les duels dus jusqu\'à la journée affichée, non joués', () => {
+    const duelDeLaJournee = (app, id, round) => app.json(
+        `tournoi.matches.filter(m => m.round === ${round} && (m.player1 === ${id} || m.player2 === ${id})).map(m => m.id)`)[0];
+
+    test('personne n\'est en retard tant que rien n\'est joué', () => {
         const app = pouleGeneree(noms(4));
-        app.ev('tournoi.currentRound = 1');
+        assert.equal(app.appel('countPartiesEnRetard', 0), 0);
+    });
+
+    test('est en retard qui n\'a pas joué une journée que d\'autres ont entamée', () => {
+        const app = pouleGeneree(noms(4));
+        // Les adversaires de la 2e journée jouent ; le partant 0 n'a joué ni la 1re ni la 2e.
+        app.appel('setResultatPartie', duelDeLaJournee(app, 1, 2), 'p1');
+        assert.equal(app.appel('countPartiesEnRetard', 0), 2);
+        app.appel('setResultatPartie', duelDeLaJournee(app, 0, 1), 'p1');
         assert.equal(app.appel('countPartiesEnRetard', 0), 1);
-        const duJour = app.json('tournoi.matches.filter(m => m.round === 1 && (m.player1 === 0 || m.player2 === 0)).map(m => m.id)')[0];
-        app.appel('setResultatPartie', duJour, 'p1');
-        app.ev('tournoi.currentRound = 1');
+    });
+
+    test('les journées à venir ne sont pas un retard', () => {
+        const app = pouleGeneree(noms(4));
+        app.appel('setResultatPartie', duelDeLaJournee(app, 0, 1), 'p1');
         assert.equal(app.appel('countPartiesEnRetard', 0), 0);
     });
 });

@@ -568,7 +568,8 @@ a.menu-item { display: block; text-decoration: none; }
    Classement, journées, duels, graphe de progression.
    ══════════════════════════════════════════════════════════════════════════════ */
 
-/* Journée de référence du classement, en rappel discret du titre */
+/* Portée du classement, en rappel discret du titre : il compte tout le tournoi,
+   pas la journée qu'on feuillette juste en dessous. */
 
 .standings-round {
     font-family: 'Inter', sans-serif;
@@ -596,7 +597,6 @@ a.menu-item { display: block; text-decoration: none; }
     margin-left: var(--e1);
     font-size: 1.1em;
     line-height: 1;
-    vertical-align: baseline;
     font-family: 'Segoe UI Symbol', 'Apple Symbols', 'Noto Sans Symbols 2', 'DejaVu Sans', serif;
 }
 
@@ -764,12 +764,10 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
 /* Le dénominateur d'une progression — « / 6 », « / 30 » — s'efface derrière
    la valeur qui bouge. */
 .sur-total { flex: none; color: var(--text-secondary); font-weight: 500; }
-.journee-titre .badge { margin-left: var(--e1); }
 
-/* Une mention que seul le grand écran peut se permettre : sur un téléphone, le
-   badge de manche vole la place au numéro de journée. Le terrain, lui, tient
-   maintenant dans un pion et reste affiché en toutes tailles. */
-.journee-titre .badge { display: none; }
+/* Le badge de manche vole la place au numéro de journée sur un téléphone :
+   seul le grand écran peut se le permettre. */
+.journee-titre .badge { display: none; margin-left: var(--e1); }
 
 @media (min-width: 701px) {
     .journee-titre .badge { display: inline-block; }

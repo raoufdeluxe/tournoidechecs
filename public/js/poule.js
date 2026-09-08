@@ -223,12 +223,11 @@ function updateProgression() {
     document.getElementById('progress-fill').style.width = ((played / total) * 100) + '%';
 }
 
-// Sans argument : classement général, toutes journées confondues — c'est ce que
-// réclament la qualification, les départages et le classement final.
-// Avec `jusquALaJournee` : classement tel qu'il était à l'issue de cette journée.
-function computeClassement(jusquALaJournee) {
-    const retenus = tournoi.matches.filter(m =>
-        m.played && (jusquALaJournee == null || m.round <= jusquALaJournee));
+// Le classement général, toutes journées confondues : celui du tournoi tel
+// qu'il se terminerait aujourd'hui. Feuilleter le calendrier ne le change pas —
+// c'est le même que réclament la qualification, les départages et le titre.
+function computeClassement() {
+    const retenus = tournoi.matches.filter(m => m.played);
 
     const standings = tournoi.players.map(p => ({ ...p, points: 0, matches: 0, wins: 0 }));
 
@@ -292,23 +291,20 @@ function computeClassement(jusquALaJournee) {
     return standings;
 }
 
-// Nombre de duels dus (journées ≤ journée affichée) que ce partant n'a pas encore joués
+// Nombre de duels que ce partant doit encore aux journées déjà entamées par
+// les autres. La référence est la journée la plus avancée où l'on a joué, non
+// celle qu'on regarde : un classement général ne bouge pas quand on feuillette.
 function countPartiesEnRetard(playerId) {
+    const journeeAtteinte = Math.max(0, ...tournoi.matches.filter(m => m.played).map(m => m.round));
     return tournoi.matches.filter(m =>
         (m.player1 === playerId || m.player2 === playerId) &&
-        m.round <= tournoi.currentRound &&
+        m.round <= journeeAtteinte &&
         !m.played
     ).length;
 }
 
 function renderClassement() {
-    const standings = computeClassement(tournoi.currentRound);
-
-    const titre = document.getElementById('standings-title');
-    if (titre) {
-        titre.innerHTML = 'Classement ' +
-            `<span class="standings-round">à l'issue de la journée ${tournoi.currentRound} / ${tournoi.totalRounds}</span>`;
-    }
+    const standings = computeClassement();
 
     const tbody = document.getElementById('standings-body');
     tbody.innerHTML = standings.map((p, idx) => {
@@ -457,8 +453,8 @@ function buildBadgeTerrain(match, isPlayer1) {
     if (!home) return '<span class="venue venue-neutral" title="Terrain neutre">⚑︎</span>';
     // Le pion dit le terrain sans un mot : blanc chez soi, noir en visite.
     return (home === 'p1') === isPlayer1
-        ? '<span class="venue venue-home" title="Domicile">♙︎</span>'
-        : '<span class="venue venue-away" title="Extérieur">♟︎</span>';
+        ? '<span class="venue" title="Domicile">♙︎</span>'
+        : '<span class="venue" title="Extérieur">♟︎</span>';
 }
 
 function renderCartePartie(match) {

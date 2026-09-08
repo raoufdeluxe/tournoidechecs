@@ -195,16 +195,16 @@ describe('cadence et variante d\'une partie', () => {
         assert.equal(app.ev('getVariante(m)'), 'classique');
     });
 
+    // Les valeurs, elles, sont dans le KV de tous les tournois : les renommer
+    // rendrait illisibles les parties déjà réglées. Les libellés, non.
     test('les quatre cadences proposées', () => {
         const app = chargerApp();
         assert.deepEqual(app.json('CADENCES.map(c => c.valeur)'), ['10', '5', '3', '24h']);
-        assert.deepEqual(app.json('CADENCES.map(c => c.libelle)'), ['10 min', '5 min', '3 min', '24 h']);
     });
 
     test('les deux types de partie', () => {
         const app = chargerApp();
         assert.deepEqual(app.json('VARIANTES.map(v => v.valeur)'), ['classique', '960']);
-        assert.deepEqual(app.json('VARIANTES.map(v => v.libelle)'), ['Classique', 'Chess960']);
     });
 
     test('les cadences et les types annoncés sont acceptés', () => {
