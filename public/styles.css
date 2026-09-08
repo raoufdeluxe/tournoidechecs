@@ -560,8 +560,8 @@ a.menu-item { display: block; text-decoration: none; }
 /* Une mention secondaire posée dans une phrase : « (optionnel) », « vs ». */
 .texte-attenue { color: var(--text-secondary); font-weight: 400; }
 
-/* Manches jouées par un partant alors que la journée est passée. */
-.tag-retard { color: var(--danger); font-weight: 700; font-size: var(--t1); }
+/* Manches qu'un partant doit encore jouer d'ici la fin du tournoi. */
+.tag-restant { color: var(--danger); font-weight: 700; font-size: var(--t1); }
 
 /* ══════════════════════════════════════════════════════════════════════════════
    6. ACCUEIL — LA POULE

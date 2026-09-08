@@ -291,16 +291,12 @@ function computeClassement() {
     return standings;
 }
 
-// Nombre de duels que ce partant doit encore aux journées déjà entamées par
-// les autres. La référence est la journée la plus avancée où l'on a joué, non
-// celle qu'on regarde : un classement général ne bouge pas quand on feuillette.
-function countPartiesEnRetard(playerId) {
-    const journeeAtteinte = Math.max(0, ...tournoi.matches.filter(m => m.played).map(m => m.round));
+// Ce qu'il reste à jouer à un partant d'ici la fin du tournoi. Le classement
+// affiche le tournoi tel qu'il se terminerait aujourd'hui : à côté de ses points,
+// ce nombre dit combien de manches lui manquent pour que sa ligne soit définitive.
+function countManchesRestantes(playerId) {
     return tournoi.matches.filter(m =>
-        (m.player1 === playerId || m.player2 === playerId) &&
-        m.round <= journeeAtteinte &&
-        !m.played
-    ).length;
+        (m.player1 === playerId || m.player2 === playerId) && !m.played).length;
 }
 
 function renderClassement() {
@@ -308,12 +304,12 @@ function renderClassement() {
 
     const tbody = document.getElementById('standings-body');
     tbody.innerHTML = standings.map((p, idx) => {
-        const pending = countPartiesEnRetard(p.id);
-        const pendingTag = pending > 0 ? ` <span class="tag-retard">(-${pending})</span>` : '';
+        const restantes = countManchesRestantes(p.id);
+        const tagRestantes = restantes > 0 ? ` <span class="tag-restant">(-${restantes})</span>` : '';
         return `
         <tr>
             <td><strong>${idx + 1}</strong></td>
-            <td>${buildCasaque(p.id)}${escapeHtml(p.name)}${p.absent ? buildTagFicheAbsente() : ''}${pendingTag}</td>
+            <td>${buildCasaque(p.id)}${escapeHtml(p.name)}${p.absent ? buildTagFicheAbsente() : ''}${tagRestantes}</td>
             <td class="cell-points">${p.points.toFixed(1)}</td>
             <td class="cell-nombre">${p.matches}</td>
         </tr>

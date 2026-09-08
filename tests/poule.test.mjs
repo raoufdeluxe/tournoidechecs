@@ -3,7 +3,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { chargerApp } from './aide/app.mjs';
-import { pouleGeneree, jouerPoule } from './aide/tournoi.mjs';
+import { pouleGeneree, jouerPoule, completerPoule } from './aide/tournoi.mjs';
 
 const noms = (n) => Array.from({ length: n }, (_, i) => `J${i}`);
 
@@ -179,28 +179,43 @@ describe('computeClassement', () => {
     });
 });
 
-describe('countPartiesEnRetard — duels en retard', () => {
-    const duelDeLaJournee = (app, id, round) => app.json(
-        `tournoi.matches.filter(m => m.round === ${round} && (m.player1 === ${id} || m.player2 === ${id})).map(m => m.id)`)[0];
+describe('les manches restantes affichées au classement', () => {
+    // Ce que montre le tableau : une ligne par partant, son nom (suivi entre
+    // parenthèses de ce qu'il lui reste à jouer) et ses manches déjà jouées.
+    const lignes = (app) => {
+        app.ev('renderClassement()');
+        const html = app.ev('document.getElementById("standings-body").innerHTML');
+        return html.split('<tr>').slice(1).map(rang => {
+            const textes = [...rang.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)]
+                .map(m => m[1].replace(/<[^>]*>/g, '').trim());
+            const reste = textes[1].match(/\(-(\d+)\)/);
+            return { nom: textes[1], reste: reste ? Number(reste[1]) : 0, manches: Number(textes[3]) };
+        });
+    };
 
-    test('personne n\'est en retard tant que rien n\'est joué', () => {
+    test('rien joué : chacun doit encore toutes les manches du tournoi', () => {
         const app = pouleGeneree(noms(4));
-        assert.equal(app.appel('countPartiesEnRetard', 0), 0);
+        const table = lignes(app);
+        assert.equal(table.length, 4, 'une ligne par partant');
+        // Aller et retour contre chacun des trois autres.
+        assert.ok(table.every(l => l.reste === 6), table.map(l => l.nom).join(' · '));
     });
 
-    test('est en retard qui n\'a pas joué une journée que d\'autres ont entamée', () => {
+    test('ce qui reste se compte jusqu\'à la fin du tournoi, pas jusqu\'à la journée du jour', () => {
         const app = pouleGeneree(noms(4));
-        // Les adversaires de la 2e journée jouent ; le partant 0 n'a joué ni la 1re ni la 2e.
-        app.appel('setResultatPartie', duelDeLaJournee(app, 1, 2), 'p1');
-        assert.equal(app.appel('countPartiesEnRetard', 0), 2);
-        app.appel('setResultatPartie', duelDeLaJournee(app, 0, 1), 'p1');
-        assert.equal(app.appel('countPartiesEnRetard', 0), 1);
+        // Un duel de la dernière journée joué d'avance : il retire une manche à
+        // ses deux partants et ne change rien pour les autres.
+        jouerPoule(app, { '0-1-leg2': 'p1' });
+        for (const ligne of lignes(app)) {
+            assert.equal(ligne.manches + ligne.reste, 6, `${ligne.nom} — ${ligne.manches} jouée(s)`);
+        }
+        assert.equal(lignes(app).filter(l => l.reste === 5).length, 2, 'les deux qui ont joué');
     });
 
-    test('les journées à venir ne sont pas un retard', () => {
+    test('poule terminée : plus personne ne doit de manche', () => {
         const app = pouleGeneree(noms(4));
-        app.appel('setResultatPartie', duelDeLaJournee(app, 0, 1), 'p1');
-        assert.equal(app.appel('countPartiesEnRetard', 0), 0);
+        completerPoule(app);
+        assert.ok(lignes(app).every(l => l.reste === 0 && l.manches === 6));
     });
 });
 
