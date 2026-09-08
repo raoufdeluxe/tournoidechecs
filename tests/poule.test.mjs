@@ -258,6 +258,36 @@ describe('les manches restantes affichées au classement', () => {
     });
 });
 
+describe('la carte d\'un duel, repliée puis ouverte', () => {
+    const carte = (app) => {
+        app.ev('renderParties()');
+        return app.ev('document.getElementById("matches-container").children[0].innerHTML');
+    };
+    const affiche = (html) => html.slice(0, html.indexOf('</summary>'));
+    const pli = (html) => html.slice(html.indexOf('</summary>'));
+    const texte = (html) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+
+    test('repliée, elle ne montre que les deux partants', () => {
+        const app = pouleGeneree(noms(4));
+        const html = carte(app);
+        const duel = app.json('tournoi.matches.filter(m => m.round === 1)')[0];
+        const partants = app.json('tournoi.players');
+        const vu = texte(affiche(html));
+        assert.ok(vu.includes(partants[duel.player1].name), 'le premier partant');
+        assert.ok(vu.includes(partants[duel.player2].name), 'son adversaire');
+        assert.doesNotMatch(vu, /10 min|Chess960|Victoire —/,
+            'cadence, type et résultat attendent qu\'on l\'ouvre');
+    });
+
+    test('ouverte, elle donne la cadence, le type et le résultat', () => {
+        const app = pouleGeneree(noms(4));
+        const cache = texte(pli(carte(app)));
+        assert.match(cache, /10 min/, 'la cadence');
+        assert.match(cache, /Chess960/, 'le type de partie');
+        assert.match(cache, /Victoire —/, 'le menu de résultat');
+    });
+});
+
 describe('getCoteDomicile — domicile / extérieur', () => {
     test('poule : le premier nommé reçoit à l\'aller, l\'autre au retour', () => {
         const app = chargerApp();

@@ -506,17 +506,13 @@ function buildBadgeTerrain(match, isPlayer1) {
 
 function renderCartePartie(match) {
     const div = document.createElement('div');
-    div.innerHTML = `
-        <div class="surface carte-partie">
-            ${buildCarteDuel(match, {
-                modifieur: 'match-card--serre',
-                casaques: true,
-                onResultat: `setResultatPartie('${match.id}', this.value)`,
-                onCadence: `setCadencePartie('${match.id}', this.value)`,
-                onVariante: `setVariantePartie('${match.id}', this.value)`,
-            })}
-        </div>
-    `;
+    div.className = 'carte-partie';
+    div.innerHTML = buildCarteDuel(match, {
+        casaques: true,
+        onResultat: `setResultatPartie('${match.id}', this.value)`,
+        onCadence: `setCadencePartie('${match.id}', this.value)`,
+        onVariante: `setVariantePartie('${match.id}', this.value)`,
+    });
 
     document.getElementById('matches-container').appendChild(div);
 }

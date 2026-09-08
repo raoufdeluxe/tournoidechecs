@@ -34,7 +34,7 @@ function renderDemie(index, elemPrefix) {
             <div class="demie-manche">
                 <div class="demie-manche-titre">Match ${match.num}</div>
                 ${buildCarteDuel(match, {
-                    modifieur: 'match-card--compact',
+                    modifieur: 'carte-duel--compact',
                     onResultat: `setResultatDemie(${index}, ${mIdx}, this.value)`,
                     onCadence: `setCadenceDemie(${index}, ${mIdx}, this.value)`,
                     onVariante: `setVarianteDemie(${index}, ${mIdx}, this.value)`,

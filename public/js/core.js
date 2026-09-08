@@ -62,6 +62,8 @@ function buildCasaque(id) {
 }
 
 // Classe et icône à appliquer à un joueur pour un match donné : victoire, défaite ou match nul
+// Le sort d'un partant dans une manche, porté par la couleur de sa case :
+// vert pour la victoire, rouge pour la défaite, or pour la nulle.
 function getClasseResultat(match, isPlayer1) {
     if (!match.played) return '';
     const won = isPlayer1 ? match.player1Score > match.player2Score : match.player2Score > match.player1Score;
@@ -69,14 +71,6 @@ function getClasseResultat(match, isPlayer1) {
     if (won) return 'winner';
     if (lost) return 'loser';
     return 'draw';
-}
-
-function getIconeResultat(match, isPlayer1) {
-    const cls = getClasseResultat(match, isPlayer1);
-    if (cls === 'winner') return '<span class="result-icon">👍</span>';
-    if (cls === 'loser') return '<span class="result-icon">👎</span>';
-    if (cls === 'draw') return '<span class="result-icon">🤝</span>';
-    return '';
 }
 
 // --- Réglages d'une partie : cadence et variante ---------------------------
@@ -260,33 +254,40 @@ function addBelle(matches) {
     });
 }
 
-// La carte d'un duel : les deux partants avec leur sort et leur terrain, leurs
-// réglages, le menu de résultat. Poule, demi-finales et finale s'en servent —
-// ne changent que le serrage de la carte, la casaque à côté des noms et les
-// gestionnaires, que chaque phase écrit à sa façon.
+// La carte d'un duel. Repliée, elle ne montre que l'affiche : les deux partants,
+// leur sort et leur terrain — de quoi lire une journée entière d'un coup d'œil.
+// Ouverte, elle donne la cadence, le type et le résultat. Poule, demi-finales et
+// finale s'en servent ; ne changent que le serrage de la carte, la casaque à
+// côté des noms et les gestionnaires, que chaque phase écrit à sa façon.
 function buildCarteDuel(match, { modifieur = '', casaques = false, onResultat, onCadence, onVariante }) {
     const partants = [tournoi.players[match.player1], tournoi.players[match.player2]];
-    const nom = escapeHtml;
 
     const cote = (premier) => {
         const p = partants[premier ? 0 : 1];
         return `<div class="player-result ${getClasseResultat(match, premier)}">
-                    ${getIconeResultat(match, premier)}${casaques ? buildCasaque(p.id) : ''}${nom(p.name)}
+                    ${casaques ? buildCasaque(p.id) : ''}${escapeHtml(p.name)}
                     ${buildBadgeTerrain(match, premier)}
                 </div>`;
     };
 
     return `
-        <div class="surface match-card${modifieur ? ' ' + modifieur : ''}">
-            ${cote(true)}
-            <div class="vs-indicator">vs</div>
-            ${cote(false)}
-        </div>
-        ${buildReglagesPartie(match, onCadence, onVariante)}
-        <select class="result-select" onchange="${onResultat}">
-            ${buildOptionsResultat(match, nom(partants[0].name), nom(partants[1].name))}
-        </select>
-        ${match.played ? '<div class="result-hint">✓ Résultat enregistré — modifiable à tout moment</div>' : ''}
+        <details class="surface carte-duel${modifieur ? ' ' + modifieur : ''}">
+            <summary>
+                <div class="match-card">
+                    ${cote(true)}
+                    <div class="vs-indicator">vs</div>
+                    ${cote(false)}
+                </div>
+                <span class="carte-duel-chevron" aria-hidden="true">▾</span>
+            </summary>
+            <div class="carte-duel-corps">
+                ${buildReglagesPartie(match, onCadence, onVariante)}
+                <select class="result-select" onchange="${onResultat}">
+                    ${buildOptionsResultat(match, escapeHtml(partants[0].name), escapeHtml(partants[1].name))}
+                </select>
+                ${match.played ? '<div class="result-hint">✓ Résultat enregistré — modifiable à tout moment</div>' : ''}
+            </div>
+        </details>
     `;
 }
 

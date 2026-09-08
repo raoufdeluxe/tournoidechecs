@@ -640,22 +640,49 @@ a.menu-item { display: block; text-decoration: none; }
 .standings-table tbody tr:nth-child(even) { background: var(--bg-secondary); }
 .standings-table tbody tr:hover { background: var(--primary-light); }
 
+/* Une carte de duel ne montre d'abord que l'affiche : les deux partants et leur
+   sort. Cadence, type et résultat attendent qu'on l'ouvre, et s'ouvrent dans le
+   cadre de la carte. <details> suffit, comme pour les volets du haut. */
+.carte-duel { --retrait: var(--e5); }
+
+.carte-duel > summary {
+    display: flex;
+    align-items: center;
+    gap: var(--e3);
+    cursor: pointer;
+    list-style: none;
+}
+
+.carte-duel > summary::-webkit-details-marker { display: none; }
+.carte-duel > summary > .match-card { flex: 1; min-width: 0; }
+.carte-duel-corps { margin-top: var(--e4); }
+
+.carte-duel-chevron {
+    flex: none;
+    color: var(--text-secondary);
+    transition: transform 0.15s ease;
+}
+
+.carte-duel[open] .carte-duel-chevron { transform: rotate(180deg); }
+
+/* Les demi-finales tiennent dans un tableau à trois colonnes : un cran en dessous. */
+.carte-duel--compact { --retrait: var(--e3); }
+.carte-duel--compact .match-card { grid-template-columns: 1fr 50px 1fr; gap: var(--e2); }
+.carte-duel--compact .player-result { padding: var(--e2); font-size: var(--t3); }
+
+/* L'affiche : les deux adversaires de part et d'autre du « vs ». */
 .match-card {
-    --retrait: var(--e5);
-    margin-bottom: var(--e4);
     display: grid;
     grid-template-columns: 1fr 100px 1fr;
     gap: var(--e4);
     align-items: center;
 }
 
-.match-card--compact { grid-template-columns: 1fr 50px 1fr; gap: var(--e2); padding: var(--e3); }
-
 /* En dessous de 700px les deux adversaires s'empilent : en 3 colonnes
    les noms se coupent en morceaux illisibles. */
 
 @media (max-width: 700px) {
-    .match-card, .match-card--compact { grid-template-columns: 1fr; gap: var(--e3); }
+    .match-card, .carte-duel--compact .match-card { grid-template-columns: 1fr; gap: var(--e3); }
     .vs-indicator { justify-self: center; width: auto; padding: var(--e1) var(--e4); }
 }
 
@@ -671,12 +698,9 @@ a.menu-item { display: block; text-decoration: none; }
     line-height: 1.25;
 }
 
-/* Les demi-finales tiennent dans un tableau à trois colonnes : un cran en dessous. */
-.match-card--compact .player-result { padding: var(--e2); font-size: var(--t3); }
 .player-result.winner { background: var(--accent-light); border-color: var(--accent); font-weight: 600; }
 .player-result.loser { background: var(--danger-light); border-color: #E39B9B; color: var(--text-secondary); }
 .player-result.draw { background: #FBF1DA; border-color: var(--gold); font-weight: 600; }
-.result-icon { margin-right: var(--e1); }
 
 .vs-indicator {
     text-align: center;
@@ -839,11 +863,9 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
    pointillé. La couleur seule ne suffit plus au-delà de huit partants. */
 .graphe-pastille--creuse { background: none; border: 3px solid; }
 
-/* Le cadre d'un duel de poule : les deux adversaires, les réglages, le résultat. */
-
-.carte-partie { margin-bottom: var(--e4); }
-
-.match-card--serre { margin: 0 0 var(--e3); }
+/* Un duel de poule : la carte encadre déjà l'affiche, l'enveloppe ne fait
+   qu'espacer — comme .demie-manche et .finale-manche dans les phases finales. */
+.carte-partie { margin-bottom: var(--e5); }
 
 /* ══════════════════════════════════════════════════════════════════════════════
    7. ACCUEIL — LES FINALES
@@ -903,7 +925,6 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
 .demie,
 .demie-affiche { font-weight: 600; margin-bottom: var(--e3); }
 .demie-manche-titre { margin-bottom: var(--e2); font-size: var(--t1); color: var(--text-secondary); }
-.demie-manche .match-card { margin-bottom: var(--e2); }
 .demie-manche .result-select { padding: var(--e2); font-size: var(--t2); }
 .demie-score { margin-top: var(--e4); padding-top: var(--e4); border-top: 1px solid var(--border); font-weight: 600; }
 
@@ -932,7 +953,6 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
     font-weight: 700;
 }
 
-.finale-manche .match-card { margin-bottom: var(--e3); }
 .verdict-champion { font-weight: 700; color: var(--success); }
 .verdict-detail { font-size: var(--t1); }
 .verdict-egalite { font-weight: 600; color: var(--warning); }

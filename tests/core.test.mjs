@@ -161,11 +161,10 @@ describe('resolveTroisiemePlace — la 3e place ne se joue pas', () => {
     });
 });
 
-describe('getClasseResultat / getIconeResultat', () => {
+describe('getClasseResultat', () => {
     test('un match non joué n\'affiche rien', () => {
         const app = chargerApp();
         assert.equal(app.appel('getClasseResultat', manche(1, null, null, false), true), '');
-        assert.equal(app.appel('getIconeResultat', manche(1, null, null, false), true), '');
     });
 
     test('victoire, défaite et nulle vues des deux côtés', () => {
