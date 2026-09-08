@@ -260,6 +260,43 @@ function addBelle(matches) {
     });
 }
 
+// La carte d'un duel : les deux partants avec leur sort et leur terrain, leurs
+// réglages, le menu de résultat. Poule, demi-finales et finale s'en servent —
+// ne changent que le serrage de la carte, la casaque à côté des noms et les
+// gestionnaires, que chaque phase écrit à sa façon.
+function buildCarteDuel(match, { modifieur = '', casaques = false, onResultat, onCadence, onVariante }) {
+    const partants = [tournoi.players[match.player1], tournoi.players[match.player2]];
+    const nom = escapeHtml;
+
+    const cote = (premier) => {
+        const p = partants[premier ? 0 : 1];
+        return `<div class="player-result ${getClasseResultat(match, premier)}">
+                    ${getIconeResultat(match, premier)}${casaques ? buildCasaque(p.id) : ''}${nom(p.name)}
+                    ${buildBadgeTerrain(match, premier)}
+                </div>`;
+    };
+
+    return `
+        <div class="surface match-card${modifieur ? ' ' + modifieur : ''}">
+            ${cote(true)}
+            <div class="vs-indicator">vs</div>
+            ${cote(false)}
+        </div>
+        ${buildReglagesPartie(match, onCadence, onVariante)}
+        <select class="result-select" onchange="${onResultat}">
+            ${buildOptionsResultat(match, nom(partants[0].name), nom(partants[1].name))}
+        </select>
+        ${match.played ? '<div class="result-hint">✓ Résultat enregistré — modifiable à tout moment</div>' : ''}
+    `;
+}
+
+// La part des duels déjà joués d'une phase, portée par sa barre d'avancement.
+function renderBarreProgression(elementId, duels) {
+    const joues = duels.filter(m => m.played).length;
+    document.getElementById(elementId).style.width =
+        (duels.length ? (joues / duels.length) * 100 : 0) + '%';
+}
+
 // Génère les <option> du menu déroulant de résultat, avec la sélection courante.
 // `p1Name` et `p2Name` sont insérés tels quels : à l'appelant de les échapper,
 // comme il le fait déjà pour les afficher ailleurs dans la même carte.

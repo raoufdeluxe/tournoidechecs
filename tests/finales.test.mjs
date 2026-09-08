@@ -85,17 +85,16 @@ describe('demi-finales', () => {
     });
 });
 
-describe('computeScoresDemie', () => {
-    test('victoire 1, nulle 0,5, et l\'état « tout joué »', () => {
+describe('le score affiché d\'une demi-finale', () => {
+    test('victoire 1 pt, nulle 0,5 pt, manche après manche', () => {
         const { app } = pouleTerminee(6);
+        const affiche = () => app.ev('document.getElementById("semi1-content").innerHTML');
+
         app.ev('setResultatDemie(0, 0, "draw")');
-        let scores = app.json('computeScoresDemie(tournoi.semifinalMatches[0])');
-        assert.deepEqual([scores.player1, scores.player2], [0.5, 0.5]);
-        assert.equal(scores.allPlayed, false);
+        assert.match(affiche(), /0\.5 pt \| .*0\.5 pt/, 'la nulle vaut une demi-manche à chacun');
+
         app.ev('setResultatDemie(0, 1, "p1")');
-        scores = app.json('computeScoresDemie(tournoi.semifinalMatches[0])');
-        assert.deepEqual([scores.player1, scores.player2], [1.5, 0.5]);
-        assert.equal(scores.allPlayed, true);
+        assert.match(affiche(), /1\.5 pt \| .*0\.5 pt/, 'la victoire ajoute une manche');
     });
 });
 

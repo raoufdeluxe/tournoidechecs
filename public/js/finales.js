@@ -3,7 +3,7 @@
 function renderDemies() {
     renderDemie(0, 'semi1');
     renderDemie(1, 'semi2');
-    updateProgressionDemies();
+    renderBarreProgression('progress-fill-semis', tournoi.semifinalMatches.flatMap(s => s.matches));
     saveEtat();
 }
 
@@ -19,9 +19,11 @@ function renderDemie(index, elemPrefix) {
     // modifier : ils ne sont jamais injectés bruts dans la page.
     const p1Name = escapeHtml(p1Obj.name);
     const p2Name = escapeHtml(p2Obj.name);
-    
-    const scores = computeScoresDemie(semifinal);
-    
+
+    // Le départage compte déjà les manches gagnées : on lit son décompte.
+    const outcome = resolveDuel(semifinal.matches, p1Obj, p2Obj);
+    semifinal.winner = outcome.winner;
+
     let html = `
         <div class="demie">
             <div class="demie-affiche">${buildCasaque(p1Idx)}${p1Name} <span class="texte-attenue">vs</span> ${buildCasaque(p2Idx)}${p2Name}</div>
@@ -31,35 +33,21 @@ function renderDemie(index, elemPrefix) {
         html += `
             <div class="demie-manche">
                 <div class="demie-manche-titre">Match ${match.num}</div>
-                <div class="surface match-card match-card--compact">
-                    <div class="player-result ${getClasseResultat(match, true)}">
-                        ${getIconeResultat(match, true)}${p1Name}
-                        ${buildBadgeTerrain(match, true)}
-                    </div>
-                    <div class="vs-indicator">vs</div>
-                    <div class="player-result ${getClasseResultat(match, false)}">
-                        ${getIconeResultat(match, false)}${p2Name}
-                        ${buildBadgeTerrain(match, false)}
-                    </div>
-                </div>
-                ${buildReglagesPartie(match,
-                    `setCadenceDemie(${index}, ${mIdx}, this.value)`,
-                    `setVarianteDemie(${index}, ${mIdx}, this.value)`)}
-                <select class="result-select" onchange="setResultatDemie(${index}, ${mIdx}, this.value)">
-                    ${buildOptionsResultat(match, p1Name, p2Name)}
-                </select>
+                ${buildCarteDuel(match, {
+                    modifieur: 'match-card--compact',
+                    onResultat: `setResultatDemie(${index}, ${mIdx}, this.value)`,
+                    onCadence: `setCadenceDemie(${index}, ${mIdx}, this.value)`,
+                    onVariante: `setVarianteDemie(${index}, ${mIdx}, this.value)`,
+                })}
             </div>
         `;
     });
     
     html += `
         <div class="demie-score">
-            ${p1Name}: ${scores.player1} pt | ${p2Name}: ${scores.player2} pt
+            ${p1Name}: ${outcome.scores[0]} pt | ${p2Name}: ${outcome.scores[1]} pt
         </div>
     `;
-    
-    const outcome = resolveDuel(semifinal.matches, p1Obj, p2Obj);
-    semifinal.winner = outcome.winner;
 
     if (outcome.winner !== null) {
         const winnerName = escapeHtml(tournoi.players[outcome.winner].name);
@@ -70,29 +58,6 @@ function renderDemie(index, elemPrefix) {
     }
     
     contentDiv.innerHTML = html;
-}
-
-function computeScoresDemie(semifinal) {
-    let p1Total = 0, p2Total = 0;
-    
-    semifinal.matches.forEach(match => {
-        if (match.played) {
-            if (match.player1Score > match.player2Score) {
-                p1Total += 1;
-            } else if (match.player2Score > match.player1Score) {
-                p2Total += 1;
-            } else {
-                p1Total += 0.5;
-                p2Total += 0.5;
-            }
-        }
-    });
-    
-    return {
-        player1: p1Total,
-        player2: p2Total,
-        allPlayed: semifinal.matches.every(m => m.played)
-    };
 }
 
 function setResultatDemie(semiIdx, matchIdx, value) {
@@ -111,16 +76,9 @@ function setVarianteDemie(semiIdx, matchIdx, valeur) {
     if (setVariante(tournoi.semifinalMatches[semiIdx].matches[matchIdx], valeur)) saveEtat();
 }
 
-function updateProgressionDemies() {
-    const allMatches = tournoi.semifinalMatches.flatMap(s => s.matches);
-    const played = allMatches.filter(m => m.played).length;
-    const total = allMatches.length;
-    document.getElementById('progress-fill-semis').style.width = ((played / total) * 100) + '%';
-}
-
+// La barre se redessine avec les demies, à la fin : une belle ajoutée juste
+// au-dessus compterait dans le total.
 function checkDemiesTerminees() {
-    updateProgressionDemies();
-    
     tournoi.semifinalMatches.forEach(semifinal => {
         const p1Obj = tournoi.players[semifinal.players[0]];
         const p2Obj = tournoi.players[semifinal.players[1]];
@@ -170,24 +128,11 @@ function renderFinale() {
         div.innerHTML = `
             <div class="finale-manche">
                 <div class="finale-manche-titre">Match ${match.num}</div>
-                <div class="surface match-card">
-                    <div class="player-result ${getClasseResultat(match, true)}">
-                        ${getIconeResultat(match, true)}${escapeHtml(finalist1.name)}
-                        ${buildBadgeTerrain(match, true)}
-                    </div>
-                    <div class="vs-indicator">vs</div>
-                    <div class="player-result ${getClasseResultat(match, false)}">
-                        ${getIconeResultat(match, false)}${escapeHtml(finalist2.name)}
-                        ${buildBadgeTerrain(match, false)}
-                    </div>
-                </div>
-                ${buildReglagesPartie(match,
-                    `setCadenceFinale(${idx}, this.value)`,
-                    `setVarianteFinale(${idx}, this.value)`)}
-                <select class="result-select" onchange="setResultatFinale(${idx}, this.value)">
-                    ${buildOptionsResultat(match, escapeHtml(finalist1.name), escapeHtml(finalist2.name))}
-                </select>
-                ${match.played ? '<div class="result-hint">✓ Résultat enregistré — modifiable à tout moment</div>' : ''}
+                ${buildCarteDuel(match, {
+                    onResultat: `setResultatFinale(${idx}, this.value)`,
+                    onCadence: `setCadenceFinale(${idx}, this.value)`,
+                    onVariante: `setVarianteFinale(${idx}, this.value)`,
+                })}
             </div>
         `;
         
@@ -313,14 +258,6 @@ function showEcran(screenId) {
     renderVoletMatchs();
     // Rien a remettre a zero tant qu'aucun tournoi n'est lance.
     saveEtat();
-}
-
-function backToPoule() {
-    showEcran('screen-tournament');
-}
-
-function backToDemies() {
-    showEcran('screen-semifinals');
 }
 
 // Ouvre un tournoi neuf sous un nouvel identifiant. Le tournoi courant n'est

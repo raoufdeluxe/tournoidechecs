@@ -208,18 +208,12 @@ function generateCalendrier() {
 }
 
 function renderPoule() {
-    updateProgression();
+    renderBarreProgression('progress-fill', tournoi.matches);
+    renderVoletMatchs();
     renderClassement();
     renderParties();
     renderGrapheProgression();
     saveEtat();
-}
-
-function updateProgression() {
-    const total = tournoi.matches.length;
-    const played = tournoi.matches.filter(m => m.played).length;
-    document.getElementById('progress-fill').style.width = (total ? (played / total) * 100 : 0) + '%';
-    renderVoletMatchs();
 }
 
 // Le duel où `recevant` reçoit `visiteur` : l'aller si c'est lui le premier
@@ -511,35 +505,20 @@ function buildBadgeTerrain(match, isPlayer1) {
 }
 
 function renderCartePartie(match) {
-    const container = document.getElementById('matches-container');
-    const p1 = tournoi.players[match.player1];
-    const p2 = tournoi.players[match.player2];
-
     const div = document.createElement('div');
     div.innerHTML = `
         <div class="surface carte-partie">
-            <div class="surface match-card match-card--serre">
-                <div class="player-result ${getClasseResultat(match, true)}">
-                    ${getIconeResultat(match, true)}${buildCasaque(p1.id)}${escapeHtml(p1.name)}
-                    ${buildBadgeTerrain(match, true)}
-                </div>
-                <div class="vs-indicator">vs</div>
-                <div class="player-result ${getClasseResultat(match, false)}">
-                    ${getIconeResultat(match, false)}${buildCasaque(p2.id)}${escapeHtml(p2.name)}
-                    ${buildBadgeTerrain(match, false)}
-                </div>
-            </div>
-            ${buildReglagesPartie(match,
-                `setCadencePartie('${match.id}', this.value)`,
-                `setVariantePartie('${match.id}', this.value)`)}
-            <select class="result-select" onchange="setResultatPartie('${match.id}', this.value)">
-                ${buildOptionsResultat(match, escapeHtml(p1.name), escapeHtml(p2.name))}
-            </select>
-            ${match.played ? '<div class="result-hint">✓ Résultat enregistré — modifiable à tout moment</div>' : ''}
+            ${buildCarteDuel(match, {
+                modifieur: 'match-card--serre',
+                casaques: true,
+                onResultat: `setResultatPartie('${match.id}', this.value)`,
+                onCadence: `setCadencePartie('${match.id}', this.value)`,
+                onVariante: `setVariantePartie('${match.id}', this.value)`,
+            })}
         </div>
     `;
 
-    container.appendChild(div);
+    document.getElementById('matches-container').appendChild(div);
 }
 
 function setCadencePartie(matchId, valeur) {
