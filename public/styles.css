@@ -830,7 +830,9 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
 
 /* Réglages d'une partie : cadence et variante */
 .partie-reglages { display: flex; gap: var(--e3); margin-bottom: var(--e3); }
-.partie-reglage { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: var(--e1); }
+/* Le retrait que les <label> portent partout ailleurs déborderait sous le champ,
+   et le bouton « Ouvrir », aligné sur le bas du bloc, s'en trouverait décalé. */
+.partie-reglage { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: var(--e1); margin-bottom: 0; }
 
 .partie-reglage-titre {
     font-size: var(--t1);
@@ -845,6 +847,10 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
 /* Le lien de la partie en ligne, sous le résultat : le champ prend la largeur,
    le bouton d'ouverture se range à sa droite, aligné sur lui. */
 .partie-lien { display: flex; gap: var(--e3); align-items: flex-end; margin-top: var(--e3); }
+
+/* Ouvrir la partie, ou la relire : deux gestes voisins, qui restent côte à côte
+   même quand le champ passe au-dessus d'eux sur un téléphone. */
+.partie-lien-actions { display: flex; align-items: center; gap: var(--e2); }
 
 /* Le bouton d'ouverture se range à droite du champ, à la même hauteur que lui :
    même retrait, même corps, même cadre — c'est une action, pas un mot souligné
@@ -873,7 +879,7 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
    ne laissait au champ que quelques caractères et ne se visait pas au pouce. */
 @media (max-width: 700px) {
     .partie-lien { flex-direction: column; align-items: stretch; gap: var(--e2); }
-    .partie-lien-ouvrir { text-align: center; }
+    .partie-lien-ouvrir { flex: 1; text-align: center; }
 }
 
 /* Largeur des colonnes du classement : le nom prend ce qui reste. */

@@ -84,7 +84,11 @@ const CADENCES = [
     { valeur: '10', libelle: '10 min' },
     { valeur: '5', libelle: '5 min' },
     { valeur: '3', libelle: '3 min' },
-    { valeur: '24h', libelle: '24 h' }
+    { valeur: '24h', libelle: '24 h' },
+    // Le format d'une partie relue sur chess.com qui ne tombe dans aucun des
+    // quatre : trois jours par coup, un 15|10. Mieux vaut le dire qu'afficher
+    // une cadence qui n'a pas été jouée.
+    { valeur: 'autre', libelle: 'Autre' }
 ];
 const CADENCE_DEFAUT = '10';
 
@@ -140,6 +144,34 @@ function buildOptions(choix, courant) {
         c.libelle + '</option>').join('');
 }
 
+// Toutes les manches d'un tournoi, quelle que soit la phase : la poule, les
+// deux demi-finales, la finale.
+function getManches(tournoi) {
+    return [
+        ...(tournoi.matches || []),
+        ...(tournoi.semifinalMatches || []).flatMap(s => s.matches || []),
+        ...(tournoi.finalMatches || []),
+    ];
+}
+
+// Les champs d'un résumé que l'application lit encore. Un tournoi enregistré
+// par une version antérieure en porte d'autres — l'Elo chess.com, la date, le
+// code d'ouverture — que plus personne n'affiche. On ne les garde pas en
+// mémoire : le prochain enregistrement du tournoi s'en débarrasse, et celui
+// qu'on n'ouvre jamais n'est pas réécrit pour autant.
+const CHAMPS_ANALYSE = ['blancs', 'noirs', 'resultat', 'fin', 'coups'];
+
+function nettoieAnalyse(manche) {
+    if (!manche.analyse) return;
+    for (const champ of Object.keys(manche.analyse)) {
+        if (!CHAMPS_ANALYSE.includes(champ)) delete manche.analyse[champ];
+    }
+}
+
+function nettoieAnalyses(tournoi) {
+    getManches(tournoi).forEach(nettoieAnalyse);
+}
+
 // --- Une manche, où qu'elle soit ------------------------------------------
 //
 // La poule désigne ses duels par leur identifiant, une demie par sa manche, la
@@ -169,28 +201,26 @@ function setVarianteManche(chemin, valeur) {
     if (setVariante(resolveManche(chemin).match, valeur)) saveEtat();
 }
 
-// Le lien accepté, la carte se redessine aussitôt : c'est ainsi qu'apparaît
-// « Ouvrir ». Le résumé de la partie arrive après, si chess.com en a un à
-// donner — on ne fait pas attendre la saisie pour ça.
-async function setLienManche(chemin, valeur) {
+// Relit la partie en ligne et en tire tout ce qu'elle apprend. Rend faux si
+// chess.com n'a rien à dire — lien d'un autre site, partie privée, réseau coupé.
+async function updateAnalyseManche(chemin) {
     const { match, render, apresResultat } = resolveManche(chemin);
-    if (!setLien(match, valeur)) {
-        notifyErreur('Le lien doit être une adresse commençant par http:// ou https://');
-        return;
-    }
-
-    delete match.analyse;
-    render();
-
     const lien = getLien(match);
-    if (!lien) return;
+    if (!lien) return false;
 
     const analyse = await fetchAnalyse(lien);
     // Le lien a pu changer pendant l'aller-retour : on ne colle pas le résumé
     // d'une partie sur une autre.
-    if (!analyse || getLien(match) !== lien) return;
+    if (!analyse || getLien(match) !== lien) return false;
 
     match.analyse = analyse;
+
+    // La cadence et le type ne se devinent plus : la partie a été jouée, on sait
+    // à quel format. Le réglage d'avance cède devant ce qui s'est passé — une
+    // valeur que le tournoi ne sait pas nommer est refusée par setCadence.
+    setCadence(match, analyse.cadence);
+    setVariante(match, analyse.variante);
+    nettoieAnalyse(match);
 
     // Les pseudos des fiches disent lequel des deux partants a gagné : autant
     // remplir le résultat s'il ne l'est pas encore. Déjà saisi, on n'y touche
@@ -199,10 +229,35 @@ async function setLienManche(chemin, valeur) {
     if (reconnu && !match.played) {
         applyResultat(match, reconnu);
         apresResultat();
-        return;
+        return true;
     }
 
     render();
+    return true;
+}
+
+// Le bouton de la carte : on redemande à chess.com où en est la partie, et on
+// le dit — c'est un geste volontaire, il mérite une réponse. Le redessin qui
+// suit enregistre le tournoi comme n'importe quelle autre saisie.
+async function syncManche(chemin) {
+    if (await updateAnalyseManche(chemin)) notifySucces('Partie relue sur chess.com.');
+    else notifyErreur('chess.com ne dit rien de cette partie.');
+}
+
+// Le lien accepté, la carte se redessine aussitôt : c'est ainsi qu'apparaît
+// « Ouvrir ». Le résumé de la partie arrive après, si chess.com en a un à
+// donner — on ne fait pas attendre la saisie pour ça, et on ne se plaint pas
+// d'un lien qui mène ailleurs.
+async function setLienManche(chemin, valeur) {
+    const { match, render } = resolveManche(chemin);
+    if (!setLien(match, valeur)) {
+        notifyErreur('Le lien doit être une adresse commençant par http:// ou https://');
+        return;
+    }
+
+    delete match.analyse;
+    render();
+    await updateAnalyseManche(chemin);
 }
 
 function setResultatManche(chemin, valeur) {
@@ -241,7 +296,8 @@ function resolveResultatAnalyse(match, analyse) {
     return '';
 }
 
-// Ce que chess.com dit de la partie, en une ligne. Le vainqueur porte le nom de
+// Ce que chess.com dit de la partie, en une ligne — ce que la carte ne dit pas
+// déjà : la cadence et le type sont réglés juste au-dessus. Le vainqueur porte le nom de
 // ton partant quand les pseudos le désignent ; sinon la partie se dit par ses
 // couleurs, faute de savoir qui est qui. Tout ce qui vient de là-bas est
 // échappé : le résumé transite par l'état partagé.
@@ -263,10 +319,8 @@ function buildPhraseAnalyse(match, analyse) {
     const desaccord = reconnu && saisi && reconnu !== saisi;
 
     return [
-        analyse.cadence ? dit(analyse.cadence) : null,
         analyse.coups ? `${dit(analyse.coups)} coups` : null,
         issue,
-        analyse.ouverture ? `ouverture ${dit(analyse.ouverture)}` : null,
         desaccord ? '<strong>en désaccord avec le résultat saisi</strong>' : null,
     ].filter(Boolean).join(' · ');
 }
@@ -283,8 +337,12 @@ function buildLienPartie(match, chemin) {
                        onchange="setLienManche('${chemin}', this.value)"
                        placeholder="https://www.chess.com/game/live/…">
             </label>
-            ${lien ? `<a class="partie-lien-ouvrir" href="${escapeHtml(lien)}"
-                         target="_blank" rel="noopener">Ouvrir ↗</a>` : ''}
+            ${lien ? `<div class="partie-lien-actions">
+                <a class="partie-lien-ouvrir" href="${escapeHtml(lien)}"
+                   target="_blank" rel="noopener">Ouvrir ↗</a>
+                ${buildBoutonPicto('synchroniser', 'Relire la partie sur chess.com',
+                                   `syncManche('${chemin}')`)}
+            </div>` : ''}
         </div>
         ${lien && match.analyse ? `<p class="partie-analyse">${buildPhraseAnalyse(match, match.analyse)}</p>` : ''}
     `;

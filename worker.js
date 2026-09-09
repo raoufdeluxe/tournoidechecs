@@ -143,21 +143,26 @@ const FINS = {
   "50move": "règle des 50 coups",
 };
 
-// « 180 » -> 3 min ; « 180+2 » -> 3 min +2 s ; « 1/259200 » -> 3 jours par coup.
-function cadenceLisible(controle) {
-  const brut = String(controle || "");
-  const parJour = brut.match(/^1\/(\d+)$/);
-  if (parJour) {
-    const jours = Math.round(Number(parJour[1]) / 86400);
-    return jours <= 1 ? "1 jour par coup" : jours + " jours par coup";
-  }
-  const [base, increment] = brut.split("+");
-  const secondes = Number(base);
-  if (!Number.isFinite(secondes) || secondes <= 0) return brut;
-  const minutes = secondes / 60;
-  const duree = minutes >= 1 ? (Number.isInteger(minutes) ? minutes + " min" : minutes.toFixed(1) + " min")
-                             : secondes + " s";
-  return increment ? duree + " +" + increment + " s" : duree;
+// Les quatre cadences que le tournoi nomme, telles que chess.com les écrit.
+// L'incrément ne change pas la famille : un 3|2 reste du 3 min. Tout autre
+// format joué — un 15|10, trois jours par coup — se range dans « autre » :
+// mieux vaut le dire que laisser la carte afficher une cadence qui n'a pas été
+// jouée. Sans cadence annoncée du tout, en revanche, on ne conclut rien.
+const CADENCES_CHESS_COM = { "180": "3", "300": "5", "600": "10", "1/86400": "24h" };
+
+function cadenceDuTournoi(controle) {
+  const brut = String(controle || "").trim();
+  if (!brut) return null;
+  const base = brut.startsWith("1/") ? brut : brut.split("+")[0];
+  return CADENCES_CHESS_COM[base] || "autre";
+}
+
+// Chess960 s'annonce dans l'en-tête PGN comme dans le nom du type de partie.
+// Sans l'un ni l'autre, on ne conclut rien plutôt que de décréter « classique ».
+function varianteDuTournoi(entetes, partie) {
+  const annonce = String(entetes.Variant || partie.typeName || "");
+  if (!annonce) return null;
+  return /960/.test(annonce) ? "960" : "classique";
 }
 
 function resumeDeLaPartie(donnees) {
@@ -172,8 +177,10 @@ function resumeDeLaPartie(donnees) {
     resultat: entetes.Result || null,
     fin: FINS[partie.gameEndReason] || partie.gameEndReason || null,
     coups: Number.isFinite(coups) ? Math.ceil(coups / 2) : null,
-    cadence: cadenceLisible(entetes.TimeControl || partie.timeControl),
-    ouverture: entetes.ECO || null,
+    // Le format réellement joué : la carte s'y règle, plutôt que de garder le
+    // format prévu à l'avance.
+    cadence: cadenceDuTournoi(entetes.TimeControl || partie.timeControl),
+    variante: varianteDuTournoi(entetes, partie),
   };
 }
 

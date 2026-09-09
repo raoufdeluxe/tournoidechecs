@@ -49,8 +49,8 @@ La **3e place** ne se joue pas : c'est le mieux classé en poule parmi les deux 
   plutôt que d'en écraser une en silence.
 - **Fonctionne hors-ligne.** Copie locale immédiate en `localStorage`, réessai automatique
   avec back-off (1s, 2s, 4s… plafonné à 30s), reprise dès le retour du réseau.
-- **Le lien de la partie en ligne** sur chaque manche, avec le résumé que
-  chess.com en donne (cadence, coups, vainqueur, ouverture).
+- **Le lien de la partie en ligne** sur chaque manche : l'application en tire le
+  résumé de la partie et **règle la carte sur le format réellement joué**.
 - **Classement vivant.** Table des scores sur l'ensemble du tournoi, barre de progression,
   matrice des duels joués et restants, et **graphe de progression journée après journée**.
 - **De 4 à 16 partants**, nombre impair géré (journée de repos), Elo optionnel par joueur.
@@ -112,7 +112,7 @@ ce qui survit au renommage du Worker comme à l'ajout d'un domaine perso.
 
 | Route | Réponse |
 |---|---|
-| `GET /api/analyse?partie=<url chess.com>` | `{ analyse: { blancs, noirs, resultat, fin, coups, cadence, ouverture } }` |
+| `GET /api/analyse?partie=<url chess.com>` | `{ analyse: { blancs, noirs, resultat, fin, coups, cadence, variante } }` |
 
 Le navigateur ne peut pas interroger chess.com lui-même : la réponse du site ne
 porte aucun en-tête CORS. Le Worker fait l'aller-retour, ne garde que ces dix
@@ -333,7 +333,10 @@ Chaque partie porte ses propres réglages, choisis sur sa carte :
 
 | Cadence | Type |
 |---|---|
-| **10 min** (défaut) · 5 min · 3 min · 24 h | **Classique** (défaut) · Chess960 |
+| **10 min** (défaut) · 5 min · 3 min · 24 h · Autre | **Classique** (défaut) · Chess960 |
+
+« Autre » n'est pas un format qu'on choisit : c'est ce qu'affiche une manche dont
+la partie en ligne a été jouée à une cadence que le tournoi ne nomme pas.
 
 Ils valent pour **une partie**, pas pour le tournoi : rien n'empêche de jouer la
 poule en blitz et la finale en 24 h, ni d'intercaler un Chess960.
@@ -354,10 +357,22 @@ l'écriture **comme à la lecture** : le lien finit dans un `href`, et l'état d
 tournoi s'écrit depuis n'importe quel appareil qui en a l'adresse.
 
 Si le lien mène à une partie chess.com, l'application en rapporte un résumé —
-cadence, nombre de coups, vainqueur et manière, code d'ouverture — enregistré à
-côté du lien et affiché sous lui :
+nombre de coups, vainqueur et manière — enregistré à côté du lien et affiché
+sous lui :
 
-> 3 min · 41 coups · Bob l'emporte par abandon · ouverture D02
+> 41 coups · Bob l'emporte par abandon
+
+**La cadence et le type ne s'y affichent pas : ils s'appliquent.** Le réglage
+d'une manche est un plan ; la partie jouée fait foi. Coller le lien règle donc la
+carte sur ce qui s'est réellement passé — 3 min, Chess960. Un incrément ne change
+pas la famille (un 3|2 reste du 3 min) ; un format hors des quatre cadences du
+tournoi — un 15|10, trois jours par coup — se range dans **Autre**, plutôt que de
+laisser la carte annoncer une cadence qui n'a pas été jouée.
+
+Le bouton de synchronisation, à droite du lien, **redemande la partie à
+chess.com** : le résumé, le format et le résultat encore vide sont relus, la page
+et le tournoi enregistré suivent. C'est le même travail que fait la pose du lien,
+rejoué à la demande — utile quand la partie s'est terminée après coup.
 
 **Le résumé nomme tes partants, pas des pseudos.** La partie désigne ses joueurs
 par leur pseudo chess.com ; l'application les rapproche des fiches (voir plus

@@ -36,18 +36,20 @@ describe('GET /api/analyse — le résumé d\'une partie chess.com', () => {
     const PARTIE = {
         plyCount: 81,
         gameEndReason: 'resigned',
+        typeName: 'Standard Chess',
         pgnHeaders: {
-            White: 'Hikaru', Black: 'nemo', Result: '1-0', ECO: 'D02', TimeControl: '180',
+            White: 'Hikaru', Black: 'nemo', Result: '1-0', TimeControl: '180',
         },
     };
 
-    test('les deux pseudos, le score, la cadence, les coups et la fin', async () => {
+    test('les deux pseudos, le score, les coups et la fin', async () => {
         const r = await avecChessCom(partieChessCom(PARTIE),
             '/api/analyse?partie=' + encodeURIComponent('https://www.chess.com/game/live/172385979790'));
         assert.equal(r.status, 200);
         assert.deepEqual(r.body.analyse, {
             blancs: 'Hikaru', noirs: 'nemo',
-            resultat: '1-0', fin: 'abandon', coups: 41, cadence: '3 min', ouverture: 'D02',
+            resultat: '1-0', fin: 'abandon', coups: 41,
+            cadence: '3', variante: 'classique',
         });
     });
 
@@ -57,17 +59,34 @@ describe('GET /api/analyse — le résumé d\'une partie chess.com', () => {
         assert.deepEqual(r.appels, ['https://www.chess.com/callback/daily/game/42']);
     });
 
-    test('les cadences se disent en français, y compris par correspondance', async () => {
-        const cadenceDe = async (controle) => {
+    test('la cadence est rendue dans les mots du tournoi, l\'incrément compris', async () => {
+        const cadenceDe = async (TimeControl) => {
             const r = await avecChessCom(
-                partieChessCom({ ...PARTIE, pgnHeaders: { ...PARTIE.pgnHeaders, TimeControl: controle } }),
+                partieChessCom({ ...PARTIE, pgnHeaders: { ...PARTIE.pgnHeaders, TimeControl } }),
                 '/api/analyse?partie=' + encodeURIComponent('https://www.chess.com/game/live/1'));
             return r.body.analyse.cadence;
         };
-        assert.equal(await cadenceDe('180'), '3 min');
-        assert.equal(await cadenceDe('180+2'), '3 min +2 s');
-        assert.equal(await cadenceDe('30'), '30 s');
-        assert.equal(await cadenceDe('1/259200'), '3 jours par coup');
+        assert.equal(await cadenceDe('180'), '3');
+        assert.equal(await cadenceDe('180+2'), '3', 'un 3|2 reste du 3 min');
+        assert.equal(await cadenceDe('600'), '10');
+        assert.equal(await cadenceDe('1/86400'), '24h');
+        // Le tournoi n'a pas de mot pour celles-là : il les dit « autre ».
+        assert.equal(await cadenceDe('900+10'), 'autre');
+        assert.equal(await cadenceDe('1/259200'), 'autre');
+        assert.equal(await cadenceDe(''), null, 'rien d\'annoncé, rien de conclu');
+    });
+
+    test('le Chess960 est reconnu, à l\'en-tête comme au type de partie', async () => {
+        const varianteDe = async (game) => {
+            const r = await avecChessCom(partieChessCom(game),
+                '/api/analyse?partie=' + encodeURIComponent('https://www.chess.com/game/daily/1'));
+            return r.body.analyse.variante;
+        };
+        assert.equal(await varianteDe({ ...PARTIE, pgnHeaders: { ...PARTIE.pgnHeaders, Variant: 'Chess960' } }), '960');
+        assert.equal(await varianteDe({ ...PARTIE, typeName: 'Chess960' }), '960');
+        assert.equal(await varianteDe({ ...PARTIE, typeName: 'Standard Chess' }), 'classique');
+        assert.equal(await varianteDe({ ...PARTIE, typeName: undefined }), null,
+            'rien d\'annoncé, rien de conclu');
     });
 
     test('un lien qui ne mène pas à une partie chess.com est refusé sans appel', async () => {

@@ -178,6 +178,34 @@ describe('conflit (409)', () => {
     });
 });
 
+describe('un tournoi d\'une version antérieure se remet en forme à l\'ouverture', () => {
+    test('un résumé de partie perd les champs que plus rien n\'affiche', async () => {
+        const ancien = {
+            screen: 'screen-tournament',
+            tournament: {
+                name: 'Repris', players: joueurs(['A', 'B']),
+                matches: [{
+                    id: '0-1-leg1', player1: 0, player2: 1, played: true, player1Score: 1, player2Score: 0, round: 1,
+                    lien: 'https://www.chess.com/game/live/1',
+                    // ce que rendaient les versions précédentes du résumé
+                    analyse: {
+                        blancs: 'A_CC', noirs: 'B_CC', resultat: '1-0', fin: 'abandon', coups: 41,
+                        cadence: '3 min', ouverture: 'D02', date: '2026.08.01', eloBlancs: 1500, eloNoirs: 1450,
+                    },
+                }],
+            },
+        };
+        const app = chargerApp({ fetch: async () => reponse(200, { version: 1, updatedAt: null, state: ancien }) });
+        await app.ev('loadEtat()');
+
+        const analyse = app.json('tournoi.matches[0].analyse');
+        assert.deepEqual(Object.keys(analyse).sort(),
+            ['blancs', 'coups', 'fin', 'noirs', 'resultat'],
+            'seuls les champs encore lus subsistent');
+        assert.equal(analyse.coups, 41, 'et ils gardent leur valeur');
+    });
+});
+
 describe('loadEtat', () => {
     test('reprend l\'état partagé et retient sa version', async () => {
         const distant = {

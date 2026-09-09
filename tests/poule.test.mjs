@@ -302,6 +302,18 @@ describe('la carte d\'un duel, repliée puis ouverte', () => {
         return app.ev('document.getElementById("matches-container").children[0].innerHTML');
     };
     const duelAffiche = (app) => app.json('tournoi.matches.filter(m => m.round === tournoi.currentRound)')[0];
+
+    // chess.com répond, le serveur du tournoi non : s'il répondait, le
+    // chargement initial finirait par recharger le tournoi par-dessus ce que le
+    // test vient de faire.
+    const repond = (app, reponse) => {
+        app.bac.fetch = async (url) => {
+            if (!String(url).includes('/api/analyse')) throw new Error('réseau indisponible');
+            return typeof reponse === 'function' ? reponse() : reponse;
+        };
+    };
+    const analyse = (contenu) => () => ({ ok: true, json: async () => ({ analyse: contenu }) });
+    const rienDeChessCom = () => ({ ok: false, json: async () => ({}) });
     const affiche = (html) => html.slice(0, html.indexOf('</summary>'));
     const pli = (html) => html.slice(html.indexOf('</summary>'));
     const texte = (html) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
@@ -339,19 +351,13 @@ describe('la carte d\'un duel, repliée puis ouverte', () => {
 
     test('le résumé de la partie chess.com accompagne le lien', async () => {
         const app = pouleGeneree(noms(4));
-        app.bac.fetch = async () => ({
-            ok: true,
-            json: async () => ({ analyse: {
-                blancs: 'Alice', noirs: 'Bob',
-                resultat: '0-1', fin: 'échec et mat', coups: 32, cadence: '5 min', ouverture: 'C50',
-            } }),
-        });
+        repond(app, analyse({ blancs: 'Alice', noirs: 'Bob', resultat: '0-1', fin: 'échec et mat', coups: 32 }));
         const duel = duelAffiche(app);
         await app.ev(`setLienManche("poule:${duel.id}", "https://www.chess.com/game/live/1")`);
 
         const vu = texte(carte(app));
         // Aucune fiche ne porte ces pseudos : la partie se dit par ses couleurs.
-        assert.match(vu, /5 min · 32 coups · victoire des noirs par échec et mat · ouverture C50/);
+        assert.match(vu, /32 coups · victoire des noirs par échec et mat/);
         assert.doesNotMatch(vu, /Alice|Bob/, 'et les pseudos chess.com ne s\'affichent pas');
     });
 
@@ -366,9 +372,7 @@ describe('la carte d\'un duel, repliée puis ouverte', () => {
         app.ev(`tournoi.players[${duel.player1}].ref = 'j-aa'; tournoi.players[${duel.player1}].name = 'Alice';`);
         app.ev(`tournoi.players[${duel.player2}].ref = 'j-bb'; tournoi.players[${duel.player2}].name = 'Bob';`);
         // Le second partant tient les blancs et gagne.
-        app.bac.fetch = async () => ({ ok: true, json: async () => ({ analyse: {
-            blancs: 'bob_cc', noirs: 'ALICE_CC', resultat: '1-0', fin: 'abandon', coups: 20, cadence: '3 min',
-        } }) });
+        repond(app, analyse({ blancs: 'bob_cc', noirs: 'ALICE_CC', resultat: '1-0', fin: 'abandon', coups: 20 }));
 
         await app.ev(`setLienManche("poule:${duel.id}", "https://www.chess.com/game/live/1")`);
 
@@ -388,9 +392,7 @@ describe('la carte d\'un duel, repliée puis ouverte', () => {
         ]);
         app.ev(`tournoi.players[${duel.player1}].ref = 'j-aa'; tournoi.players[${duel.player2}].ref = 'j-bb';`);
         app.appel('setResultatManche', `poule:${duel.id}`, 'p1');
-        app.bac.fetch = async () => ({ ok: true, json: async () => ({ analyse: {
-            blancs: 'Bob_CC', noirs: 'Alice_CC', resultat: '1-0', coups: 20, cadence: '3 min',
-        } }) });
+        repond(app, analyse({ blancs: 'Bob_CC', noirs: 'Alice_CC', resultat: '1-0', coups: 20 }));
 
         await app.ev(`setLienManche("poule:${duel.id}", "https://www.chess.com/game/live/1")`);
 
@@ -399,9 +401,65 @@ describe('la carte d\'un duel, repliée puis ouverte', () => {
         assert.match(texte(carte(app)), /en désaccord avec le résultat saisi/);
     });
 
+    test('la carte se règle sur le format réellement joué', async () => {
+        const app = pouleGeneree(noms(4));
+        const duel = duelAffiche(app);
+        app.appel('setCadenceManche', `poule:${duel.id}`, '10');   // le format prévu
+        repond(app, analyse({ blancs: 'x', noirs: 'y', resultat: '1-0', coups: 20, cadence: '3', variante: '960' }));
+
+        await app.ev(`setLienManche("poule:${duel.id}", "https://www.chess.com/game/live/1")`);
+
+        const manche = app.json(`tournoi.matches.find(m => m.id === "${duel.id}")`);
+        assert.equal(manche.cadence, '3', 'la partie a été jouée en 3 min, la carte le dit');
+        assert.equal(manche.variante, '960');
+        assert.deepEqual(Object.keys(manche.analyse).sort(), ['blancs', 'coups', 'noirs', 'resultat'],
+            'le format est appliqué à la manche, pas gardé dans le résumé');
+    });
+
+    test('un format hors des quatre cadences s\'affiche « Autre »', async () => {
+        const app = pouleGeneree(noms(4));
+        const duel = duelAffiche(app);
+        app.appel('setCadenceManche', `poule:${duel.id}`, '5');
+        repond(app, analyse({ blancs: 'x', noirs: 'y', resultat: '1-0', coups: 20, cadence: 'autre', variante: null }));
+
+        await app.ev(`setLienManche("poule:${duel.id}", "https://www.chess.com/game/live/1")`);
+
+        const manche = app.json(`tournoi.matches.find(m => m.id === "${duel.id}")`);
+        assert.equal(manche.cadence, 'autre', 'la partie n\'a pas été jouée en 5 min');
+        assert.match(carte(app), /<option value="autre" selected>Autre</, 'et le menu le montre');
+        assert.equal(manche.variante, 'classique', 'faute d\'annonce, le type ne bouge pas');
+    });
+
+    test('le bouton de relecture redemande la partie et remet la carte à jour', async () => {
+        const app = pouleGeneree(noms(4));
+        const duel = duelAffiche(app);
+        let cadence = '10';
+        repond(app, () => analyse({ blancs: 'x', noirs: 'y', resultat: '1-0', coups: 20, cadence, variante: 'classique' })());
+        await app.ev(`setLienManche("poule:${duel.id}", "https://www.chess.com/game/live/1")`);
+
+        // la partie a repris depuis : chess.com dit maintenant autre chose
+        cadence = '3';
+        await app.ev(`syncManche("poule:${duel.id}")`);
+
+        assert.equal(app.json(`tournoi.matches.find(m => m.id === "${duel.id}")`).cadence, '3');
+        assert.match(app.alertes.at(-1), /relue sur chess\.com/);
+    });
+
+    test('relire un lien dont chess.com ne dit rien le dit dans la page', async () => {
+        const app = pouleGeneree(noms(4));
+        const duel = duelAffiche(app);
+        repond(app, rienDeChessCom);
+        await app.ev(`setLienManche("poule:${duel.id}", "https://lichess.org/abcd")`);
+        assert.deepEqual(app.alertes, [], 'coller le lien ne se plaint pas');
+
+        await app.ev(`syncManche("poule:${duel.id}")`);
+        assert.match(app.alertes.at(-1), /ne dit rien de cette partie/,
+            'le demander expressément, si');
+    });
+
     test('vider le lien emporte le résumé avec lui', async () => {
         const app = pouleGeneree(noms(4));
-        app.bac.fetch = async () => ({ ok: true, json: async () => ({ analyse: { resultat: '1-0', blancs: 'Alice' } }) });
+        repond(app, analyse({ resultat: '1-0', blancs: 'Alice' }));
         const duel = duelAffiche(app);
         await app.ev(`setLienManche("poule:${duel.id}", "https://www.chess.com/game/live/1")`);
         await app.ev(`setLienManche("poule:${duel.id}", "")`);
@@ -410,7 +468,7 @@ describe('la carte d\'un duel, repliée puis ouverte', () => {
 
     test('un lien hors chess.com garde le lien, sans résumé', async () => {
         const app = pouleGeneree(noms(4));
-        app.bac.fetch = async () => ({ ok: false, json: async () => ({}) });
+        repond(app, rienDeChessCom);
         const duel = duelAffiche(app);
         await app.ev(`setLienManche("poule:${duel.id}", "https://lichess.org/abcd")`);
         const html = carte(app);

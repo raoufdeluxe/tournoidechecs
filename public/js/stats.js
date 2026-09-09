@@ -54,15 +54,6 @@ const toutesVariantes = () => VARIANTES.map(v => v.valeur);
 const bilanTotal = (stats) => bilanFiltre(stats, toutesCadences(), toutesVariantes());
 
 // Toutes les parties d'un tournoi, poule et phases finales confondues.
-function partiesDuTournoi(etat) {
-    const t = (etat && etat.tournament) || {};
-    return [
-        ...(t.matches || []),
-        ...(t.semifinalMatches || []).flatMap(s => s.matches || []),
-        ...(t.finalMatches || [])
-    ];
-}
-
 function ajouterPartie(stats, partie, issue) {
     const champ = issue === 'victoire' ? 'victoires' : issue === 'nulle' ? 'nulles' : 'defaites';
     stats.parFormat[cleFormat(getCadence(partie), getVariante(partie))][champ]++;
@@ -84,7 +75,7 @@ function computeStats(tournois) {
         const etat = enveloppe && enveloppe.state;
         const partants = (etat && etat.tournament && etat.tournament.players) || [];
 
-        for (const partie of partiesDuTournoi(etat)) {
+        for (const partie of getManches((etat && etat.tournament) || {})) {
             if (!partie.played) continue;
 
             const ref1 = (partants[partie.player1] || {}).ref;

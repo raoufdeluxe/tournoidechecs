@@ -57,7 +57,7 @@ const UN_TOURNOI = {
 };
 
 /** Coche les filtres comme le ferait l'utilisateur. */
-function filtrer(app, { joueurs = [], cadences = ['10', '5', '3', '24h'], variantes = ['classique', '960'] }) {
+function filtrer(app, { joueurs = [], cadences = ['10', '5', '3', '24h', 'autre'], variantes = ['classique', '960'] }) {
     const cases = (liste) => liste.map(valeur => ({ checked: true, dataset: { valeur } }));
     app.definirElements('.stats-case-joueur', cases(joueurs));
     app.definirElements('.stats-case-cadence', cases(cadences));

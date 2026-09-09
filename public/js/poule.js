@@ -107,11 +107,7 @@ async function startTournoi() {
 
     // Donner le départ régénère tout le calendrier : les résultats déjà saisis
     // seraient effacés sans retour possible. On ne le fait jamais en silence.
-    const dejaJoues = [
-        ...tournoi.matches,
-        ...(tournoi.semifinalMatches || []).flatMap(s => s.matches),
-        ...(tournoi.finalMatches || [])
-    ].filter(m => m.played).length;
+    const dejaJoues = getManches(tournoi).filter(m => m.played).length;
 
     if (dejaJoues) {
         const pluriel = dejaJoues > 1 ? 's' : '';

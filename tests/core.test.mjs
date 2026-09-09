@@ -238,9 +238,9 @@ describe('cadence et variante d\'une partie', () => {
 
     // Les valeurs, elles, sont dans le KV de tous les tournois : les renommer
     // rendrait illisibles les parties déjà réglées. Les libellés, non.
-    test('les quatre cadences proposées', () => {
+    test('les cadences proposées, « autre » comprise', () => {
         const app = chargerApp();
-        assert.deepEqual(app.json('CADENCES.map(c => c.valeur)'), ['10', '5', '3', '24h']);
+        assert.deepEqual(app.json('CADENCES.map(c => c.valeur)'), ['10', '5', '3', '24h', 'autre']);
     });
 
     test('les deux types de partie', () => {
@@ -251,7 +251,7 @@ describe('cadence et variante d\'une partie', () => {
     test('les cadences et les types annoncés sont acceptés', () => {
         const app = chargerApp();
         app.set('globalThis.m', {});
-        for (const valeur of ['10', '5', '3', '24h']) {
+        for (const valeur of ['10', '5', '3', '24h', 'autre']) {
             assert.equal(app.ev(`setCadence(m, ${JSON.stringify(valeur)})`), true, valeur);
             assert.equal(app.ev('m.cadence'), valeur);
         }

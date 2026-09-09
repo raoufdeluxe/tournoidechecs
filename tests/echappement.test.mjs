@@ -34,10 +34,12 @@ describe('phase de poule', () => {
         // Ce nom-là ne vient même pas d'une fiche : c'est un pseudo choisi sur
         // chess.com, que le Worker nous rapporte tel quel.
         const app = pouleGeneree(noms(4));
-        app.bac.fetch = async () => ({
-            ok: true,
-            json: async () => ({ analyse: { resultat: '1-0', blancs: PIEGE, coups: 3 } }),
-        });
+        // Seul chess.com répond : si l'API d'état répondait, le chargement
+        // initial rechargerait le tournoi par-dessus ce que le test vient de faire.
+        app.bac.fetch = async (url) => {
+            if (!String(url).includes('/api/analyse')) throw new Error('réseau indisponible');
+            return { ok: true, json: async () => ({ analyse: { resultat: '1-0', blancs: PIEGE, coups: 3 } }) };
+        };
         const duel = app.json('tournoi.matches.filter(m => m.round === tournoi.currentRound)')[0];
         await app.ev(`setLienManche("poule:${duel.id}", "https://www.chess.com/game/live/1")`);
         app.ev('document.getElementById("matches-container").children.length = 0; renderParties()');
