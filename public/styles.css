@@ -1072,29 +1072,82 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
 .players-actions { margin-top: var(--e4); }
 .players-actions button { width: auto; min-width: 220px; flex: none; }
 
-/* Liste des joueurs réutilisables */
+/* Liste des joueurs réutilisables
+   ─────────────────────────────────
+   Une fiche est une ligne de liste, pas un formulaire : des champs discrets,
+   des actions grises, et tout tient sur une ligne — deux sur un téléphone.
+   La grille aligne les colonnes d'une fiche à l'autre. */
 
 .joueur-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 240px) 170px 4ch 32px 32px;
+    /* Une colonne « auto » — le bouton de la ligne d'ajout, plus bas — se
+       partagerait sinon toute la place qui reste. */
+    justify-content: start;
     gap: var(--e3);
     align-items: center;
-    padding: var(--e2) 0;
-    border-bottom: 1px solid var(--border);
+    padding: var(--e1) 0;
 }
 
-.joueur-row:last-of-type { border-bottom: none; }
-.joueur-row--nouveau { border-top: 2px solid var(--border); margin-top: var(--e2); }
-.joueur-row .joueur-nom { flex: 1 1 auto; min-width: 0; }
-.joueur-row .joueur-pseudo { flex: 0 1 190px; min-width: 0; }
+.joueur-row + .joueur-row { border-top: 1px solid var(--border); }
+
+/* Les champs se font oublier : ils gardent le cadre et le halo des autres
+   champs de l'application, en plus menu — c'est une liste qu'on parcourt bien
+   plus souvent qu'on ne l'édite. */
+.joueur-row input { padding: var(--e2) var(--e3); font-size: var(--t2); }
+
+/* Le pseudo porte la marque du site d'où il vient, posée dans le retrait du
+   champ — le motif habituel d'un champ à icône. Le fichier est servi par
+   l'application : rien n'est chargé chez chess.com au passage.
+   Le sélecteur nomme la balise, comme input.journee-numero plus haut : sans
+   elle, la règle des <input> l'emporterait et remettrait le fond à plat. */
+input.joueur-pseudo {
+    padding-left: calc(var(--e2) + 20px);
+    padding-right: var(--e2);
+    background-image: url("icones/chess-com.svg");
+    background-repeat: no-repeat;
+    background-position: left var(--e2) center;
+    background-size: 14px;
+}
+
 /* Le classement se lit, il ne se tape pas : il vient de chess.com. */
-.joueur-row .joueur-elo { flex: 0 0 60px; text-align: right; color: var(--text-secondary); font-weight: 600; }
-.joueur-sync { color: var(--primary); }
+.joueur-elo { text-align: right; color: var(--text-secondary); font-weight: 600; font-size: var(--t2); }
+
+/* Deux actions, pas deux alertes : le picto seul, gris, qui ne prend ses
+   couleurs qu'au survol. La corbeille ne hurle plus sur chaque ligne. */
+.joueur-row .bouton-picto {
+    width: 32px;
+    height: 32px;
+    background: none;
+    border-color: transparent;
+    color: var(--text-secondary);
+}
+
+.joueur-row .bouton-picto svg { width: 17px; height: 17px; }
+.joueur-row .bouton-picto:hover { background: var(--primary-light); color: var(--primary); }
+.joueur-row .bouton-picto.danger:hover { background: var(--danger-light); color: var(--danger); }
+
+/* La ligne d'ajout se distingue de la liste : un nom, un pseudo, un bouton. */
+.joueur-row--nouveau {
+    grid-template-columns: minmax(0, 240px) 170px auto;
+    border-top: 2px solid var(--border);
+    margin-top: var(--e3);
+    padding-top: var(--e4);
+}
+
 .joueur-row button:not(.bouton-picto) { padding: var(--e2) var(--e4); font-size: var(--t2); }
 
+/* Sur un téléphone, cinq colonnes ne tiennent pas : le nom prend la première
+   ligne, tout le reste se range sur la seconde. */
 @media (max-width: 600px) {
-    .joueur-row { flex-wrap: wrap; }
-    .joueur-row .joueur-nom { flex: 1 1 100%; }
-    .joueur-row .joueur-pseudo { flex: 1 1 auto; }
+    .joueur-row {
+        grid-template-columns: minmax(0, 1fr) 4ch 32px 32px;
+        gap: var(--e2);
+        padding: var(--e2) 0;
+    }
+
+    .joueur-row .joueur-nom { grid-column: 1 / -1; }
+    .joueur-row--nouveau { grid-template-columns: minmax(0, 1fr) auto; }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════

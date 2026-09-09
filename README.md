@@ -400,7 +400,9 @@ et ne peut pas être départagé par lui : c'est la belle qui tranche.
 ### Le pseudo chess.com
 
 Chaque fiche porte en plus, si on veut, le **pseudo chess.com** du joueur — lettres,
-chiffres, tiret et souligné, comme le site les admet. Il sert à deux choses, et
+chiffres, tiret et souligné, comme le site les admet. Le champ porte la marque du
+site, servie par l'application (`public/icones/chess-com.svg`) et non chargée
+chez eux. Il sert à deux choses, et
 **ne s'affiche que sur cette page** :
 
 - le bouton de **synchronisation** à côté du champ enregistre le pseudo tel qu'il

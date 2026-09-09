@@ -324,8 +324,8 @@ const PICTOS = {
 
 // Un bouton sans texte doit se nommer autrement : `aria-label` pour qui écoute,
 // `title` pour l'infobulle de qui survole.
-function buildBoutonPicto(picto, libelle, action, classe) {
-    return `<button type="button" class="bouton-picto ${classe}" onclick="${action}"
+function buildBoutonPicto(picto, libelle, action, classe = '') {
+    return `<button type="button" class="${['bouton-picto', classe].filter(Boolean).join(' ')}" onclick="${action}"
                 aria-label="${escapeHtml(libelle)}" title="${escapeHtml(libelle)}">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"

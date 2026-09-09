@@ -22,11 +22,11 @@ function renderJoueurs() {
         return `
         <div class="joueur-row">
             <input type="text" class="joueur-nom" maxlength="64" value="${escapeHtml(j.nom)}" data-id="${id}">
-            <input type="text" class="joueur-pseudo" maxlength="32" placeholder="Pseudo chess.com" data-id="${id}"
+            <input type="text" class="joueur-pseudo" maxlength="32" placeholder="Pseudo" data-id="${id}"
                    value="${escapeHtml(j.pseudo || '')}">
-            <span class="joueur-elo" data-id="${id}">${j.elo == null ? '—' : j.elo}</span>
-            ${buildBoutonPicto('synchroniser', 'Synchroniser avec chess.com', `synchroniserFiche('${id}')`, 'secondary joueur-sync')}
-            ${buildBoutonPicto('supprimer', 'Supprimer', `removeJoueur('${id}')`, 'danger joueur-supprimer')}
+            <span class="joueur-elo">${j.elo == null ? '—' : j.elo}</span>
+            ${buildBoutonPicto('synchroniser', 'Synchroniser avec chess.com', `synchroniserFiche('${id}')`)}
+            ${buildBoutonPicto('supprimer', 'Supprimer', `removeJoueur('${id}')`, 'danger')}
         </div>
     `;
     }).join('');

@@ -10,7 +10,19 @@ import { chargerApp, lireScript, lireFichier, PAGES, scriptsDeLaPage } from './a
 const racine = fileURLToPath(new URL('..', import.meta.url));
 const fichiersJs = readdirSync(racine + 'public/js').filter(f => f.endsWith('.js')).sort();
 
-describe('les scripts de la page', () => {
+describe('ce que la page charge', () => {
+    test('chaque fichier appelé par la feuille de style existe', () => {
+        // Une adresse fausse ne fait rien échouer : l'image ne s'affiche pas,
+        // sans un mot. C'est le genre de panne qu'on ne voit jamais.
+        const appels = [...lireFichier('public/styles.css').matchAll(/url\(["']?([^"')]+)["']?\)/g)]
+            .map(m => m[1])
+            .filter(chemin => !/^(data:|https?:|\/\/)/.test(chemin));
+        assert.ok(appels.length > 0, 'le relevé a bien trouvé des fichiers');
+        for (const chemin of appels) {
+            assert.ok(existsSync(racine + 'public/' + chemin), `styles.css appelle ${chemin}, qui n'existe pas`);
+        }
+    });
+
     test('chaque page ne charge que des fichiers qui existent', () => {
         for (const page of PAGES) {
             for (const script of scriptsDeLaPage(page)) {
