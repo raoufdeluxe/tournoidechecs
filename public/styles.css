@@ -170,20 +170,6 @@ body {
    Ce sur quoi on tape et ce qu'on clique, partout dans l'application.
    ══════════════════════════════════════════════════════════════════════════════ */
 
-/* Bouton sans texte : une cible carrée d'au moins 40 px, taille au-dessous de
-   laquelle un doigt ne vise plus. Le picto occupe la moitié, le reste est la
-   marge de frappe. */
-
-button.bouton-picto {
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-button.bouton-picto svg { width: 20px; height: 20px; }
 .form-group { margin-bottom: var(--e5); }
 label { display: block; margin-bottom: var(--e2); font-weight: 500; color: var(--text-primary); }
 
@@ -226,6 +212,28 @@ button.secondary { background: transparent; color: var(--primary); border-color:
 button.secondary:hover { background: var(--primary-light); }
 button.danger { background: var(--danger); border-color: var(--danger); }
 button.success { background: var(--success); border-color: var(--success); }
+
+/* Un bouton sans texte n'est pas un bouton plein en plus petit : le picto seul,
+   gris, sur rien. Il ne prend ses couleurs qu'au survol — violet, ou rouge si
+   l'action est destructrice. Deux actions de plus par ligne ne doivent pas
+   peser plus lourd que la ligne elle-même.
+   Ce bloc vient après .secondary et .danger, à dessein : à force égale, c'est
+   la règle écrite plus bas qui l'emporte, et c'est leur fond qu'il défait. */
+button.bouton-picto {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border-color: transparent;
+    color: var(--text-secondary);
+}
+
+button.bouton-picto svg { width: 17px; height: 17px; }
+button.bouton-picto:hover { background: var(--primary-light); color: var(--primary); opacity: 1; }
+button.bouton-picto.danger:hover { background: var(--danger-light); color: var(--danger); }
 
 .player-input-group {
     display: grid;
@@ -404,6 +412,17 @@ a.menu-item { display: block; text-decoration: none; }
    5. BRIQUES COMMUNES
    Ce qui sert sur plusieurs pages : pastilles, médailles, messages, panneaux.
    ══════════════════════════════════════════════════════════════════════════════ */
+
+/* « Rien à afficher pour l'instant » : la même phrase discrète sur les listes
+   de quatre pages — tournois, joueurs, statistiques, sauvegarde. */
+.liste-vide { color: var(--text-secondary); font-size: var(--t2); padding: var(--e2) var(--e1); }
+
+/* Un bouton de texte au fil d'une liste : plus menu que le bouton principal
+   d'une page, qui lui garde sa pleine taille. */
+.tournaments-head button, .joueur-row button:not(.bouton-picto) {
+    padding: var(--e2) var(--e4);
+    font-size: var(--t2);
+}
 
 .medal {
     display: inline-block;
@@ -1030,7 +1049,6 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
 }
 
 .tournaments-head strong { font-family: var(--font-sport); font-size: var(--t3); }
-.tournaments-head button { padding: var(--e2) var(--e4); font-size: var(--t2); }
 
 .tournament-row {
     display: flex;
@@ -1052,8 +1070,6 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
 .tournament-row-meta { font-size: var(--t2); color: var(--text-secondary); margin-top: var(--e1); }
 
 .tournament-badge { margin-left: var(--e2); --ton: var(--success); --fond: var(--accent-light); }
-
-.tournaments-empty { color: var(--text-secondary); font-size: var(--t2); padding: var(--e2) var(--e1); }
 
 /* Une ligne de la page Tournois : nom éditable + informations */
 .tournoi-edition { flex: 1 1 auto; min-width: 0; }
@@ -1113,20 +1129,6 @@ input.joueur-pseudo {
 /* Le classement se lit, il ne se tape pas : il vient de chess.com. */
 .joueur-elo { text-align: right; color: var(--text-secondary); font-weight: 600; font-size: var(--t2); }
 
-/* Deux actions, pas deux alertes : le picto seul, gris, qui ne prend ses
-   couleurs qu'au survol. La corbeille ne hurle plus sur chaque ligne. */
-.joueur-row .bouton-picto {
-    width: 32px;
-    height: 32px;
-    background: none;
-    border-color: transparent;
-    color: var(--text-secondary);
-}
-
-.joueur-row .bouton-picto svg { width: 17px; height: 17px; }
-.joueur-row .bouton-picto:hover { background: var(--primary-light); color: var(--primary); }
-.joueur-row .bouton-picto.danger:hover { background: var(--danger-light); color: var(--danger); }
-
 /* La ligne d'ajout se distingue de la liste : un nom, un pseudo, un bouton. */
 .joueur-row--nouveau {
     grid-template-columns: minmax(0, 240px) 170px auto;
@@ -1135,7 +1137,6 @@ input.joueur-pseudo {
     padding-top: var(--e4);
 }
 
-.joueur-row button:not(.bouton-picto) { padding: var(--e2) var(--e4); font-size: var(--t2); }
 
 /* Sur un téléphone, cinq colonnes ne tiennent pas : le nom prend la première
    ligne, tout le reste se range sur la seconde. */

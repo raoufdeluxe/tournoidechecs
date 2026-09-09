@@ -12,7 +12,7 @@ function renderJoueurs() {
     if (!conteneur) return;
 
     if (!joueurs.length) {
-        conteneur.innerHTML = '<div class="tournaments-empty">Aucun joueur pour l\'instant. ' +
+        conteneur.innerHTML = '<div class="liste-vide">Aucun joueur pour l\'instant. ' +
             'Ajoute le premier ci-dessous — tu pourras ensuite l\'inscrire à un tournoi.</div>';
         return;
     }
@@ -117,10 +117,10 @@ async function removeJoueur(id) {
 
 async function startPageJoueurs() {
     const conteneur = document.getElementById('joueurs-editor');
-    conteneur.innerHTML = '<div class="tournaments-empty">Chargement…</div>';
+    conteneur.innerHTML = '<div class="liste-vide">Chargement…</div>';
 
     if (!await loadJoueurs()) {
-        conteneur.innerHTML = '<div class="tournaments-empty">Liste indisponible — hors ligne ?</div>';
+        conteneur.innerHTML = '<div class="liste-vide">Liste indisponible — hors ligne ?</div>';
         return;
     }
     renderJoueurs();

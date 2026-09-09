@@ -26,7 +26,7 @@ function getTournoiCourant() {
 
 async function loadListeTournois() {
     const liste = document.getElementById('tournois-liste');
-    liste.innerHTML = '<div class="tournaments-empty">Chargement…</div>';
+    liste.innerHTML = '<div class="liste-vide">Chargement…</div>';
 
     let data;
     try {
@@ -34,14 +34,14 @@ async function loadListeTournois() {
         if (!res.ok) throw new Error(res.status);
         data = await res.json();
     } catch (e) {
-        liste.innerHTML = '<div class="tournaments-empty">Liste indisponible — hors ligne ?</div>';
+        liste.innerHTML = '<div class="liste-vide">Liste indisponible — hors ligne ?</div>';
         return;
     }
 
     const items = ((data && data.tournaments) || []).filter(t => !tournoisSupprimes.has(t.id));
 
     if (!items.length) {
-        liste.innerHTML = '<div class="tournaments-empty">Aucun tournoi enregistré pour l\'instant : ' +
+        liste.innerHTML = '<div class="liste-vide">Aucun tournoi enregistré pour l\'instant : ' +
             'donne le départ au premier.</div>';
         return;
     }
@@ -52,7 +52,7 @@ async function loadListeTournois() {
             // list() renvoie les 100 premières clés par ordre alphabétique ; le
             // tri par date ne porte que sur celles-là. Dire « les plus récents »
             // serait faux dès qu'il y en a davantage.
-            ? '<div class="tournaments-empty">Il y a plus de 100 tournois : seuls 100 d\'entre eux sont affichés.</div>'
+            ? '<div class="liste-vide">Il y a plus de 100 tournois : seuls 100 d\'entre eux sont affichés.</div>'
             : '');
 }
 
@@ -84,8 +84,8 @@ function buildLigneTournoi(t, courant) {
                 </div>
             </div>
             <div class="tournament-row-actions">
-                ${buildBoutonPicto('renommer', 'Renommer', `renameTournoi('${escapeHtml(t.id)}')`, 'secondary')}
-                ${buildBoutonPicto('ouvrir', 'Ouvrir', `openTournoi('${escapeHtml(t.id)}')`, 'secondary')}
+                ${buildBoutonPicto('renommer', 'Renommer', `renameTournoi('${escapeHtml(t.id)}')`)}
+                ${buildBoutonPicto('ouvrir', 'Ouvrir', `openTournoi('${escapeHtml(t.id)}')`)}
                 ${buildBoutonPicto('supprimer', 'Supprimer', `removeTournoi('${escapeHtml(t.id)}')`, 'danger')}
             </div>
         </div>

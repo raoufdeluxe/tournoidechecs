@@ -57,7 +57,7 @@
             <p class="card-intro">Une sauvegarde contient <strong>tous les tournois et toutes les fiches
                de joueurs</strong> : c'est l'état complet de l'application, en un fichier JSON.</p>
 
-            <div id="sauvegarde-resume" class="tournaments-empty" role="status" aria-live="polite">Chargement…</div>
+            <div id="sauvegarde-resume" class="liste-vide" role="status" aria-live="polite">Chargement…</div>
 
             <div class="players-actions">
                 <button id="btn-export" onclick="exportTout()">⬇️ Tout exporter</button>
@@ -73,7 +73,7 @@
                 <button class="secondary" onclick="closeImport()">Fermer</button>
             </div>
             <div id="import-plan"></div>
-            <div id="import-progress" class="tournaments-empty"></div>
+            <div id="import-progress" class="liste-vide"></div>
             <div class="players-actions">
                 <button id="btn-import-confirm" onclick="applyRestauration()">Restaurer</button>
             </div>
@@ -84,7 +84,7 @@
             <p class="card-intro">Supprime <strong>tous les tournois et toutes les fiches</strong>, pour tout
                le monde et définitivement. Les liens déjà partagés cesseront de fonctionner.
                Exporte d'abord si tu veux pouvoir revenir en arrière.</p>
-            <div id="raz-progress" class="tournaments-empty"></div>
+            <div id="raz-progress" class="liste-vide"></div>
             <div class="players-actions">
                 <button class="danger" id="btn-raz" onclick="eraseTout()">🧨 Tout effacer</button>
             </div>

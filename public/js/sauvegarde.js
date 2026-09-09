@@ -224,14 +224,14 @@ async function prepareRestauration(fichier) {
 function renderPlanRestauration(plan, sauvegarde, listeLue) {
     const badge = (texte) => '<span class="etiquette tournament-badge">' + texte + '</span>';
 
-    let html = '<div class="tournaments-empty">Sauvegarde du ' +
+    let html = '<div class="liste-vide">Sauvegarde du ' +
         escapeHtml(new Date(sauvegarde.exporteLe).toLocaleString('fr-FR')) +
         ' — décoche ce que tu ne veux pas restaurer.</div>';
 
     // Sans la liste du serveur, impossible de savoir ce qui existe déjà : on le
     // dit, plutôt que de laisser croire que tout est nouveau.
     if (!listeLue) {
-        html += '<div class="tournaments-empty">⚠ La liste des tournois n\'a pas pu être lue : ' +
+        html += '<div class="liste-vide">⚠ La liste des tournois n\'a pas pu être lue : ' +
             'impossible de dire lesquels existent déjà. Un tournoi portant le même identifiant ' +
             'sera remplacé.</div>';
     }
@@ -247,7 +247,7 @@ function renderPlanRestauration(plan, sauvegarde, listeLue) {
                     <span class="tournament-row-meta">${t.nom === t.id ? '' : escapeHtml(t.id) + ' · '}${t.partants} partants</span>
                 </span>
             </label>`).join('')
-        : '<div class="tournaments-empty">Aucun tournoi dans ce fichier.</div>';
+        : '<div class="liste-vide">Aucun tournoi dans ce fichier.</div>';
 
     html += '<div class="restaure-section">Joueurs</div>';
     html += plan.joueurs.length
@@ -259,9 +259,9 @@ function renderPlanRestauration(plan, sauvegarde, listeLue) {
                     <span class="tournament-row-meta restaure-requis"></span>
                 </span>
             </label>`).join('')
-        : '<div class="tournaments-empty">Aucune fiche de joueur dans ce fichier.</div>';
+        : '<div class="liste-vide">Aucune fiche de joueur dans ce fichier.</div>';
 
-    html += '<div class="tournaments-empty">Les fiches absentes du fichier sont conservées. ' +
+    html += '<div class="liste-vide">Les fiches absentes du fichier sont conservées. ' +
         'Rien n\'est encore écrit — « Restaurer » applique ce plan.</div>';
 
     document.getElementById('import-plan').innerHTML = html;

@@ -4,13 +4,13 @@ let statsCalculees = { parRef: {}, ignorees: 0 };
 
 async function startPageStats() {
     const zone = document.getElementById('stats-graphe');
-    zone.innerHTML = '<div class="tournaments-empty">Lecture des tournois…</div>';
+    zone.innerHTML = '<div class="liste-vide">Lecture des tournois…</div>';
 
     try {
         await loadJoueurs();
         statsCalculees = computeStats(await fetchTournois());
     } catch (e) {
-        zone.innerHTML = '<div class="tournaments-empty">Statistiques indisponibles — hors ligne ?</div>';
+        zone.innerHTML = '<div class="liste-vide">Statistiques indisponibles — hors ligne ?</div>';
         return;
     }
 
@@ -34,7 +34,7 @@ function renderFiltres() {
     const zoneJoueurs = document.getElementById('stats-joueurs');
 
     if (!joueurs.length) {
-        zoneJoueurs.innerHTML = '<div class="tournaments-empty">Aucun joueur enregistré. ' +
+        zoneJoueurs.innerHTML = '<div class="liste-vide">Aucun joueur enregistré. ' +
             '<a href="./joueurs">Ajoute-les</a> pour commencer à comparer.</div>';
     } else {
         // Un joueur qui n'a jamais joué est proposé, mais décoché : sinon la
@@ -127,11 +127,11 @@ function renderGrapheStats() {
     const variantes = valeursCochees('stats-case-variante');
 
     if (!refs.length) {
-        zone.innerHTML = '<div class="tournaments-empty">Coche au moins un joueur à comparer.</div>';
+        zone.innerHTML = '<div class="liste-vide">Coche au moins un joueur à comparer.</div>';
         return;
     }
     if (!cadences.length || !variantes.length) {
-        zone.innerHTML = '<div class="tournaments-empty">Coche au moins une cadence et un type de partie.</div>';
+        zone.innerHTML = '<div class="liste-vide">Coche au moins une cadence et un type de partie.</div>';
         return;
     }
 
@@ -154,7 +154,7 @@ function renderGrapheStats() {
     html += buildGraphe(lignes);
 
     if (statsCalculees.ignorees) {
-        html += `<div class="tournaments-empty">${statsCalculees.ignorees} partie(s) ne sont pas comptées : ` +
+        html += `<div class="liste-vide">${statsCalculees.ignorees} partie(s) ne sont pas comptées : ` +
             'leurs partants ne sont rattachés à aucune fiche de joueur, on ne peut donc pas savoir qui a joué.</div>';
     }
 
