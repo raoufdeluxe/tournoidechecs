@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Tests de l'outil d'export vers Grist.
+"""Tests de l'outil Grist.
 
-    python3 outils/test_vers_grist.py
+    python3 outils/test_grist.py
 
 Ils décrivent ce que l'outil fait, pas comment il est écrit : le document est
 mis en état avant d'écrire, ce qu'on écrit correspond aux colonnes déclarées, et
@@ -15,17 +15,17 @@ import json
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import urllib.parse
 import unittest
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
-# Le fichier s'appelle vers-grist.py : un tiret ne s'importe pas, mais c'est le
-# nom qu'on tape en ligne de commande, et c'est lui qui compte. On le charge
-# donc par son chemin plutôt que de le renommer pour arranger ce test.
-_chemin = Path(__file__).with_name("vers-grist.py")
-_spec = importlib.util.spec_from_file_location("vers_grist", _chemin)
+# Chargé par son chemin : le test tourne aussi bien lancé seul que depuis la
+# racine, sans dépendre de ce qu'il y a dans sys.path.
+_chemin = Path(__file__).with_name("grist.py")
+_spec = importlib.util.spec_from_file_location("grist", _chemin)
 outil = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(outil)
 
@@ -100,25 +100,44 @@ class FauxGrist(BaseHTTPRequestHandler):
 
 
 class FauxApp(BaseHTTPRequestHandler):
-    """L'API de l'application, du côté où l'outil la lit."""
+    """L'API de l'application : ce que l'outil y lit, et ce qu'il y écrit."""
 
     etats = {}
+    fiches = [{"id": "j-alice", "nom": "Alice", "elo": 1500, "pseudo": "A_CC"}]
+    recu = []
 
-    def do_GET(self):
-        chemin, _, requete = self.path.partition("?")
-        if chemin.endswith("/joueurs"):
-            corps = {"joueurs": [{"id": "j-alice", "nom": "Alice", "elo": 1500, "pseudo": "A_CC"}]}
-        elif chemin.endswith("/tournois"):
-            corps = {"tournaments": [{"id": t} for t in self.etats]}
-        else:
-            identifiant = urllib.parse.parse_qs(requete)["id"][0]
-            corps = {"version": 1, "updatedAt": None, "state": self.etats[identifiant]}
+    def _corps(self):
+        taille = int(self.headers.get("Content-Length") or 0)
+        return json.loads(self.rfile.read(taille) or b"{}")
+
+    def _repond(self, corps):
         charge = json.dumps(corps).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(charge)))
         self.end_headers()
         self.wfile.write(charge)
+
+    def do_PUT(self):
+        self.recu.append(("joueurs", self._corps()))
+        self._repond({"version": 2, "updatedAt": None})
+
+    def do_POST(self):
+        identifiant = urllib.parse.parse_qs(self.path.partition("?")[2])["id"][0]
+        self.recu.append((identifiant, self._corps()))
+        self._repond({"version": 2, "updatedAt": None})
+
+    def do_GET(self):
+        chemin, _, requete = self.path.partition("?")
+        if chemin.endswith("/joueurs"):
+            corps = {"version": 1, "joueurs": self.fiches}
+        elif chemin.endswith("/tournois"):
+            corps = {"tournaments": [{"id": t} for t in self.etats]}
+        else:
+            identifiant = urllib.parse.parse_qs(requete)["id"][0]
+            corps = {"version": 1, "updatedAt": None,
+                     "state": self.etats.get(identifiant, {})}
+        self._repond(corps)
 
     def log_message(self, *args):
         pass
@@ -387,8 +406,8 @@ class UneSeuleCommande(SurUnFauxGrist):
 
     def lance(self, *options):
         argv = sys.argv
-        sys.argv = ["vers-grist.py", "--app", self.adresse, "--doc", self.doc,
-                    "--cle", "cle", *options]
+        sys.argv = ["grist.py", "sync", "kv2grist", "--app", self.adresse,
+                    "--doc", self.doc, "--cle", "cle", *options]
         try:
             with contextlib.redirect_stdout(io.StringIO()) as sortie:
                 outil.main()
@@ -419,6 +438,82 @@ class UneSeuleCommande(SurUnFauxGrist):
         self.assertEqual(FauxGrist.journal, [])
         self.assertEqual(FauxGrist.tables["Manches"], ["Cle", "Joueur1", "Joueur2"])
         self.assertIn("irréversible", sortie)
+
+
+class LesDeuxSens(SurUnFauxGrist):
+    """`sync kv2grist` et `sync grist2kv` : le sens est l'argument."""
+
+    def setUp(self):
+        super().setUp()
+        FauxApp.etats = {"coupe": ETAT}
+        FauxApp.recu = []
+        self.adresse = f"http://127.0.0.1:{SERVEUR_APP.server_port}"
+
+    def lance(self, *options):
+        argv = sys.argv
+        sys.argv = ["grist.py", *options, "--app", self.adresse,
+                    "--doc", self.doc, "--cle", "cle"]
+        try:
+            with contextlib.redirect_stdout(io.StringIO()) as sortie:
+                outil.main()
+            return sortie.getvalue()
+        finally:
+            sys.argv = argv
+
+    def test_kv2grist_verse_l_application_dans_le_document(self):
+        self.lance("sync", "kv2grist", "--pousse")
+        self.assertEqual([l["require"]["Cle"] for l in FauxGrist.lignes["Manches"]],
+                         ["coupe:poule:0-1:1", "coupe:demie:1:1", "coupe:finale:1:1"])
+        self.assertEqual(FauxApp.recu, [], "rien n'est écrit dans l'application")
+
+    def test_grist2kv_reinjecte_le_document_dans_l_application(self):
+        self.lance("sync", "kv2grist", "--pousse")      # le document a de quoi relire
+        FauxGrist.journal = []
+        self.lance("sync", "grist2kv", "--pousse")
+
+        # Les fiches d'abord : sans elles, les partants seraient dits supprimés.
+        self.assertEqual(FauxApp.recu[0][0], "joueurs")
+        self.assertEqual([f["id"] for f in FauxApp.recu[0][1]["joueurs"]], ["j-alice"])
+
+        identifiant, corps = FauxApp.recu[1]
+        self.assertEqual(identifiant, "coupe")
+        self.assertEqual(corps["baseVersion"], 1, "la version relue juste avant d'écrire")
+        t = corps["state"]["tournament"]
+        self.assertEqual(t["name"], "Coupe du Dimanche")
+        self.assertEqual(len(t["matches"]), 1)
+        self.assertEqual(FauxGrist.journal, [], "rien n'est écrit dans le document")
+
+    def test_sans_pousse_aucun_des_deux_sens_n_ecrit(self):
+        self.lance("sync", "kv2grist")
+        self.lance("sync", "grist2kv")
+        self.assertEqual(FauxApp.recu, [])
+        self.assertEqual(FauxGrist.journal, [])
+
+    def test_un_sens_manquant_se_dit(self):
+        for oubli in ([], ["sync"]):
+            with self.assertRaises(SystemExit) as cas:
+                self.lance(*oubli)
+            self.assertIn("kv2grist", str(cas.exception), oubli)
+            self.assertIn("grist2kv", str(cas.exception), oubli)
+        self.assertEqual(FauxApp.recu, [])
+        self.assertEqual(FauxGrist.journal, [])
+
+    def test_le_fichier_arrete_grist2kv_avant_l_application(self):
+        self.lance("sync", "kv2grist", "--pousse")      # le document a de quoi relire
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = Path(dossier) / "extrait.json"
+            self.lance("sync", "grist2kv", "--fichier", str(chemin))
+            sauvegarde = json.loads(chemin.read_text(encoding="utf-8"))
+
+        self.assertEqual(list(sauvegarde["tournois"]), ["coupe"])
+        # Les fiches font le voyage : sans elles, les partants seraient dits supprimés.
+        self.assertEqual([f["id"] for f in sauvegarde["joueurs"]], ["j-alice"])
+        self.assertEqual(FauxApp.recu, [], "l'application n'est pas touchée")
+
+    def test_le_fichier_ne_vaut_que_pour_le_sens_qui_lit_le_document(self):
+        with self.assertRaises(SystemExit) as cas:
+            self.lance("sync", "kv2grist", "--fichier", "nawak.json")
+        self.assertIn("grist2kv", str(cas.exception))
 
 
 @unittest.skipUnless(shutil.which("node"), "node n'est pas là")
@@ -512,7 +607,7 @@ class LeFormatDeSauvegarde(unittest.TestCase):
 
 
 class LExtrait(SurUnFauxGrist):
-    """--depuis-grist : le document redevient un fichier que l'application avale."""
+    """Ce que grist2kv relit du document, avant d'en faire quoi que ce soit."""
 
     def setUp(self):
         super().setUp()

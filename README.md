@@ -121,11 +121,11 @@ le mode (`live` ou `daily`) et l'identifiant, puis reconstruit l'appel. Un lien
 qui ne mène pas à une partie chess.com est refusé (`400`) sans que le site soit
 dérangé ; une partie introuvable rend `404`, un site en panne `502`.
 
-**Le document Grist** — facultatif. `outils/vers-grist.py` recopie les tournois
+**Le document Grist** — facultatif. `outils/grist.py` recopie les tournois
 **à plat** dans un document Grist, pour qu'on puisse trier, filtrer et tracer ses
-propres courbes dans une feuille de calcul. C'est une commande qu'on lance :
-**rien ne tient le document à jour tout seul**, il ne reflète que le dernier
-versement.
+propres courbes dans une feuille de calcul — et sait les en ramener. C'est une
+commande qu'on lance, dans un sens ou dans l'autre : **rien ne tient les deux
+côtés d'accord tout seul**, le document ne reflète que la dernière synchro.
 
 | Table | Une ligne par | Clé | Colonnes |
 |---|---|---|---|
@@ -210,18 +210,28 @@ manière de finir — à ne pas confondre avec `Blancs`, `Noirs` et `Resultat`, 
 sont ce que le tournoi tient pour vrai. Elles restent vides pour une manche sans
 partie en ligne.
 
-**Verser des tournois d'un coup** — `outils/vers-grist.py` exporte tout ce que
-l'application connaît vers Grist, sans avoir à rouvrir chaque tournoi. Ce n'est
-pas une fonctionnalité de l'application mais une opération qu'on fait à la main,
-au moment d'une bascule ou d'une reprise : d'où le script plutôt qu'un bouton.
+**Synchroniser d'un coup** — `outils/grist.py` porte tout ce que
+l'application connaît dans le document, et sait le rapporter, sans avoir à
+rouvrir chaque tournoi. Ce n'est pas une fonctionnalité de l'application mais une
+opération qu'on fait à la main, au moment d'une bascule ou d'une reprise : d'où
+le script plutôt qu'un bouton.
 
 ```bash
-python3 outils/vers-grist.py --app http://127.0.0.1:8787 --env .dev.vars   # dit ce qu'il ferait
-python3 outils/vers-grist.py --app https://…workers.dev --env .dev.vars --pousse
-python3 outils/vers-grist.py --app … --tournoi coupe-du-dimanche --pousse  # un seul
-python3 outils/vers-grist.py --app … --env .dev.vars --refaire --pousse   # repartir de zéro
-python3 outils/vers-grist.py --env .dev.vars --depuis-grist --tournoi coupe # sens inverse
+python3 outils/grist.py sync kv2grist --app … --env .dev.vars           # dit ce qu'il ferait
+python3 outils/grist.py sync kv2grist --app … --env .dev.vars --pousse  # l'app → le document
+python3 outils/grist.py sync grist2kv --app … --env .dev.vars --pousse  # le document → l'app
+python3 outils/grist.py sync kv2grist --app … --tournoi coupe --pousse  # un seul tournoi
+python3 outils/grist.py sync kv2grist --app … --refaire --pousse        # repartir de zéro
+python3 outils/grist.py sync grist2kv --env .dev.vars --fichier         # vers un fichier
 ```
+
+**Le sens est l'argument, et il n'a pas de défaut** : `kv2grist` verse
+l'application dans le document, `grist2kv` fait l'inverse et **remplace** les
+tournois de même identifiant. Se tromper de sens écrase un côté par l'autre, donc
+l'outil refuse de le deviner — lancé sans, il rappelle les deux. Les deux passent
+par l'API du tournoi, relisent la version courante juste avant d'écrire, et ne
+font rien sans `--pousse`. En `grist2kv`, les fiches partent avant les tournois :
+sans elles, les partants s'afficheraient comme supprimés.
 
 **Le versement met le document en état de lui-même** : il crée les tables
 manquantes et **ajoute aux tables existantes les colonnes qui leur manquent**,
@@ -246,26 +256,28 @@ ne fait rien sans `--pousse` et dit d'abord ce qu'il ferait.
 
 [934]: https://github.com/gristlabs/grist-core/issues/934
 
-**`--depuis-grist` fait le chemin inverse** : il relit le document et écrit un
-fichier que la page **Sauvegarde** de l'application avale tel quel — même format,
-même version, on l'ouvre avec « Importer une sauvegarde » et l'écran de
-confirmation dit ce qu'il ferait avant de le faire.
+**`--fichier` arrête `grist2kv` en chemin** : au lieu d'écrire dans
+l'application, il dépose ce qu'il a relu dans un fichier que la page
+**Sauvegarde** avale tel quel — même format, même version, on l'ouvre avec
+« Importer une sauvegarde » et l'écran de confirmation dit ce qu'il ferait avant
+de le faire. C'est le même sens, avec une relecture au milieu.
 
 ```bash
-python3 outils/vers-grist.py --env .dev.vars --depuis-grist --tournoi coupe
+python3 outils/grist.py sync grist2kv --env .dev.vars --tournoi coupe --fichier
 # coupe se retrouve dans sauvegarde-2026-09-11T12-00-00.json
 ```
 
-Sans `--tournoi`, il extrait tout le document ; `--depuis-grist mon-fichier.json`
-choisit le nom. Il n'écrit rien dans Grist, donc `--pousse` n'a rien à autoriser.
-Les **fiches jointes sont celles que les tournois extraits citent** — sans elles,
-leurs partants s'afficheraient comme supprimés ; les autres ne sont pas du
-voyage, c'est un extrait et non une sauvegarde du document.
+Sans `--tournoi`, il extrait tout le document ; `--fichier mon-extrait.json`
+choisit le nom. L'application n'est ni lue ni touchée — `--app` n'a donc rien à
+désigner, et `--pousse` rien à autoriser. Les **fiches jointes sont celles que
+les tournois extraits citent** — sans elles, leurs partants s'afficheraient comme
+supprimés ; les autres ne sont pas du voyage, c'est un extrait et non une
+sauvegarde du document.
 
 C'est là que le modèle sans JSON se paie : la reconstruction existe **deux
 fois**, dans `public/grist/widget-tournoi.js` côté JavaScript et `etat_depuis_lignes()`
 dans l'outil. Deux implémentations de la même règle divergent, et ce serait en
-silence. Un test les confronte donc : `outils/test_vers_grist.py` verse un
+silence. Un test les confronte donc : `outils/test_grist.py` verse un
 tournoi allé jusqu'au bout — poule, demie avec sa belle, finale, partie relue sur
 chess.com —, le fait rebâtir par le widget, et exige que le tournoi revienne
 identique à celui qui est parti.
@@ -293,15 +305,16 @@ bronze. Le podium n'est enregistré nulle part : le widget le recalcule, et c'es
 ce qui lui permet d'afficher « Terminé » là où la restauration, qui ne sait pas
 départager, s'arrête à « Grande finale ».
 
-Il lit **par l'API du tournoi**, la même que le navigateur : il marche donc sur
-`wrangler dev` comme sur l'adresse déployée, et ne demande aucun secret
-Cloudflare. Sans `--pousse`, il dit seulement ce qu'il enverrait. Python 3, sans
-dépendance.
+Il passe **par l'API du tournoi** dans les deux sens, la même que le navigateur :
+il marche donc sur `wrangler dev` comme sur l'adresse déployée, et ne demande
+aucun secret Cloudflare. Sans `--pousse`, il dit seulement ce qu'il ferait.
+Python 3, sans dépendance.
 
 **Le KV est la vérité** : c'est lui qui est lu au bord du réseau, lui qui porte la
-version, lui qui refuse une écriture concurrente. **Le Worker ne parle pas à
-Grist** — il ignore qu'un document existe. Le versement se fait à la main, quand
-on le décide.
+version, lui qui refuse une écriture concurrente — `grist2kv` lui-même y repasse,
+version par version, comme le ferait un navigateur. **Le Worker ne parle pas à
+Grist** — il ignore qu'un document existe. La synchro se fait à la main, quand on
+la décide.
 
 **Les joueurs** — création, modification et suppression fiche par fiche :
 
@@ -341,7 +354,7 @@ wrangler dev
 node --test
 
 # les outils de outils/, en Python, testés de la même façon
-python3 outils/test_vers_grist.py
+python3 outils/test_grist.py
 ```
 
 La page marche aussi en `file://` (double-clic sur `public/index.html`) : dans ce cas
@@ -356,7 +369,7 @@ wrangler deploy
 ```
 
 **Réglages de l'outil Grist.** Ils ne concernent pas le Worker, qui ne parle
-jamais à Grist : `outils/vers-grist.py` les lit dans un fichier `dotenv` passé
+jamais à Grist : `outils/grist.py` les lit dans un fichier `dotenv` passé
 par `--env`, ou dans l'environnement.
 
 ```

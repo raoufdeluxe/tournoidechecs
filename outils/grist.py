@@ -1,22 +1,29 @@
 #!/usr/bin/env python3
-"""Exporte les tournois de l'application vers un document Grist.
+"""Synchronise les tournois entre l'application et un document Grist.
 
 Ce n'est pas une fonctionnalité de l'application — c'est une opération qu'on
 fait à la main, au moment d'une bascule ou d'une reprise. D'où le script.
 
-Il lit par l'API du tournoi (la même que le navigateur), donc il marche aussi
-bien sur `wrangler dev` que sur l'adresse déployée, et n'a besoin d'aucun secret
-Cloudflare. Il écrit dans Grist par « ajouter ou mettre à jour » : relancé deux
-fois, il n'empile rien.
+    python3 outils/grist.py sync kv2grist --app … --env .dev.vars --pousse
+    python3 outils/grist.py sync grist2kv --app … --env .dev.vars --pousse
 
-    python3 outils/vers-grist.py --app http://127.0.0.1:8787 --env .dev.vars
-    python3 outils/vers-grist.py --app https://echecs.exemple.workers.dev --env .dev.vars --pousse
+**Le sens est l'argument** : `kv2grist` verse l'application dans le document,
+`grist2kv` fait l'inverse. Il n'y a pas de sens par défaut — se tromper de sens
+écrase, alors on le nomme.
+
+Le versement passe par l'API du tournoi, la même que le navigateur : ça marche
+sur `wrangler dev` comme sur l'adresse déployée, sans aucun secret Cloudflare.
+Côté Grist, l'écriture se fait par « ajouter ou mettre à jour » : relancé deux
+fois, rien ne s'empile.
 
 --refaire supprime les tables, les recrée au modèle et reverse tout : c'est ce
 qu'on fait après un changement de modèle, quand compléter ne suffit plus.
+--fichier arrête grist2kv sur une sauvegarde JSON au lieu d'écrire dans
+l'application : on l'importe alors depuis la page Sauvegarde, qui demande
+confirmation. Même sens, une destination de plus.
 
-Sans --pousse, il ne fait que dire ce qu'il enverrait. Le modèle est celui du
-miroir du Worker, au champ près : voir TABLES plus bas.
+Sans --pousse, rien n'est écrit : l'outil dit seulement ce qu'il ferait. Le
+modèle des tables est décrit par TABLES, plus bas.
 """
 
 import argparse
@@ -455,6 +462,9 @@ def refaire_tables(doc, cle, pousse):
 # --- Le versement ------------------------------------------------------------
 
 MANQUE_DOC = "Il manque --doc / --cle (ou GRIST_DOC / GRIST_CLE)."
+SANS_SENS = ("Il faut dire le sens :\n"
+             "  sync kv2grist  l'application → le document\n"
+             "  sync grist2kv  le document → l'application")
 
 # Le format que la page /sauvegarde de l'application sait relire. Un test vérifie
 # qu'il colle encore à celui de public/js/sauvegarde.js.
@@ -508,6 +518,49 @@ def nom_de_fichier(date=None):
     return "sauvegarde-" + horodatage.replace(":", "-").replace(".", "-")[:19] + ".json"
 
 
+def deposer(sauvegarde, fichier):
+    """L'autre destination du sens Grist → application : un fichier plutôt que
+    l'application elle-même. La page Sauvegarde l'avale tel quel, en demandant
+    confirmation — d'où l'intérêt de s'arrêter là quand on veut relire avant."""
+    fichier = fichier or nom_de_fichier()
+    with open(fichier, "w", encoding="utf-8") as f:
+        json.dump(sauvegarde, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    manches = sum(len(manches_du_tournoi(e["state"])) for e in sauvegarde["tournois"].values())
+    print(f"{fichier} : {len(sauvegarde['tournois'])} tournoi(s), "
+          f"{manches} manches, {len(sauvegarde['joueurs'])} fiche(s)")
+    print("À injecter dans l'application : page Sauvegarde → « Importer une sauvegarde ».")
+
+
+def reverser(app, sauvegarde, pousse):
+    """Le sens Grist → application : réinjecte les tournois et les fiches.
+
+    L'API refuse une écriture partie d'une version périmée : on relit donc la
+    version courante juste avant d'écrire, comme le ferait un navigateur. Les
+    fiches passent en premier — sans elles, les partants d'un tournoi restauré
+    s'afficheraient comme supprimés."""
+    api = app.rstrip("/") + "/api"
+    comptes = {"fiches": 0, "tournois": 0}
+
+    fiches = sauvegarde["joueurs"]
+    if fiches:
+        print(f"  ← {len(fiches)} fiche(s)")
+        comptes["fiches"] = len(fiches)
+        if pousse:
+            appel(f"{api}/joueurs", "PUT",
+                  {"baseVersion": appel(f"{api}/joueurs").get("version", 0), "joueurs": fiches})
+
+    for identifiant, enveloppe in sauvegarde["tournois"].items():
+        adresse = f"{api}/etat?id={urllib.parse.quote(identifiant)}"
+        courant = appel(adresse).get("version", 0)
+        print(f"  ← {identifiant} (version {courant} → {courant + 1})")
+        comptes["tournois"] += 1
+        if pousse:
+            appel(adresse, "POST", {"baseVersion": courant, "state": enveloppe["state"]})
+
+    return comptes
+
+
 def verser(app, ecrire, tournois=None):
     """Lit l'application et pose tout dans Grist : les fiches, puis chaque
     tournoi avec ses partants et ses manches."""
@@ -532,19 +585,32 @@ def verser(app, ecrire, tournois=None):
 
 
 def main():
-    a = argparse.ArgumentParser(description="Exporte les tournois vers Grist.")
+    a = argparse.ArgumentParser(description="Synchronise les tournois entre l'application et Grist.")
+    # Le sens est l'argument, et il n'a pas de défaut : se tromper de sens
+    # écrase un côté par l'autre, alors l'outil refuse de le deviner.
+    a.add_argument("commande", nargs="?", choices=["sync"],
+                   help="sync <sens> : synchronise dans le sens demandé")
+    a.add_argument("sens", nargs="?", choices=["kv2grist", "grist2kv"],
+                   help="kv2grist : l'application vers le document. "
+                        "grist2kv : le document vers l'application.")
     a.add_argument("--app", help="adresse de l'application (sans /api)")
     a.add_argument("--doc", default=os.environ.get("GRIST_DOC"), help="https://…/api/docs/<id>")
     a.add_argument("--cle", default=os.environ.get("GRIST_CLE"), help="clé d'API Grist")
     a.add_argument("--env", help="fichier dotenv à charger (.dev.vars, .env.grist)")
-    a.add_argument("--tournoi", action="append", help="n'exporter que ceux-là (répétable)")
+    a.add_argument("--tournoi", action="append", help="n'en prendre que ceux-là (répétable)")
     a.add_argument("--refaire", action="store_true",
-                   help="supprime les tables, les recrée au modèle, puis reverse tout")
-    a.add_argument("--depuis-grist", metavar="FICHIER", nargs="?", const="",
-                   help="sens inverse : relit le document et écrit une sauvegarde JSON "
-                        "à injecter dans /sauvegarde (défaut : sauvegarde-<horodatage>.json)")
+                   help="kv2grist : supprime les tables et les recrée au modèle avant de verser")
+    a.add_argument("--fichier", metavar="NOM", nargs="?", const="",
+                   help="grist2kv : écrire une sauvegarde JSON à injecter dans /sauvegarde "
+                        "plutôt que d'écrire dans l'application "
+                        "(défaut : sauvegarde-<horodatage>.json)")
     a.add_argument("--pousse", action="store_true", help="écrire pour de vrai")
     args = a.parse_args()
+
+    if args.commande != "sync" or not args.sens:
+        sys.exit(SANS_SENS)
+    if args.fichier is not None and args.sens != "grist2kv":
+        sys.exit("--fichier ne vaut que pour « sync grist2kv » : c'est le document qu'on relit.")
 
     lire_env(args.env)
     doc = args.doc or os.environ.get("GRIST_DOC")
@@ -554,26 +620,29 @@ def main():
                  "Ce n'est pas l'adresse de l'API : il y manque /api/docs/.\n"
                  "Attendu : https://TON-INSTANCE/api/docs/<identifiant du document>")
 
-    # Le sens inverse : Grist est la source, l'application la destination. Rien
-    # n'est écrit dans le document, et --pousse n'a rien à autoriser.
-    if args.depuis_grist is not None:
-        if not (doc and cle):
-            sys.exit(MANQUE_DOC)
-        sauvegarde = extraire(doc, cle, args.tournoi)
-        fichier = args.depuis_grist or nom_de_fichier()
-        with open(fichier, "w", encoding="utf-8") as f:
-            json.dump(sauvegarde, f, ensure_ascii=False, indent=2)
-            f.write("\n")
-        manches = sum(len(manches_du_tournoi(e["state"])) for e in sauvegarde["tournois"].values())
-        print(f"{fichier} : {len(sauvegarde['tournois'])} tournoi(s), "
-              f"{manches} manches, {len(sauvegarde['joueurs'])} fiche(s)")
-        print("À injecter dans l'application : page Sauvegarde → « Importer une sauvegarde ».")
-        return
-
-    if not args.app:
-        sys.exit("Il manque --app (l'adresse de l'application).")
-    if args.pousse and not (doc and cle):
+    # Le document est la source en grist2kv, la destination en kv2grist : il
+    # faut savoir où il est dès qu'on le lit, et dès qu'on y écrit pour de vrai.
+    if not (doc and cle) and (args.sens == "grist2kv" or args.pousse):
         sys.exit(MANQUE_DOC)
+    # L'application n'est touchée ni lue quand grist2kv s'arrête sur un fichier.
+    if not args.app and args.fichier is None:
+        sys.exit("Il manque --app (l'adresse de l'application).")
+
+    # Grist → application : le document est la source et rien n'y est écrit.
+    # La destination est l'application, ou un fichier quand on veut relire avant.
+    if args.sens == "grist2kv":
+        sauvegarde = extraire(doc, cle, args.tournoi)
+        if args.fichier is not None:
+            deposer(sauvegarde, args.fichier)
+            return
+        print("Application :")
+        comptes = reverser(args.app, sauvegarde, args.pousse)
+        verbe = "Réinjecté" if args.pousse else "À réinjecter (essai à blanc)"
+        print(f"\n{verbe} : {comptes['tournois']} tournoi(s), {comptes['fiches']} fiche(s)")
+        if not args.pousse:
+            print("Relance avec --pousse pour écrire pour de vrai "
+                  "— les tournois de même identifiant seront remplacés.")
+        return
 
     def ecrire(table, lignes):
         if lignes and args.pousse:

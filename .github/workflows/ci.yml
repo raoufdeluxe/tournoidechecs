@@ -25,7 +25,7 @@ jobs:
       # Les outils de outils/ sont en Python, et testés comme le reste : la
       # bibliothèque standard suffit, python3 est déjà là sur l'image.
       - name: Tests des outils
-        run: python3 outils/test_vers_grist.py
+        run: python3 outils/test_grist.py
 
   worker:
     name: Worker (build à blanc)

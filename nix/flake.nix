@@ -27,7 +27,7 @@
             echo "  wrangler login"
             echo "  wrangler kv namespace create TOURNOI_KV"
             echo "  wrangler deploy"
-            echo "  python3 outils/vers-grist.py --help"
+            echo "  python3 outils/grist.py --help"
           '';
         };
       });

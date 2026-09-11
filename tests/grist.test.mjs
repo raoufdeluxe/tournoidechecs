@@ -2,7 +2,7 @@
 // document, sans rejouer aucune règle.
 //
 // Qu'il relise fidèlement ce que l'outil a versé se vérifie ailleurs, dans
-// outils/test_vers_grist.py : l'écrivain est en Python, le lecteur ici.
+// outils/test_grist.py : l'écrivain est en Python, le lecteur ici.
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';

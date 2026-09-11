@@ -11,9 +11,9 @@
 // seul à en avoir besoin — core.js est chargé par les cinq pages, dont aucune
 // n'a à savoir qu'un tableur existe.
 //
-// outils/vers-grist.py dit les mêmes règles à l'envers, pour écrire ces lignes.
+// outils/grist.py dit les mêmes règles à l'envers, pour écrire ces lignes.
 // Deux langages, deux sens : qu'ils restent d'accord se vérifie par
-// l'aller-retour de outils/test_vers_grist.py.
+// l'aller-retour de outils/test_grist.py.
 
 
 // Le rang de la manche dans son duel, quelle que soit la phase : l'aller et le

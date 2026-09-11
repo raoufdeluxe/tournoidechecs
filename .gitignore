@@ -8,7 +8,7 @@ dist
 todos/
 __pycache__/
 
-# Les extraits de tournois : ceux de --depuis-grist comme ceux du bouton
+# Les extraits de tournois : ceux de --fichier comme ceux du bouton
 # « Tout exporter ». Ils portent des noms de joueurs, ils n'ont rien à faire
 # dans l'historique.
 sauvegarde-*.json
