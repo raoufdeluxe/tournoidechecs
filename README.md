@@ -121,6 +121,188 @@ le mode (`live` ou `daily`) et l'identifiant, puis reconstruit l'appel. Un lien
 qui ne mène pas à une partie chess.com est refusé (`400`) sans que le site soit
 dérangé ; une partie introuvable rend `404`, un site en panne `502`.
 
+**Le document Grist** — facultatif. `outils/vers-grist.py` recopie les tournois
+**à plat** dans un document Grist, pour qu'on puisse trier, filtrer et tracer ses
+propres courbes dans une feuille de calcul. C'est une commande qu'on lance :
+**rien ne tient le document à jour tout seul**, il ne reflète que le dernier
+versement.
+
+| Table | Une ligne par | Clé | Colonnes |
+|---|---|---|---|
+| `Joueurs` | fiche | `Ref` | `Nom`, `Elo`, `Pseudo` |
+| `Tournois` | tournoi | `Tournoi` | `Nom`, `Version`, `Maj` |
+| `Partants` | joueur **dans** un tournoi | `Cle` (`tournoi:indice`) | `Tournoi`, `Indice`, `Ref` |
+| `Manches` | manche, toutes phases confondues | `Cle` (`tournoi:phase:duel:manche`) | `Tournoi`, `Phase`, `Duel`, `Journee`, `Manche`, `Blancs`, `Noirs`, `Resultat`, `Cadence`, `Variante`, `Lien`, `CC_Blancs`, `CC_Noirs`, `CC_Issue`, `CC_Fin`, `CC_Coups` |
+
+Les quatre tables se joignent :
+
+```
+  Joueurs (Ref) ←── Partants (Cle) ──→ Tournois (Tournoi)
+                       ↑
+                       └───────────── Manches.Blancs / Noirs
+```
+
+**Aucune colonne ne porte de JSON.** Les quatre tables suffisent : un tournoi
+s'y verse et s'en rebâtit à l'identique — `etatDepuisLignes()` dans
+le widget fait le chemin du retour, et un test le vérifie sur un tournoi allé
+jusqu'au bout, belle et podium compris. C'est ce qui rend l'historique de Grist utile : un
+instantané n'est pas un tableau de scores, c'est un tournoi qu'on peut repousser
+vers l'application.
+
+**Une manche désigne deux _partants_, pas deux fiches.** `Blancs` et `Noirs`
+renvoient sur `Partants`, qui renvoie sur `Joueurs` par sa `Ref` : un tournoi
+d'avant les fiches se lit donc comme les autres, au lieu de laisser deux colonnes
+vides. Dans Grist, ces colonnes se convertissent en colonnes **Référence** — la
+table affiche alors les noms tout en gardant le lien.
+
+**`Partants` dit qui est inscrit à quoi** : un joueur *dans* un tournoi, avec son
+indice. **Une table d'association pure** — ni nom, ni Elo, ni rang : le nom et
+l'Elo sont dans `Joueurs` (les recopier ici ferait dépendre `Nom` de `Ref` plutôt
+que du partant, la dépendance transitive que la 3e forme normale interdit), et
+le podium se recalcule des manches.
+
+**Le résultat s'écrit en couleurs** : `B` si les blancs gagnent, `N` si les
+noirs gagnent, `E` en cas d'égalité, vide tant que la manche n'est pas jouée.
+Une seule colonne : les points de chacun s'en déduisent, et « jouée » se lit à la
+présence de la lettre.
+
+Les deux joueurs sont nommés **par leur couleur**, et non par leur rang dans le
+duel. Les couleurs alternent d'une manche à l'autre — celui qui reçoit a les
+blancs à l'aller, les noirs au retour, c'est la règle qu'affichent les pions ♙/♟
+des cartes, et la belle repart comme l'aller. L'outil fait cette bascule une
+fois pour toutes : une ligne se lit sans savoir d'où elle vient.
+
+**`Phase`, `Duel`, `Manche` situent une manche**, et font sa clé naturelle avec
+le tournoi. `Phase` vaut `poule`, `demie` ou `finale` ; `Duel` nomme le duel dans
+sa phase — la paire qui s'affronte en poule (`0-3`), le numéro de la demie
+ailleurs ; `Manche` est le rang dans ce duel, l'aller valant 1, le retour 2 et la
+belle 3.
+
+### Ce que le schéma respecte, et où il s'arrête
+
+Les quatre tables sont en **3e forme normale** : aucun attribut non clé ne dépend
+d'un autre attribut non clé. C'est ce qui a coûté `Partants.Nom` et `Elo` — le
+nom d'un joueur n'a qu'un endroit — et le podium, qui n'est qu'un calcul.
+
+Elles ne sont **pas en forme normale de Boyce-Codd**, et c'est délibéré : la clé
+d'un partant porte son tournoi (`coupe:3`), donc `Manches.Blancs` détermine
+`Manches.Tournoi`, et la paire `Blancs`/`Noirs` détermine `Duel` en poule. Ces
+deux attributs sont **premiers** — ils forment la clé naturelle d'une manche
+(`Tournoi`, `Phase`, `Duel`, `Manche`) — donc la 3FN tient ; les retirer
+reviendrait à retirer la clé.
+
+La colonne `Cle` de `Partants` et de `Manches` est une **clé de substitution** :
+`require` de l'API Grist ne compare qu'une colonne à la fois, et une colonne
+Référence a besoin d'une clé simple pour afficher le nom. Une clé candidate de
+plus ne viole aucune forme normale.
+
+Ce qui **ne s'enregistre pas**, parce que rien ne le fixe : le nombre de journées
+(c'est la dernière journée de la poule), la journée qu'on feuilletait (un point
+de vue, pas un fait), le vainqueur d'une demie (il se rejoue des manches, et
+quand la finale existe ses deux finalistes le disent), **le podium** (il se
+recalcule des manches : un tournoi terminé rouvre sur sa finale, et le clic qui
+proclame le vainqueur redonne le même), l'écran ouvert (il se déduit de
+l'avancement) et l'ordre de deux duels d'une même journée (ils n'ont pas de rang
+entre eux — ils reviennent triés).
+
+Les colonnes `CC_` sont les mots de **chess.com** — ses pseudos, son verdict, sa
+manière de finir — à ne pas confondre avec `Blancs`, `Noirs` et `Resultat`, qui
+sont ce que le tournoi tient pour vrai. Elles restent vides pour une manche sans
+partie en ligne.
+
+**Verser des tournois d'un coup** — `outils/vers-grist.py` exporte tout ce que
+l'application connaît vers Grist, sans avoir à rouvrir chaque tournoi. Ce n'est
+pas une fonctionnalité de l'application mais une opération qu'on fait à la main,
+au moment d'une bascule ou d'une reprise : d'où le script plutôt qu'un bouton.
+
+```bash
+python3 outils/vers-grist.py --app http://127.0.0.1:8787 --env .dev.vars   # dit ce qu'il ferait
+python3 outils/vers-grist.py --app https://…workers.dev --env .dev.vars --pousse
+python3 outils/vers-grist.py --app … --tournoi coupe-du-dimanche --pousse  # un seul
+python3 outils/vers-grist.py --app … --env .dev.vars --refaire --pousse   # repartir de zéro
+python3 outils/vers-grist.py --env .dev.vars --depuis-grist --tournoi coupe # sens inverse
+```
+
+**Le versement met le document en état de lui-même** : il crée les tables
+manquantes et **ajoute aux tables existantes les colonnes qui leur manquent**,
+avec les identifiants et les types qu'il attend. Il ne supprime ni ne renomme
+rien — une table qui porte des colonnes en plus les garde, et relancé il ne fait
+rien. Il n'y a donc pas d'étape préalable à ne pas oublier.
+
+`--refaire` **supprime les quatre tables, les recrée au modèle et reverse
+tout** — les trois d'un seul coup. C'est ce qu'on fait après un changement de
+modèle, quand compléter ne suffit plus : vider les tables laisserait leurs
+colonnes d'hier, et avec elles les vues et les formules qui s'y accrochaient.
+
+Ce sont bien les **tables** qui partent, pas leur contenu : **les vues, les mises
+en forme et les widgets construits dans Grist partent avec**. C'est le prix d'un
+document qui redevient exactement le modèle, et rien d'autre.
+
+Grist n'a pas de `DELETE` sur une table ([grist-core#934][934], toujours
+ouverte) : c'est l'action `RemoveTable`, posée par `/apply`, qui le fait. Et un
+document doit garder au moins une table — chacune est donc recréée aussitôt
+supprimée, plutôt que de toutes les retirer d'abord. Comme le reste, `--refaire`
+ne fait rien sans `--pousse` et dit d'abord ce qu'il ferait.
+
+[934]: https://github.com/gristlabs/grist-core/issues/934
+
+**`--depuis-grist` fait le chemin inverse** : il relit le document et écrit un
+fichier que la page **Sauvegarde** de l'application avale tel quel — même format,
+même version, on l'ouvre avec « Importer une sauvegarde » et l'écran de
+confirmation dit ce qu'il ferait avant de le faire.
+
+```bash
+python3 outils/vers-grist.py --env .dev.vars --depuis-grist --tournoi coupe
+# coupe se retrouve dans sauvegarde-2026-09-11T12-00-00.json
+```
+
+Sans `--tournoi`, il extrait tout le document ; `--depuis-grist mon-fichier.json`
+choisit le nom. Il n'écrit rien dans Grist, donc `--pousse` n'a rien à autoriser.
+Les **fiches jointes sont celles que les tournois extraits citent** — sans elles,
+leurs partants s'afficheraient comme supprimés ; les autres ne sont pas du
+voyage, c'est un extrait et non une sauvegarde du document.
+
+C'est là que le modèle sans JSON se paie : la reconstruction existe **deux
+fois**, dans `public/grist/widget-tournoi.js` côté JavaScript et `etat_depuis_lignes()`
+dans l'outil. Deux implémentations de la même règle divergent, et ce serait en
+silence. Un test les confronte donc : `outils/test_vers_grist.py` verse un
+tournoi allé jusqu'au bout — poule, demie avec sa belle, finale, partie relue sur
+chess.com —, le fait rebâtir par le widget, et exige que le tournoi revienne
+identique à celui qui est parti.
+
+**Le widget « Tournoi »** — `public/grist/widget-tournoi.html` affiche un tournoi
+entier *dans* Grist : son nom, son étape, son avancement, le classement avec ses
+quatre qualifiés, le tableau final et le podium. À installer comme widget
+personnalisé sur une vue de la table `Manches` (**Add Widget → Custom**, URL du
+fichier servi par l'application, accès **Full document access** : il lit aussi
+`Partants`, `Tournois` et `Joueurs`, et n'écrit jamais rien).
+
+L'API des widgets se charge depuis **l'instance qui affiche la page**, déduite
+de `document.referrer`, et non depuis `docs.getgrist.com` : le document et la
+bibliothèque restent de la même version — les deux diffèrent déjà de cent
+kilo-octets. Le référent n'est pas suivi les yeux fermés pour autant : n'importe
+quelle page peut mettre le widget en iframe, et charger son script reviendrait à
+lui laisser exécuter du code sur le domaine de l'application. La liste
+`INSTANCES`, en tête du fichier, dit lesquelles sont admises — une ligne de plus
+pour une instance de plus.
+
+Il ne rejoue **aucune** règle : il rebâtit le tournoi de ses lignes,
+puis appelle le code de l'application — `computeClassement` pour le barème et
+les départages, `resolveDuel` pour les duels, `resolveTroisiemePlace` pour le
+bronze. Le podium n'est enregistré nulle part : le widget le recalcule, et c'est
+ce qui lui permet d'afficher « Terminé » là où la restauration, qui ne sait pas
+départager, s'arrête à « Grande finale ».
+
+Il lit **par l'API du tournoi**, la même que le navigateur : il marche donc sur
+`wrangler dev` comme sur l'adresse déployée, et ne demande aucun secret
+Cloudflare. Sans `--pousse`, il dit seulement ce qu'il enverrait. Python 3, sans
+dépendance.
+
+**Le KV est la vérité** : c'est lui qui est lu au bord du réseau, lui qui porte la
+version, lui qui refuse une écriture concurrente. **Le Worker ne parle pas à
+Grist** — il ignore qu'un document existe. Le versement se fait à la main, quand
+on le décide.
+
 **Les joueurs** — création, modification et suppression fiche par fiche :
 
 | Route | Réponse |
@@ -149,7 +331,7 @@ historique `tournament`, pour qu'un onglet resté sur une ancienne version conti
 ## Développement
 
 ```bash
-# shell de dev (node + wrangler)
+# shell de dev (node, wrangler, python)
 nix develop ./nix
 
 # serveur local, sur http://localhost:8787
@@ -157,6 +339,9 @@ wrangler dev
 
 # la suite de tests (Node >= 22.7, aucune dépendance à installer)
 node --test
+
+# les outils de outils/, en Python, testés de la même façon
+python3 outils/test_vers_grist.py
 ```
 
 La page marche aussi en `file://` (double-clic sur `public/index.html`) : dans ce cas
@@ -169,6 +354,22 @@ wrangler login
 wrangler kv namespace create CHESS_TOURNAMENT   # une seule fois — reporter l'id dans wrangler.toml
 wrangler deploy
 ```
+
+**Réglages de l'outil Grist.** Ils ne concernent pas le Worker, qui ne parle
+jamais à Grist : `outils/vers-grist.py` les lit dans un fichier `dotenv` passé
+par `--env`, ou dans l'environnement.
+
+```
+GRIST_DOC="https://grist.numerique.gouv.fr/api/docs/abc123XYZ"
+GRIST_CLE="…"
+```
+
+Ces fichiers ne sont pas versionnés (`.gitignore` couvre `.dev.vars*` et
+`.env*`), et `wrangler dev` ne les envoie nulle part.
+
+> ⚠️ À ne pas confondre avec un fichier de *shell* que l'on `source` : celui-là
+> donne ses variables à la commande `wrangler` (son jeton Cloudflare), pas au
+> Worker. Une clé Grist posée là ne se retrouverait jamais dans `env`.
 
 > ⚠️ Dans `wrangler.toml`, la table `[assets]` doit rester **en dernier** :
 > en TOML, toute clé écrite après elle lui appartient.
@@ -448,7 +649,7 @@ toute la liste d'un coup, et celle-là est refusée si la liste a bougé entre-t
 ## Comment les choses s'appellent
 
 **Verbe technique en anglais, terme métier en français** : `renderClassement`,
-`addJoueur`, `loadJoueurs`, `setResultatPartie`, `computeClassement`,
+`addJoueur`, `loadJoueurs`, `setResultatManche`, `computeClassement`,
 `buildOptionsJoueurs`, `eraseTout`. Le geste se lit en anglais, ce sur quoi il
 porte se lit en français.
 

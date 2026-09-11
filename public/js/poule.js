@@ -152,9 +152,7 @@ async function startTournoi() {
             id: idx,
             ref: ref,
             name: fiche ? fiche.nom : NOM_JOUEUR_ABSENT,
-            elo: fiche ? fiche.elo : null,
-            points: 0,
-            matches: 0
+            elo: fiche ? fiche.elo : null
         };
     });
 
@@ -268,74 +266,6 @@ function renderVoletMatchs() {
     const joues = duels.filter(m => m.played).length;
     document.getElementById('matchs-resume').textContent = `Matchs : ${joues}/${total}`;
     document.getElementById('matrice-matchs').innerHTML = buildMatriceMatchs();
-}
-
-// Le classement général, toutes journées confondues : celui du tournoi tel
-// qu'il se terminerait aujourd'hui. Feuilleter le calendrier ne le change pas —
-// c'est le même que réclament la qualification, les départages et le titre.
-function computeClassement() {
-    const retenus = tournoi.matches.filter(m => m.played);
-
-    const standings = tournoi.players.map(p => ({ ...p, points: 0, matches: 0, wins: 0 }));
-
-    retenus.forEach(match => {
-        standings[match.player1].matches++;
-        standings[match.player2].matches++;
-        
-        if (match.player1Score > match.player2Score) {
-            standings[match.player1].points += 1;
-            standings[match.player1].wins += 1;
-        } else if (match.player2Score > match.player1Score) {
-            standings[match.player2].points += 1;
-            standings[match.player2].wins += 1;
-        } else {
-            standings[match.player1].points += 0.5;
-            standings[match.player2].points += 0.5;
-        }
-    });
-
-    // Points marqués uniquement dans les duels entre joueurs à égalité (confrontation directe)
-    function headToHeadPoints(playerId, tiedOpponentIds) {
-        let pts = 0;
-        retenus.forEach(match => {
-            const isP1 = match.player1 === playerId;
-            const isP2 = match.player2 === playerId;
-            if (!isP1 && !isP2) return;
-            const opponentId = isP1 ? match.player2 : match.player1;
-            if (!tiedOpponentIds.includes(opponentId)) return;
-            const myScore = isP1 ? match.player1Score : match.player2Score;
-            const oppScore = isP1 ? match.player2Score : match.player1Score;
-            if (myScore > oppScore) pts += 1;
-            else if (myScore === oppScore) pts += 0.5;
-        });
-        return pts;
-    }
-
-    // 1) Points, 2) Nombre de victoires
-    standings.sort((a, b) => b.points - a.points || b.wins - a.wins);
-
-    // 3) Confrontation directe entre joueurs encore à égalité stricte (points + victoires)
-    let i = 0;
-    while (i < standings.length) {
-        let j = i + 1;
-        while (j < standings.length && standings[j].points === standings[i].points && standings[j].wins === standings[i].wins) {
-            j++;
-        }
-        if (j - i > 1) {
-            const tiedIds = standings.slice(i, j).map(p => p.id);
-            const group = standings.slice(i, j).map(p => ({
-                ...p,
-                h2h: headToHeadPoints(p.id, tiedIds.filter(id => id !== p.id))
-            }));
-            group.sort((a, b) => b.h2h - a.h2h || b.matches - a.matches);
-            for (let k = 0; k < group.length; k++) {
-                standings[i + k] = group[k];
-            }
-        }
-        i = j;
-    }
-
-    return standings;
 }
 
 // Ce qu'il reste à jouer à un partant d'ici la fin du tournoi. Le classement
@@ -470,10 +400,9 @@ function renderParties() {
     // La clôture n'apparaît qu'une fois tous les duels joués.
     document.getElementById('cloture-poule').hidden = !allPlayed;
 
-    const container = document.getElementById('matches-container');
-    container.innerHTML = '';
-
-    roundMatches.forEach(match => renderCartePartie(match));
+    document.getElementById('matches-container').innerHTML = roundMatches
+        .map(match => buildCarteDuel(match, `poule:${match.id}`, { casaques: true }))
+        .join('');
 }
 
 // Domicile / extérieur.
@@ -500,21 +429,6 @@ function buildBadgeTerrain(match, isPlayer1) {
         : '<span class="venue" title="Extérieur">♟︎</span>';
 }
 
-function renderCartePartie(match) {
-    const div = document.createElement('div');
-    div.className = 'carte-partie';
-    div.innerHTML = buildCarteDuel(match, `poule:${match.id}`, { casaques: true });
-
-    document.getElementById('matches-container').appendChild(div);
-}
-
-function nextJournee() {
-    if (tournoi.currentRound < tournoi.totalRounds) {
-        tournoi.currentRound++;
-        renderPoule();
-    }
-}
-
 // Le numéro de journée se saisit : taper 12 mène droit à la 12e. Hors
 // calendrier ou illisible, on s'en tient à la borne la plus proche — et le
 // champ reprend le numéro affiché, puisque tout se redessine.
@@ -526,11 +440,9 @@ function goToJournee(value) {
     renderPoule();
 }
 
-function prevJournee() {
-    if (tournoi.currentRound > 1) {
-        tournoi.currentRound--;
-        renderPoule();
-    }
+// Les flèches feuillettent : elles disent un pas, la borne est déjà dite.
+function decaleJournee(pas) {
+    goToJournee(tournoi.currentRound + pas);
 }
 
 function finalizePoule() {
@@ -546,8 +458,6 @@ function finalizePoule() {
     
     // Semi-finale 1: 1er vs 4e
     tournoi.semifinalMatches.push({
-        id: 'semi-1',
-        type: 'semifinal',
         players: [top4[0].id, top4[3].id],
         matches: [
             { player1: top4[0].id, player2: top4[3].id, player1Score: null, player2Score: null, played: false, num: 1, cadence: CADENCE_DEFAUT, variante: VARIANTE_DEFAUT },
@@ -558,8 +468,6 @@ function finalizePoule() {
     
     // Semi-finale 2: 2e vs 3e
     tournoi.semifinalMatches.push({
-        id: 'semi-2',
-        type: 'semifinal',
         players: [top4[1].id, top4[2].id],
         matches: [
             { player1: top4[1].id, player2: top4[2].id, player1Score: null, player2Score: null, played: false, num: 1, cadence: CADENCE_DEFAUT, variante: VARIANTE_DEFAUT },

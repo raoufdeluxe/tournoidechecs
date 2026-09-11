@@ -25,7 +25,7 @@ describe('phase de poule', () => {
     test('les cartes de duel, menu de résultat compris', () => {
         const app = pouleGeneree(noms(4));
         app.ev('renderParties()');
-        const carte = app.ev('document.getElementById("matches-container").children[0].innerHTML');
+        const carte = app.ev('document.getElementById("matches-container").innerHTML');
         assertEchappe(carte, 'carte de duel');
         assert.match(carte, /Victoire — &lt;img/, 'le menu de résultat aussi');
     });
@@ -43,7 +43,7 @@ describe('phase de poule', () => {
         const duel = app.json('tournoi.matches.filter(m => m.round === tournoi.currentRound)')[0];
         await app.ev(`setLienManche("poule:${duel.id}", "https://www.chess.com/game/live/1")`);
         app.ev('document.getElementById("matches-container").children.length = 0; renderParties()');
-        assertEchappe(app.ev('document.getElementById("matches-container").children[0].innerHTML'),
+        assertEchappe(app.ev('document.getElementById("matches-container").innerHTML'),
             'résumé de la partie');
     });
 
@@ -90,7 +90,7 @@ describe('phases finales', () => {
             setResultatManche("demie:1:0", "p1"); setResultatManche("demie:1:1", "p1");
             startFinale();
         `);
-        assertEchappe(app.ev('document.getElementById("final-matches-container").children[0].innerHTML'), 'finale');
+        assertEchappe(app.ev('document.getElementById("final-matches-container").innerHTML'), 'finale');
         assertEchappe(app.ev('document.getElementById("finalistes-list").innerHTML'), 'tableau des finalistes');
 
         app.ev('setResultatManche("finale:0", "p1"); setResultatManche("finale:1", "p1");');

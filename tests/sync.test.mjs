@@ -204,6 +204,29 @@ describe('un tournoi d\'une version antérieure se remet en forme à l\'ouvertur
             'seuls les champs encore lus subsistent');
         assert.equal(analyse.coups, 41, 'et ils gardent leur valeur');
     });
+
+    test('le tournoi perd les champs qu\'aucun calcul ne lit plus', async () => {
+        const ancien = {
+            screen: 'screen-tournament',
+            tournament: {
+                name: 'Repris', totalRounds: 2, currentRound: 1,
+                // `winners` n'a jamais servi ; les points d'un partant sont
+                // recomptés à chaque affichage, celui-ci ment déjà.
+                winners: [0],
+                players: [{ id: 0, name: 'A', elo: null, points: 99, matches: 7 },
+                          { id: 1, name: 'B', elo: null, points: 0, matches: 0 }],
+                matches: [{ id: '0-1-leg1', player1: 0, player2: 1, round: 1, played: false,
+                            player1Score: null, player2Score: null }],
+            },
+        };
+        const app = chargerApp({ fetch: async () => reponse(200, { version: 1, updatedAt: null, state: ancien }) });
+        await app.ev('loadEtat()');
+
+        assert.equal(app.ev('typeof tournoi.winners'), 'undefined');
+        assert.deepEqual(app.json('tournoi.players[0]'), { id: 0, name: 'A', elo: null });
+        assert.equal(app.json('computeClassement()[0].points'), 0,
+            'et le classement compte les manches jouées, pas ce qui traînait');
+    });
 });
 
 describe('loadEtat', () => {

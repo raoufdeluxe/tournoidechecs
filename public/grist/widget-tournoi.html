@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournoi — widget Grist</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        /* Le widget vit dans un cadre étroit, sans en-tête ni menu : il reprend
+           les primitives de l'application et ne redit que ce qui le distingue. */
+        body.widget { padding: var(--e3); background: none; }
+        body.widget select { width: auto; max-width: 100%; margin-bottom: var(--e3); }
+
+        .tw-bloc { margin-bottom: var(--e3); }
+        .tw-section {
+            margin-bottom: var(--e3);
+            font-family: var(--font-sport);
+            font-size: var(--t2);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: var(--text-secondary);
+        }
+
+        /* Le bandeau : le nom du tournoi porte l'affiche, comme sur l'accueil. */
+        .tw-bandeau {
+            margin-bottom: var(--e3);
+            padding: var(--e5) var(--e4);
+            border-radius: var(--r2);
+            background: linear-gradient(135deg, var(--navy) 0%, var(--primary-dark) 100%);
+            color: #fff;
+            text-align: center;
+        }
+        .tw-titre {
+            font-family: var(--font-sport);
+            font-size: var(--t5);
+            font-weight: 800;
+            line-height: 1.15;
+            text-transform: uppercase;
+            letter-spacing: .02em;
+        }
+        .tw-etape { margin-top: var(--e3); }
+        .tw-badge { --ton: var(--navy-dark); --fond: var(--gold); }
+
+        .tw-jauge {
+            height: 6px;
+            margin-top: var(--e4);
+            border-radius: var(--r3);
+            background: rgba(255, 255, 255, .18);
+            overflow: hidden;
+        }
+        .tw-jauge-remplie {
+            height: 100%;
+            border-radius: var(--r3);
+            background: var(--gold);
+            transition: width .3s ease;
+        }
+        .tw-compte {
+            margin-top: var(--e2);
+            font-family: var(--font-sport);
+            font-size: var(--t4);
+            font-weight: 700;
+        }
+        .tw-compte span { font-size: var(--t2); font-weight: 500; opacity: .7; }
+
+        /* Le podium : l'or au centre et surélevé, l'argent et le bronze de part
+           et d'autre — la forme se lit avant les noms. */
+        .tw-podium { --fond: var(--accent-light); --bord: transparent; }
+        .tw-marches {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            align-items: end;
+            gap: var(--e2);
+        }
+        .tw-marche { text-align: center; }
+        .tw-medaille { font-size: var(--t5); line-height: 1; }
+        .tw-marche-nom {
+            margin-top: var(--e2);
+            font-weight: 600;
+            font-size: var(--t2);
+            overflow-wrap: anywhere;
+        }
+        .tw-marche-rang {
+            font-family: var(--font-sport);
+            font-size: var(--t1);
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        .tw-marche--or { transform: translateY(-12px); }
+        .tw-marche--or .tw-medaille { font-size: var(--t6); }
+        .tw-marche--or .tw-marche-nom { font-size: var(--t3); color: var(--primary-dark); }
+        .tw-marche--or .tw-marche-rang { color: var(--gold); font-weight: 700; }
+
+        /* Les quatre qualifiés : un filet vert en bordure de ligne suffit à les
+           détacher sans repeindre le tableau. */
+        .tw-qualifie td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+        .tw-rang { font-family: var(--font-sport); font-weight: 700; }
+
+        /* Le classement vient de l'application, avec son resserrage sur petit
+           écran : seuls ses écarts de page n'ont plus lieu d'être ici. */
+        .tw-bloc .standings-table { margin-top: 0; }
+        .tw-bloc .table-scroll { margin-bottom: 0; }
+
+        /* Coups par partie : un nom, une barre, un chiffre. La barre est
+           relative au plus long — c'est un ordre de grandeur, pas une échelle. */
+        .tw-coups-ligne {
+            display: grid;
+            grid-template-columns: minmax(0, 7em) 1fr auto;
+            align-items: center;
+            gap: var(--e2);
+            padding: var(--e1) 0;
+            font-size: var(--t2);
+        }
+        .tw-coups-nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tw-coups-barre {
+            height: 10px;
+            border-radius: var(--r3);
+            background: var(--bg-light);
+            overflow: hidden;
+        }
+        .tw-coups-barre > span { display: block; height: 100%; border-radius: var(--r3); }
+        .tw-coups-valeur {
+            font-family: var(--font-sport);
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        .tw-coups-note {
+            margin-top: var(--e2);
+            font-size: var(--t1);
+            color: var(--text-secondary);
+        }
+
+        /* Les parties sans lien : la date à gauche, l'affiche à droite. */
+        .tw-sans-lien-ligne {
+            display: grid;
+            grid-template-columns: minmax(0, 10em) 1fr;
+            gap: var(--e2);
+            padding: var(--e1) 0;
+            font-size: var(--t2);
+        }
+        .tw-sans-lien-ligne + .tw-sans-lien-ligne { border-top: 1px solid var(--border); }
+        .tw-sans-lien-quand {
+            font-family: var(--font-sport);
+            font-size: var(--t1);
+            font-weight: 600;
+            color: var(--text-secondary);
+            align-self: center;
+        }
+        @media (max-width: 380px) {
+            .tw-sans-lien-ligne { grid-template-columns: 1fr; gap: 0; }
+        }
+
+        /* Le tableau final : une colonne tant que la place manque, deux dès
+           qu'il y en a — les demies côte à côte, la finale dessous. */
+        .tw-tableau { display: grid; gap: var(--e3); }
+        @media (min-width: 480px) {
+            .tw-tableau { grid-template-columns: 1fr 1fr; }
+            .tw-tableau > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+        }
+
+        .tw-duel { --retrait: var(--e3); }
+        .tw-duel-titre {
+            margin-bottom: var(--e2);
+            font-family: var(--font-sport);
+            font-size: var(--t1);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: var(--text-secondary);
+        }
+        .tw-cote {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--e2);
+            padding: var(--e2);
+            border-radius: var(--r1);
+            background: var(--bg-light);
+        }
+        .tw-cote + .tw-cote { margin-top: var(--e1); }
+        .tw-cote-nom { overflow-wrap: anywhere; }
+        .tw-cote-score { font-family: var(--font-sport); font-weight: 700; }
+        .tw-cote--gagne {
+            background: var(--accent-light);
+            color: var(--accent);
+            font-weight: 600;
+        }
+        .tw-duel-note {
+            margin-top: var(--e2);
+            font-size: var(--t1);
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body class="widget">
+    <select id="choix-tournoi" onchange="afficheTournoiChoisi(this.value)" hidden
+            aria-label="Tournoi à afficher"></select>
+    <!-- Ouverte seule, la page n'a personne à qui parler : elle le dit, plutôt
+         que de rester blanche. Les premières lignes de Grist effacent ce mot. -->
+    <div id="tournoi">
+        <div class="surface tw-bloc liste-vide">
+            Ce widget s'affiche dans Grist : ajoute-le à une vue de la table
+            <strong>Manches</strong>, en accès « Full document access ».
+        </div>
+    </div>
+
+    <script src="../js/core.js"></script>
+    <script src="widget-tournoi.js"></script>
+    <script type="module">
+        // Les instances Grist reconnues ; la première est celle de ce
+        // déploiement. Elles servent à deux choses : savoir où lire un document
+        // public, et savoir de qui accepter la bibliothèque des widgets.
+        const INSTANCES = ['https://grist.numerique.gouv.fr', 'https://docs.getgrist.com'];
+
+        const reglages = new URLSearchParams(location.search);
+
+        function montre(message) {
+            const bloc = document.createElement('div');
+            bloc.className = 'surface tw-bloc liste-vide';
+            bloc.textContent = message;
+            document.getElementById('tournoi').replaceChildren(bloc);
+        }
+
+        // --- Hors de Grist : la page lit le document elle-même ----------------
+        //
+        // Un document partagé en lecture répond aux requêtes anonymes et
+        // autorise toutes les origines : aucune clé ne traîne donc dans la page,
+        // et rien ne transite par l'application.
+        async function litLeDocument(identifiant) {
+            const base = `${INSTANCES[0]}/api/docs/${encodeURIComponent(identifiant)}/tables`;
+            const table = async (nom) => {
+                const reponse = await fetch(`${base}/${nom}/records`);
+                if (!reponse.ok) {
+                    throw new Error(reponse.status === 403
+                        ? 'ce document n\'est pas partagé en lecture'
+                        : `table ${nom} illisible (${reponse.status})`);
+                }
+                return (await reponse.json()).records.map(l => l.fields);
+            };
+            const [manches, partants, tournois, joueurs] = await Promise.all(
+                ['Manches', 'Partants', 'Tournois', 'Joueurs'].map(table));
+
+            appliqueTournoi(manches, partants, tournois, joueurs);
+            const voulu = reglages.get('tournoi');
+            if (voulu) afficheTournoiChoisi(voulu);
+        }
+
+        // --- Dans Grist : c'est Grist qui donne les lignes --------------------
+        //
+        // L'API des widgets se charge depuis l'instance qui nous affiche, et non
+        // depuis un domaine tiers : le document et la bibliothèque restent de la
+        // même version. La page étant dans une iframe, `document.referrer` dit
+        // d'où elle est ouverte — mais on ne le suit pas les yeux fermés :
+        // n'importe quelle page peut nous mettre en iframe, et charger son
+        // script reviendrait à lui laisser exécuter du code sur notre domaine.
+        function getInstanceGrist() {
+            try {
+                const origine = new URL(document.referrer).origin;
+                if (INSTANCES.includes(origine)) return origine;
+            } catch (e) {
+                // Pas de référent : politique restrictive, ou page ouverte seule.
+            }
+            return INSTANCES[0];
+        }
+
+        async function suitGrist() {
+            await new Promise((charge, echec) => {
+                const script = document.createElement('script');
+                script.src = getInstanceGrist() + '/grist-plugin-api.js';
+                script.onload = charge;
+                script.onerror = () => echec(new Error(script.src + ' est injoignable'));
+                document.head.appendChild(script);
+            });
+
+            // Le widget lit quatre tables : les manches auxquelles il est
+            // rattaché, les partants, les tournois et les fiches. Lire au-delà
+            // de sa table demande l'accès au document — il ne modifie rien.
+            grist.ready({ requiredAccess: 'full' });
+
+            // fetchTable rend des colonnes parallèles : on les remet en lignes.
+            const enLignes = (table) => {
+                const colonnes = Object.keys(table);
+                const hauteur = colonnes.length ? table[colonnes[0]].length : 0;
+                return Array.from({ length: hauteur }, (_, i) =>
+                    Object.fromEntries(colonnes.map(col => [col, table[col][i]])));
+            };
+
+            grist.onRecords(async (manches) => {
+                const [partants, tournois, joueurs] = await Promise.all(
+                    ['Partants', 'Tournois', 'Joueurs'].map(t => grist.docApi.fetchTable(t)));
+                appliqueTournoi(manches, enLignes(partants), enLignes(tournois), enLignes(joueurs));
+            });
+        }
+
+        try {
+            const document_ = reglages.get('doc');
+            await (document_ ? litLeDocument(document_) : suitGrist());
+        } catch (erreur) {
+            montre('Lecture impossible : ' + erreur.message);
+        }
+    </script>
+</body>
+</html>

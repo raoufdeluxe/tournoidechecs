@@ -84,13 +84,16 @@ function mergeJoueurs(fichesDuFichier, fichesActuelles) {
     const nouveaux = [];
     const misAJour = [];
     for (const fiche of fichesDuFichier || []) {
-        const propre = { id: fiche.id, nom: fiche.nom, elo: fiche.elo };
+        // Le pseudo chess.com fait partie de la fiche : sans lui, une
+        // restauration rendrait les joueurs méconnaissables des parties en ligne.
+        const propre = { id: fiche.id, nom: fiche.nom, elo: fiche.elo, pseudo: fiche.pseudo || null };
         const i = fusion.findIndex(j => j.id === fiche.id);
         if (i === -1) {
             fusion.push(propre);
             nouveaux.push(propre);
         } else {
-            if (fusion[i].nom !== propre.nom || fusion[i].elo !== propre.elo) misAJour.push(propre);
+            if (fusion[i].nom !== propre.nom || fusion[i].elo !== propre.elo
+                || (fusion[i].pseudo || null) !== propre.pseudo) misAJour.push(propre);
             fusion[i] = propre;
         }
     }
@@ -123,7 +126,8 @@ function planRestauration(sauvegarde, idsDistants) {
         const existante = actuelles.get(fiche.id);
         let etat = 'nouveau';
         if (existante) {
-            etat = (existante.nom === fiche.nom && existante.elo === fiche.elo) ? 'inchangé' : 'mis à jour';
+            etat = (existante.nom === fiche.nom && existante.elo === fiche.elo
+                    && (existante.pseudo || null) === (fiche.pseudo || null)) ? 'inchangé' : 'mis à jour';
         }
         return { ...fiche, etat };
     });

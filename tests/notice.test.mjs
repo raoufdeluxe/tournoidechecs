@@ -5,23 +5,21 @@ import assert from 'node:assert/strict';
 import { chargerApp } from './aide/app.mjs';
 
 const notices = (app) => app.json(`
-    (document.getElementById('notices').children || []).map(n => ({
-        classe: n.className,
-        texte: n.children[0] ? n.children[0].textContent : ''
-    }))
+    (document.getElementById('notices').children || [])
+        .map(n => (n.children[0] ? n.children[0].textContent : ''))
 `);
 
 describe('notify', () => {
     test('le message s\'affiche dans la page, pas dans une boîte', () => {
         const app = chargerApp();
         app.ev('notify("Bonjour")');
-        assert.deepEqual(notices(app), [{ classe: 'notice notice--info', texte: 'Bonjour' }]);
+        assert.deepEqual(notices(app), ['Bonjour']);
     });
 
     test('les messages s\'empilent au lieu de se remplacer', () => {
         const app = chargerApp();
         app.ev('notify("un"); notify("deux");');
-        assert.deepEqual(notices(app).map(n => n.texte), ['un', 'deux']);
+        assert.deepEqual(notices(app), ['un', 'deux']);
     });
 
     test('information et succès s\'effacent seuls, une erreur reste', () => {
@@ -38,7 +36,7 @@ describe('notify', () => {
         const app = chargerApp();
         app.ev('notify("<img src=x onerror=1>")');
         // textContent : la balise reste du texte, quoi qu'on lui donne.
-        assert.equal(notices(app)[0].texte, '<img src=x onerror=1>');
+        assert.equal(notices(app)[0], '<img src=x onerror=1>');
     });
 
 });

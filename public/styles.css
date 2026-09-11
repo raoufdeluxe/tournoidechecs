@@ -913,9 +913,9 @@ input.journee-numero::-webkit-inner-spin-button, input.journee-numero::-webkit-o
    pointillé. La couleur seule ne suffit plus au-delà de huit partants. */
 .graphe-pastille--creuse { background: none; border: 3px solid; }
 
-/* Un duel de poule : la carte encadre déjà l'affiche, l'enveloppe ne fait
-   qu'espacer — comme .demie-manche et .finale-manche dans les phases finales. */
-.carte-partie { margin-bottom: var(--e5); }
+/* Les duels d'une journée : la carte encadre déjà chaque affiche, le conteneur
+   ne fait que les espacer. */
+#matches-container { display: grid; gap: var(--e5); }
 
 /* ══════════════════════════════════════════════════════════════════════════════
    7. ACCUEIL — LES FINALES

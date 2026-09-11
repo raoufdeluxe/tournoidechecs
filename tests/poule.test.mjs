@@ -299,7 +299,7 @@ describe('la carte d\'un duel, repliée puis ouverte', () => {
     // au lieu de les remplacer, on lirait sinon un rendu périmé.
     const carte = (app) => {
         app.ev('document.getElementById("matches-container").children.length = 0; renderParties()');
-        return app.ev('document.getElementById("matches-container").children[0].innerHTML');
+        return app.ev('document.getElementById("matches-container").innerHTML');
     };
     const duelAffiche = (app) => app.json('tournoi.matches.filter(m => m.round === tournoi.currentRound)')[0];
 

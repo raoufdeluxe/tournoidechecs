@@ -4,6 +4,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../worker.js';
 import { fauxKV, appeler } from './aide/kv.mjs';
+import { lireFichier } from './aide/app.mjs';
 
 const etat = (nom, nbJoueurs = 2) => ({
     screen: 'screen-tournament',

@@ -56,10 +56,16 @@ describe('ce que la page charge', () => {
 });
 
 describe('les liaisons entre la page et le code', () => {
+    // Toutes les pages du dossier public, pas seulement les cinq de
+    // l'application : un widget est une page comme une autre, et ses
+    // identifiants doivent exister comme les autres.
+    const pagesHtml = readdirSync(racine + 'public', { recursive: true })
+        .filter(f => f.endsWith('.html')).sort();
+
     // Gabarits HTML écrits dans le JS compris : les lignes de liste et les
     // cartes de duel posent aussi des onclick.
     const sources = [
-        ...PAGES.map(page => lireFichier('public/' + page)),
+        ...pagesHtml.map(page => lireFichier('public/' + page)),
         ...fichiersJs.map(lireScript),
     ].join('\n');
 
@@ -68,8 +74,8 @@ describe('les liaisons entre la page et le code', () => {
             .map(m => m[1]));
         assert.ok(noms.size > 5, 'le relevé a bien trouvé des gestionnaires');
 
-        // Une fonction peut vivre sur une autre page : on cherche sur les trois.
-        const apps = PAGES.map(page => chargerApp({ page }));
+        // Une fonction peut vivre sur une autre page : on les charge toutes.
+        const apps = pagesHtml.map(page => chargerApp({ page }));
         for (const nom of noms) {
             const trouvee = apps.some(app => app.ev(`typeof ${nom}`) === 'function');
             assert.ok(trouvee, `${nom}() est appelée depuis le HTML mais n'existe sur aucune page`);
@@ -100,7 +106,7 @@ describe('les liaisons entre la page et le code', () => {
     });
 
     test('aucun identifiant d\'élément n\'est déclaré deux fois dans une page', () => {
-        for (const page of PAGES) {
+        for (const page of pagesHtml) {
             const ids = [...lireFichier('public/' + page).matchAll(/\bid="([^"]+)"/g)].map(m => m[1]);
             const doublons = ids.filter((id, i) => ids.indexOf(id) !== i);
             assert.deepEqual(doublons, [], `${page} : getElementById ne verrait que le premier`);
@@ -109,11 +115,6 @@ describe('les liaisons entre la page et le code', () => {
 });
 
 describe('le Worker et sa configuration', () => {
-    test('worker.js expose un gestionnaire fetch', async () => {
-        const worker = (await import('../worker.js')).default;
-        assert.equal(typeof worker.fetch, 'function');
-    });
-
     test('le front et le Worker partagent le même motif d\'identifiant', () => {
         const app = chargerApp();
         const motifFront = app.ev('ID_PATTERN.source');
@@ -138,19 +139,27 @@ describe('le Worker et sa configuration', () => {
         assert.equal(tables.at(-1), 'assets');
     });
 
-    test('le binding KV attendu par le Worker est bien déclaré', () => {
+    test('chaque réglage que lit le Worker se trouve quelque part', () => {
+        // Un binding KV est déclaré dans wrangler.toml ; une clé d'API n'y est
+        // pas — elle se pose par `wrangler secret put`, et c'est le README qui
+        // le dit. L'un ou l'autre, mais jamais rien : un réglage que personne ne
+        // fournit ne se voit qu'en production, quand la route tombe.
         const toml = lireFichier('wrangler.toml');
-        const bindings = [...lireFichier('worker.js').matchAll(/env\.([A-Z_][A-Z0-9_]*)/g)].map(m => m[1]);
-        assert.ok(bindings.length > 0);
-        for (const binding of new Set(bindings)) {
-            assert.match(toml, new RegExp(`binding\\s*=\\s*"${binding}"`),
-                `${binding} est utilisé par le Worker mais absent de wrangler.toml`);
+        const readme = lireFichier('README.md');
+        const reglages = [...lireFichier('worker.js').matchAll(/env\.([A-Z_][A-Z0-9_]*)/g)].map(m => m[1]);
+        assert.ok(reglages.length > 0, 'le relevé a bien trouvé des réglages');
+
+        for (const reglage of new Set(reglages)) {
+            const declare = new RegExp(`binding\\s*=\\s*"${reglage}"|^\\s*${reglage}\\s*=`, 'm').test(toml);
+            const documente = new RegExp(`secret put ${reglage}\\b`).test(readme);
+            assert.ok(declare || documente,
+                `${reglage} est lu par le Worker mais n'est ni dans wrangler.toml ni posé en secret dans le README`);
         }
     });
 });
 
 describe('les messages restent dans la page', () => {
-    const sourcesJs = readdirSync(racine + 'public/js')
+    const sourcesJs = readdirSync(racine + 'public', { recursive: true })
         .filter(f => f.endsWith('.js'))
         .map(f => [f, lireScript(f)]);
 
@@ -158,7 +167,8 @@ describe('les messages restent dans la page', () => {
         // alert, confirm et prompt bloquent l'onglet, s'affichent hors de la page
         // et ne peuvent rien mettre en forme. notice.js et dialogue.js les remplacent.
         for (const [nom, source] of sourcesJs) {
-            if (nom === 'dialogue.js') continue; // c'est lui qui les remplace
+            // Le nom du fichier, pas la fin du chemin : le relevé est récursif.
+            if (nom.split('/').pop() === 'dialogue.js') continue; // c'est lui qui les remplace
             assert.doesNotMatch(source, /(^|[^.\w])(alert|confirm|prompt)\s*\(/,
                 `${nom} ouvre encore une boîte du navigateur`);
         }

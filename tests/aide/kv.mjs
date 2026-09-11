@@ -29,8 +29,12 @@ export function fauxKV(entrees = {}) {
     };
 }
 
-/** Appelle le Worker et renvoie { status, headers, body } (corps JSON si possible). */
-export async function appeler(worker, kv, methode, chemin, corps) {
+/**
+ * Appelle le Worker et renvoie { status, headers, body } (corps JSON si possible).
+ * `reglages` complète l'environnement — une clé d'API, par exemple, ne s'allume
+ * que si ses deux réglages sont là.
+ */
+export async function appeler(worker, kv, methode, chemin, corps, reglages = {}) {
     const init = { method: methode };
     if (corps !== undefined) {
         init.body = typeof corps === 'string' ? corps : JSON.stringify(corps);
@@ -38,7 +42,7 @@ export async function appeler(worker, kv, methode, chemin, corps) {
     }
     const reponse = await worker.fetch(
         new Request('https://echecs.test' + chemin, init),
-        { CHESS_TOURNAMENT: kv });
+        { CHESS_TOURNAMENT: kv, ...reglages });
     const texte = await reponse.text();
     let body;
     try { body = JSON.parse(texte); } catch { body = texte; }

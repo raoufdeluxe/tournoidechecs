@@ -152,7 +152,7 @@ function applyEtat(state) {
     tournoi = state.tournament;
     // Un tournoi peut venir d'une version antérieure : on le remet dans la
     // forme d'aujourd'hui avant que quoi que ce soit ne le lise.
-    nettoieAnalyses(tournoi);
+    nettoieTournoi(tournoi);
     // Les noms viennent des fiches : un renommage fait ailleurs apparaît ici.
     resolveJoueursDuTournoi();
     renderTitreTournoi();

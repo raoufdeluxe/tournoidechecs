@@ -1,5 +1,14 @@
-.env.wael
+# Les réglages locaux du Worker : wrangler lit .dev.vars (ou .env) en
+# développement, et une clé d'API n'a rien à faire dans l'historique.
+.dev.vars*
+.env*
 .wrangler
 node_modules
 dist
 todos/
+__pycache__/
+
+# Les extraits de tournois : ceux de --depuis-grist comme ceux du bouton
+# « Tout exporter ». Ils portent des noms de joueurs, ils n'ont rien à faire
+# dans l'historique.
+sauvegarde-*.json

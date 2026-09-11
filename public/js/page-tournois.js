@@ -1,14 +1,6 @@
 // Page /tournois : la liste des tournois enregistrés, avec renommage et
 // suppression. Ouvrir un tournoi renvoie à l'accueil, qui le fait tourner.
 
-const SCREEN_LABELS = {
-    'screen-config':     'Inscription',
-    'screen-tournament': 'Phase de poule',
-    'screen-semifinals': 'Demi-finales',
-    'screen-finals':     'Grande finale',
-    'screen-results':    'Terminé'
-};
-
 // L'index du serveur met quelques secondes à refléter une suppression : on
 // masque en attendant ce qu'on vient de supprimer, pour que la liste
 // corresponde à ce qu'on vient de faire.

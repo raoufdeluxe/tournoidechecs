@@ -21,9 +21,18 @@ let tournoi = {
     matches: [],
     semifinalMatches: [],
     finalMatches: [],
-    winners: [],
     totalRounds: 0,
     currentRound: 1
+};
+
+// L'étape d'un tournoi, dite en clair : la page Tournois la met dans sa liste,
+// le widget Grist dans son bandeau.
+const SCREEN_LABELS = {
+    'screen-config':     'Inscription',
+    'screen-tournament': 'Phase de poule',
+    'screen-semifinals': 'Demi-finales',
+    'screen-finals':     'Grande finale',
+    'screen-results':    'Terminé'
 };
 
 // Les noms viennent d'autres personnes via la liste partagée : jamais injectés bruts.
@@ -62,15 +71,90 @@ function buildCasaque(id) {
 }
 
 // Classe et icône à appliquer à un joueur pour un match donné : victoire, défaite ou match nul
+// Le classement général, toutes journées confondues : celui du tournoi tel
+// qu'il se terminerait aujourd'hui. Feuilleter le calendrier ne le change pas —
+// c'est le même que réclament la qualification, les départages et le titre.
+function computeClassement() {
+    const retenus = tournoi.matches.filter(m => m.played);
+
+    const standings = tournoi.players.map(p => ({ ...p, points: 0, matches: 0, wins: 0 }));
+
+    retenus.forEach(match => {
+        standings[match.player1].matches++;
+        standings[match.player2].matches++;
+        
+        if (match.player1Score > match.player2Score) {
+            standings[match.player1].points += 1;
+            standings[match.player1].wins += 1;
+        } else if (match.player2Score > match.player1Score) {
+            standings[match.player2].points += 1;
+            standings[match.player2].wins += 1;
+        } else {
+            standings[match.player1].points += 0.5;
+            standings[match.player2].points += 0.5;
+        }
+    });
+
+    // Points marqués uniquement dans les duels entre joueurs à égalité (confrontation directe)
+    function headToHeadPoints(playerId, tiedOpponentIds) {
+        let pts = 0;
+        retenus.forEach(match => {
+            const isP1 = match.player1 === playerId;
+            const isP2 = match.player2 === playerId;
+            if (!isP1 && !isP2) return;
+            const opponentId = isP1 ? match.player2 : match.player1;
+            if (!tiedOpponentIds.includes(opponentId)) return;
+            const myScore = isP1 ? match.player1Score : match.player2Score;
+            const oppScore = isP1 ? match.player2Score : match.player1Score;
+            if (myScore > oppScore) pts += 1;
+            else if (myScore === oppScore) pts += 0.5;
+        });
+        return pts;
+    }
+
+    // 1) Points, 2) Nombre de victoires
+    standings.sort((a, b) => b.points - a.points || b.wins - a.wins);
+
+    // 3) Confrontation directe entre joueurs encore à égalité stricte (points + victoires)
+    let i = 0;
+    while (i < standings.length) {
+        let j = i + 1;
+        while (j < standings.length && standings[j].points === standings[i].points && standings[j].wins === standings[i].wins) {
+            j++;
+        }
+        if (j - i > 1) {
+            const tiedIds = standings.slice(i, j).map(p => p.id);
+            const group = standings.slice(i, j).map(p => ({
+                ...p,
+                h2h: headToHeadPoints(p.id, tiedIds.filter(id => id !== p.id))
+            }));
+            group.sort((a, b) => b.h2h - a.h2h || b.matches - a.matches);
+            for (let k = 0; k < group.length; k++) {
+                standings[i + k] = group[k];
+            }
+        }
+        i = j;
+    }
+
+    return standings;
+}
+
+// Le résultat d'une manche dans la langue du menu : 'p1', 'p2', 'draw', ou rien
+// tant qu'elle n'est pas jouée. C'est le seul endroit qui décide qui a gagné.
+function getResultatManche(match) {
+    if (!match.played) return '';
+    if (match.player1Score > match.player2Score) return 'p1';
+    if (match.player2Score > match.player1Score) return 'p2';
+    return 'draw';
+}
+
 // Le sort d'un partant dans une manche, porté par la couleur de sa case :
 // vert pour la victoire, rouge pour la défaite, or pour la nulle.
 function getClasseResultat(match, isPlayer1) {
-    if (!match.played) return '';
-    const won = isPlayer1 ? match.player1Score > match.player2Score : match.player2Score > match.player1Score;
-    const lost = isPlayer1 ? match.player1Score < match.player2Score : match.player2Score < match.player1Score;
-    if (won) return 'winner';
-    if (lost) return 'loser';
-    return 'draw';
+    const resultat = getResultatManche(match);
+    if (!resultat) return '';
+    if (resultat === 'draw') return 'draw';
+    return (resultat === 'p1') === isPlayer1 ? 'winner' : 'loser';
 }
 
 // --- Réglages d'une partie : cadence et variante ---------------------------
@@ -156,9 +240,7 @@ function getManches(tournoi) {
 
 // Les champs d'un résumé que l'application lit encore. Un tournoi enregistré
 // par une version antérieure en porte d'autres — l'Elo chess.com, la date, le
-// code d'ouverture — que plus personne n'affiche. On ne les garde pas en
-// mémoire : le prochain enregistrement du tournoi s'en débarrasse, et celui
-// qu'on n'ouvre jamais n'est pas réécrit pour autant.
+// code d'ouverture — que plus personne n'affiche.
 const CHAMPS_ANALYSE = ['blancs', 'noirs', 'resultat', 'fin', 'coups'];
 
 function nettoieAnalyse(manche) {
@@ -168,8 +250,25 @@ function nettoieAnalyse(manche) {
     }
 }
 
-function nettoieAnalyses(tournoi) {
+// Un tournoi ouvert est remis dans la forme d'aujourd'hui : on ne garde pas en
+// mémoire ce que plus rien ne lit. Le prochain enregistrement s'en débarrasse,
+// et celui qu'on n'ouvre jamais n'est pas réécrit pour autant.
+//
+// `winners` n'a jamais servi à rien, pas plus que l'`id` et le `type` d'une
+// demie ; les points et le nombre de manches d'un partant sont recomptés par
+// computeClassement à chaque affichage, ce qui est enregistré là n'est donc
+// jamais lu.
+function nettoieTournoi(tournoi) {
     getManches(tournoi).forEach(nettoieAnalyse);
+    delete tournoi.winners;
+    for (const partant of tournoi.players || []) {
+        delete partant.points;
+        delete partant.matches;
+    }
+    for (const demie of tournoi.semifinalMatches || []) {
+        delete demie.id;
+        delete demie.type;
+    }
 }
 
 // --- Une manche, où qu'elle soit ------------------------------------------
@@ -364,9 +463,6 @@ function buildReglagesPartie(match, chemin) {
     `;
 }
 
-// Un partant dont la fiche a été supprimée garde le nom recopié à son
-// inscription, mais il n'est plus rattaché à rien : le renommer depuis la page
-// Joueurs n'aurait aucun effet sur lui. Autant le dire.
 // Pictogrammes tracés dans la page : ni police d'icônes à charger, ni image à
 // aller chercher. Ils prennent la couleur du bouton (`currentColor`) et suivent
 // sa taille, donc ils ne peuvent pas se désaccorder de lui.
@@ -398,7 +494,7 @@ function buildInfobullePartant(partant) {
     const fiche = (partant.ref && typeof getJoueur === 'function') ? getJoueur(partant.ref) : null;
     const elo = fiche && fiche.elo != null ? fiche.elo : partant.elo;
     const pseudo = fiche && fiche.pseudo;
-    return [pseudo || null, elo != null ? elo : null].filter(v => v != null).join(' - ');
+    return [pseudo, elo].filter(v => v != null && v !== '').join(' - ');
 }
 
 // Le nom d'un partant, partout où il s'affiche : au survol, l'infobulle dit son
@@ -413,6 +509,9 @@ function buildNomPartant(partantId) {
         : escapeHtml(partant.name);
 }
 
+// Un partant dont la fiche a été supprimée garde le nom recopié à son
+// inscription, mais il n'est plus rattaché à rien : le renommer depuis la page
+// Joueurs n'aurait aucun effet sur lui. Autant le dire.
 function buildTagFicheAbsente() {
     return '<span class="etiquette tag-absent" title="Ce joueur n\'est plus dans la liste : son nom ne suivra plus les renommages.">fiche supprimée</span>';
 }
@@ -553,24 +652,14 @@ function renderBarreProgression(elementId, duels) {
         (duels.length ? (joues / duels.length) * 100 : 0) + '%';
 }
 
-// Le résultat d'une manche dans la langue du menu : 'p1', 'p2', 'draw', ou rien
-// tant qu'elle n'est pas jouée.
-function getResultatManche(match) {
-    if (!match.played) return '';
-    if (match.player1Score > match.player2Score) return 'p1';
-    if (match.player2Score > match.player1Score) return 'p2';
-    return 'draw';
-}
-
-// Génère les <option> du menu déroulant de résultat, avec la sélection courante.
-// `p1Name` et `p2Name` sont insérés tels quels : à l'appelant de les échapper,
-// comme il le fait déjà pour les afficher ailleurs dans la même carte.
+// Les <option> du menu de résultat, avec la sélection courante. `p1Name` et
+// `p2Name` sont insérés tels quels : à l'appelant de les échapper, comme il le
+// fait déjà pour les afficher ailleurs dans la même carte.
 function buildOptionsResultat(match, p1Name, p2Name) {
-    const selected = getResultatManche(match);
-    return `
-        <option value="" ${selected === '' ? 'selected' : ''}>Résultat à définir…</option>
-        <option value="p1" ${selected === 'p1' ? 'selected' : ''}>🏆 Victoire — ${p1Name}</option>
-        <option value="draw" ${selected === 'draw' ? 'selected' : ''}>🤝 Match nul</option>
-        <option value="p2" ${selected === 'p2' ? 'selected' : ''}>🏆 Victoire — ${p2Name}</option>
-    `;
+    return buildOptions([
+        { valeur: '', libelle: 'Résultat à définir…' },
+        { valeur: 'p1', libelle: `🏆 Victoire — ${p1Name}` },
+        { valeur: 'draw', libelle: '🤝 Match nul' },
+        { valeur: 'p2', libelle: `🏆 Victoire — ${p2Name}` },
+    ], getResultatManche(match));
 }

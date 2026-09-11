@@ -468,6 +468,7 @@ export default {
       };
 
       await env.CHESS_TOURNAMENT.put(key, JSON.stringify(next));
+
       return json({ version: next.version, updatedAt: next.updatedAt });
     }
 

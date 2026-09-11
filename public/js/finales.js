@@ -94,20 +94,13 @@ function renderFinale() {
         </div>
     `;
     
-    const container = document.getElementById('final-matches-container');
-    container.innerHTML = '';
-    
-    tournoi.finalMatches.forEach((match, idx) => {
-        const div = document.createElement('div');
-        div.innerHTML = `
+    document.getElementById('final-matches-container').innerHTML = tournoi.finalMatches
+        .map((match, idx) => `
             <div class="finale-manche">
                 <div class="finale-manche-titre">Match ${match.num}</div>
                 ${buildCarteDuel(match, `finale:${idx}`)}
             </div>
-        `;
-        
-        container.appendChild(div);
-    });
+        `).join('');
 
     const outcome = resolveDuel(tournoi.finalMatches, finalist1, finalist2);
     const placeholder = document.getElementById('final-result-placeholder');
@@ -239,7 +232,7 @@ async function startNouveauTournoi() {
     if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
     retryDelay = 1000;
 
-    tournoi = { name: null, players: [], matches: [], semifinalMatches: [], finalMatches: [], winners: [], totalRounds: 0, currentRound: 1 };
+    tournoi = { name: null, players: [], matches: [], semifinalMatches: [], finalMatches: [], totalRounds: 0, currentRound: 1 };
     document.getElementById('tournament-name').value = '';
     document.getElementById('player-count').value = 4;
     renderTitreTournoi();

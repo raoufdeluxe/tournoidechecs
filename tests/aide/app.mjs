@@ -17,13 +17,18 @@ const racine = fileURLToPath(new URL('../..', import.meta.url));
 // Les trois pages de l'application.
 export const PAGES = ['index.html', 'joueurs.html', 'tournois.html', 'stats.html', 'sauvegarde.html'];
 
-/** Les scripts que charge une page, dans son ordre à elle. */
+/** Les scripts que charge une page, dans son ordre à elle. Ceux de public/js/
+    gardent leur nom nu ; une page d'un sous-dossier peut en charger d'autres,
+    qui reviennent alors en chemin relatif à public/. */
 export function scriptsDeLaPage(page = 'index.html') {
-    return [...lireFichier('public/' + page).matchAll(/<script src="js\/([^"]+)"><\/script>/g)].map(m => m[1]);
+    const dossier = page.slice(0, page.lastIndexOf('/') + 1);
+    return [...lireFichier('public/' + page).matchAll(/<script src="([^"]+)"><\/script>/g)]
+        .map(m => new URL(m[1], 'file:///' + dossier).pathname.slice(1))
+        .map(chemin => (chemin.startsWith('js/') ? chemin.slice(3) : chemin));
 }
 
 export function lireScript(nom) {
-    return readFileSync(racine + 'public/js/' + nom, 'utf8');
+    return readFileSync(racine + 'public/' + (nom.includes('/') ? nom : 'js/' + nom), 'utf8');
 }
 
 export function lireFichier(chemin) {
@@ -194,7 +199,8 @@ export function chargerApp(options = {}) {
     const contexte = vm.createContext(bac);
     const scripts = options.scripts ?? scriptsDeLaPage(page);
     for (const nom of scripts) {
-        vm.runInContext(lireScript(nom), contexte, { filename: 'public/js/' + nom });
+        vm.runInContext(lireScript(nom), contexte,
+            { filename: 'public/' + (nom.includes('/') ? nom : 'js/' + nom) });
     }
 
     // La confirmation est un panneau dans la page : les tests répondent à sa

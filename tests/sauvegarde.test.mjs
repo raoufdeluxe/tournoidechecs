@@ -169,6 +169,17 @@ describe('les fiches de joueurs voyagent avec la sauvegarde', () => {
         assert.deepEqual(r.misAJour.map(j => j.id), ['j-aa']);
     });
 
+    test('le pseudo chess.com survit à la restauration', () => {
+        // Il fait partie de la fiche : sans lui, les joueurs restaurés ne sont
+        // plus reconnus dans les parties en ligne.
+        const app = chargerApp({ page: 'sauvegarde.html' });
+        app.set('globalThis.__fichier', [{ id: 'j-aa', nom: 'Alice', elo: 1500, pseudo: 'Alice_CC' }]);
+        app.set('globalThis.__actuelles', [{ id: 'j-aa', nom: 'Alice', elo: 1500, pseudo: null }]);
+        const r = app.json('mergeJoueurs(__fichier, __actuelles)');
+        assert.equal(r.fusion.find(j => j.id === 'j-aa').pseudo, 'Alice_CC');
+        assert.deepEqual(r.misAJour.map(j => j.id), ['j-aa'], 'un pseudo qui change est un changement');
+    });
+
     test('une fiche identique n\'est pas comptée comme mise à jour', () => {
         const app = chargerApp({ page: 'sauvegarde.html' });
         app.set('globalThis.__f', [{ id: 'j-aa', nom: 'Alice', elo: 1500 }]);
