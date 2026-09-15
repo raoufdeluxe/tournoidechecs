@@ -108,6 +108,7 @@ describe('affichage de la liste', () => {
 
     test('cliquer sur le repère déplace le tournoi vers l\'adresse de son nom', async () => {
         const app = await pageTournois({ 'red-indians-cup': { version: 2, state: etatTournoi('Big Chief Cup') } });
+        assert.match(liste(app), /aligner l'adresse/, 'le décalage est signalé');
         app.repondreConfirm(true);
         saisir(app, 'red-indians-cup', 'Big Chief Cup');
         await app.ev(`renameTournoi('red-indians-cup')`);
@@ -119,7 +120,7 @@ describe('affichage de la liste', () => {
 
     test('un tournoi sans nom n\'est pas marqué comme divergent', async () => {
         const app = await pageTournois({ xtzxfycn4h: { version: 1, state: etatTournoi(null) } });
-        assert.doesNotMatch(liste(app), /tournoi-ecart/);
+        assert.doesNotMatch(liste(app), /aligner l'adresse/);
     });
 
     test('au-delà de 100 tournois, on ne prétend pas montrer les plus récents', async () => {
@@ -134,7 +135,7 @@ describe('affichage de la liste', () => {
         await app.ev('loadListeTournois()');
         const html = liste(app);
         assert.match(html, /plus de 100 tournois/);
-        assert.doesNotMatch(html, /plus récents/, 'ce serait faux : list() rend les clés par ordre alphabétique');
+        assert.doesNotMatch(html, /récent/i, 'ce serait faux : list() rend les clés par ordre alphabétique');
     });
 
     test('la page n\'ouvre aucun tournoi au chargement', async () => {

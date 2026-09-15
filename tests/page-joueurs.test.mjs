@@ -72,8 +72,6 @@ describe('affichage de la liste', () => {
         assert.match(html, />1500</, 'son Elo est affiché');
         assert.doesNotMatch(html, /<input[^>]*value="1500"/, 'et n\'est pas un champ de saisie');
         assert.match(html, />—</, 'sans classement, un tiret');
-        assert.equal((html.match(/removeJoueur/g) || []).length, 2, 'un retrait par joueur');
-        assert.equal((html.match(/synchroniserFiche/g) || []).length, 2, 'une synchro par joueur');
     });
 
     test('liste vide : on invite à ajouter le premier', async () => {

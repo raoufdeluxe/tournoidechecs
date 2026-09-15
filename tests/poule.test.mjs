@@ -473,7 +473,9 @@ describe('la carte d\'un duel, repliée puis ouverte', () => {
         await app.ev(`setLienManche("poule:${duel.id}", "https://lichess.org/abcd")`);
         const html = carte(app);
         assert.match(html, /href="https:\/\/lichess\.org\/abcd"/, 'le lien reste');
-        assert.doesNotMatch(html, /partie-analyse/, 'mais rien à résumer');
+        // Aucune des phrases que sait écrire un résumé : ni coups, ni issue.
+        assert.doesNotMatch(texte(html), /coups|l'emporte|partie nulle|victoire des/,
+            'mais rien à résumer');
     });
 
     test('une adresse invalide est refusée et dite dans la page', () => {

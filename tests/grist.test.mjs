@@ -84,8 +84,9 @@ describe('le tournoi lu depuis le document', () => {
         assert.match(t, /Demi-finale 1/);
         assert.match(t, /Demi-finale 2/);
         assert.match(t, /Demi-finales/, 'l\'étape suit l\'avancement');
+        assert.match(t, /Tableau final/, 'le tableau est dressé');
         // Alice gagne ses deux manches : 2 à 0.
-        assert.match(vu(app), /tw-cote--gagne[\s\S]*?Alice/);
+        assert.match(t, /Alice 2/);
     });
 
     test('la finale jouée dresse le podium, sans qu\'il soit enregistré nulle part', () => {
@@ -105,7 +106,7 @@ describe('le tournoi lu depuis le document', () => {
         assert.match(t, /Dauphin/);
         assert.match(t, /Terminé/, 'le tournoi est allé au bout');
         // Alice gagne la finale ; Bob est dauphin ; le bronze sort de la poule.
-        assert.match(vu(app), /tw-marche--or[\s\S]*?Alice/);
+        assert.match(t, /Alice Champion/);
     });
 
     test('les coups par partie ne comptent que les parties relues sur chess.com', () => {

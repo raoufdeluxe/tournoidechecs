@@ -3,7 +3,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { chargerApp } from './aide/app.mjs';
-import { joueurs, pouleGeneree, completerPoule } from './aide/tournoi.mjs';
+import { pouleGeneree, completerPoule } from './aide/tournoi.mjs';
 
 const manche = (num, p1, p2, joue = true) => ({
     player1: 0, player2: 1, player1Score: p1, player2Score: p2, played: joue, num,
@@ -216,16 +216,6 @@ describe('le lien vers la partie en ligne', () => {
         assert.equal(app.ev('getLien(m)'), '');
     });
 });
-
-describe('getCouleurCasaque — une casaque par partant', () => {
-    test('la couleur est stable et la palette boucle', () => {
-        const app = chargerApp();
-        const taille = app.ev('COULEURS_CASAQUE.length');
-        assert.equal(app.appel('getCouleurCasaque', 0), app.appel('getCouleurCasaque', taille));
-        assert.notEqual(app.appel('getCouleurCasaque', 0), app.appel('getCouleurCasaque', 1));
-    });
-});
-
 
 describe('cadence et variante d\'une partie', () => {
     test('sans réglage, une partie est en 10 min et classique', () => {

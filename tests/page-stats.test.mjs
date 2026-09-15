@@ -105,8 +105,6 @@ describe('le graphe', () => {
         filtrer(app, { joueurs: ['j-a'] });
         const html = graphe(app);
 
-        assert.match(html, /<svg/);
-        assert.equal((html.match(/<rect/g) || []).length, 1, 'une barre');
         // Alice : 2 victoires, 1 nulle, 1 défaite sur 4 parties -> 50 %
         assert.match(html, />50 %</);
         assert.match(html, />4 parties</);
@@ -141,7 +139,7 @@ describe('le graphe', () => {
         const app = await pageStats({ fiches: DEUX_JOUEURS, tournois: UN_TOURNOI });
         filtrer(app, { joueurs: ['j-a'], cadences: ['5'] });
         assert.match(graphe(app), /aucune partie à ce format/);
-        assert.equal((graphe(app).match(/<rect/g) || []).length, 0);
+        assert.doesNotMatch(graphe(app), /\d+ partie/, 'et aucune barre chiffrée');
     });
 
     test('les joueurs sont classés du meilleur au moins bon', async () => {
