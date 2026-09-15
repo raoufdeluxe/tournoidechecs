@@ -122,12 +122,6 @@ describe('affichage de la liste', () => {
         assert.doesNotMatch(liste(app), /tournoi-ecart/);
     });
 
-    test('un nom piégé ne s\'injecte pas dans la page', async () => {
-        const app = await pageTournois({ a: { version: 1, state: etatTournoi('<img src=x onerror="window.__XSS=1">') } });
-        assert.doesNotMatch(liste(app), /<img/);
-        assert.match(liste(app), /&lt;img/);
-    });
-
     test('au-delà de 100 tournois, on ne prétend pas montrer les plus récents', async () => {
         const app = await pageTournois({ a: { version: 1, state: etatTournoi('A') } });
         // `complete: false` signale que le serveur en a laissé de côté.

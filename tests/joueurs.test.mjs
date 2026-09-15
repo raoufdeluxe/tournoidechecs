@@ -351,14 +351,6 @@ describe('buildOptionsJoueurs — le menu d\'un emplacement', () => {
         const app = chargerApp();
         assert.match(app.appel('buildOptionsJoueurs', ''), /Nouveau joueur/);
     });
-
-    test('un nom piégé ne s\'injecte pas dans la page', () => {
-        const app = chargerApp();
-        app.set('joueurs', [{ id: 'j-aa', nom: '<img src=x onerror="window.__XSS=1">', elo: null }]);
-        const html = app.appel('buildOptionsJoueurs', '');
-        assert.doesNotMatch(html, /<img/);
-        assert.match(html, /&lt;img/);
-    });
 });
 
 describe('inscription d\'un tournoi à partir des fiches', () => {

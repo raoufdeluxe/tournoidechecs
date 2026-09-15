@@ -97,15 +97,6 @@ describe('les filtres proposés', () => {
         assert.equal(app.ev('typeof saveEtat'), 'undefined');
         assert.deepEqual(app.appelsFetch.filter(a => a.init && a.init.method && a.init.method !== 'GET'), []);
     });
-
-    test('un nom piégé ne s\'injecte pas dans la page', async () => {
-        const app = await pageStats({
-            fiches: [{ id: 'j-a', nom: '<img src=x onerror="window.__XSS=1">', elo: null }],
-            tournois: {},
-        });
-        assert.doesNotMatch(selecteur(app), /<img/);
-        assert.match(selecteur(app), /&lt;img/);
-    });
 });
 
 describe('le graphe', () => {

@@ -411,6 +411,7 @@ tests/
   finales.test.mjs   qualification des 4 premiers, demies, Grande Finale, podium
   sync.test.mjs      envois sérialisés, back-off hors-ligne, conflit 409
   tournois.test.mjs  slug du nom, identifiant du lien, échappement HTML
+  echappement.test.mjs  aucun nom saisi n'est injecté brut, sur aucun écran
   worker.test.mjs    routes, versionnage, liste des tournois
   statique.test.mjs  cohérence page ↔ code ↔ wrangler.toml
   sauvegarde.test.mjs  export/import : format, plan, écriture, échecs partiels

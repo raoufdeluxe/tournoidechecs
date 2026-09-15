@@ -1,5 +1,6 @@
-// Un nom de joueur vient d'une fiche que toute personne ayant le lien peut
-// modifier. Il ne doit jamais être injecté brut dans la page, sur aucun écran.
+// Un nom saisi — la fiche d'un joueur, le nom d'un tournoi — vient de quelqu'un
+// d'autre : toute personne ayant le lien peut le modifier. Il ne doit jamais être
+// injecté brut dans la page, sur aucun écran.
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
@@ -123,5 +124,19 @@ describe('listes et menus', () => {
         app.set('joueurs', [{ id: 'j-aa', nom: PIEGE, elo: null }]);
         app.ev('renderJoueurs()');
         assertEchappe(app.ev('document.getElementById("joueurs-editor").innerHTML'), 'page Joueurs');
+    });
+
+    test('la liste des tournois', () => {
+        const app = chargerApp({ page: 'tournois.html' });
+        const ligne = app.appel('buildLigneTournoi',
+            { id: 'a', name: PIEGE, screen: 'screen-tournament', players: 4 }, null);
+        assertEchappe(ligne, 'liste des tournois');
+    });
+
+    test('les filtres de la page Stats', () => {
+        const app = chargerApp({ page: 'stats.html' });
+        app.set('joueurs', [{ id: 'j-aa', nom: PIEGE, elo: null }]);
+        app.ev('renderFiltres()');
+        assertEchappe(app.ev('document.getElementById("stats-joueurs").innerHTML'), 'filtres des stats');
     });
 });

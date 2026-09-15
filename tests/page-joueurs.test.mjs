@@ -86,13 +86,6 @@ describe('affichage de la liste', () => {
         assert.match(editeur(app), /indisponible/);
     });
 
-    test('un nom piégé ne s\'injecte pas dans la page', async () => {
-        const app = await pageJoueurs([{ id: 'j-aa', nom: '<img src=x onerror="window.__XSS=1">', elo: null }]);
-        const html = editeur(app);
-        assert.doesNotMatch(html, /<img/);
-        assert.match(html, /&lt;img/);
-    });
-
     test('la page ne fait pas tourner de tournoi', async () => {
         const app = await pageJoueurs([]);
         // Aucun appel à l'état d'un tournoi : cette page n'en ouvre aucun.

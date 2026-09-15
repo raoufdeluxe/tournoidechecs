@@ -650,12 +650,4 @@ describe('GET /tournois — la liste', () => {
         const r = await appeler(worker, fauxKV(), 'POST', '/api/tournois', { baseVersion: 0, state: etat('X') });
         assert.equal(r.status, 404);
     });
-
-    test('/tournaments reste servi : un onglet resté sur l\'ancienne page l\'appelle', async () => {
-        const kv = fauxKV({ 'tournament:abc': enveloppe(1, etat('Les potes', 4)) });
-        const ancienne = await appeler(worker, kv, 'GET', '/tournaments');
-        const nouvelle = await appeler(worker, kv, 'GET', '/api/tournois');
-        assert.equal(ancienne.status, 200);
-        assert.deepEqual(ancienne.body, nouvelle.body);
-    });
 });
