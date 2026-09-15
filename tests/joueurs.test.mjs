@@ -172,7 +172,6 @@ describe('loadJoueurs', () => {
         app.ev('document.getElementById("player-inputs").children.length = 0;');
         await app.ev('loadEtat()');
 
-        const emplacements = app.ev('document.getElementById("player-inputs").children');
         assert.equal(app.ev('document.getElementById("player-inputs").children.length'), 4);
         assert.match(app.ev('document.getElementById("player-inputs").children[0].innerHTML'), /Alice/);
     });

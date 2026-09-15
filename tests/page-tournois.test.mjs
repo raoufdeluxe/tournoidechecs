@@ -69,6 +69,12 @@ async function pageTournois(tournois = {}, { courant = null, listeEnPanne = fals
 
 const liste = (app) => app.ev('document.getElementById("tournois-liste").innerHTML');
 
+/** Le bouton lit le champ de la ligne : on lui donne celui qu'un clic réel aurait visé. */
+function saisir(app, id, nom) {
+    app.ev(`__champ = { value: ${JSON.stringify(nom)}, dataset: { id: ${JSON.stringify(id)} } };
+            document.querySelector = () => __champ;`);
+}
+
 describe('affichage de la liste', () => {
     test('une ligne par tournoi, avec son nom modifiable et son étape', async () => {
         const app = await pageTournois({
@@ -103,9 +109,7 @@ describe('affichage de la liste', () => {
     test('cliquer sur le repère déplace le tournoi vers l\'adresse de son nom', async () => {
         const app = await pageTournois({ 'red-indians-cup': { version: 2, state: etatTournoi('Big Chief Cup') } });
         app.repondreConfirm(true);
-        // Le bouton lit le champ de la ligne, comme le ferait un clic réel.
-        app.ev(`__champ = { value: 'Big Chief Cup', dataset: { id: 'red-indians-cup' } };
-                document.querySelector = () => __champ;`);
+        saisir(app, 'red-indians-cup', 'Big Chief Cup');
         await app.ev(`renameTournoi('red-indians-cup')`);
 
         assert.ok(app.serveur.tournois['big-chief-cup'], 'écrit à la nouvelle adresse');
@@ -147,11 +151,6 @@ describe('affichage de la liste', () => {
 });
 
 describe('renommer un tournoi', () => {
-    function saisir(app, id, nom) {
-        app.ev(`__champ = { value: ${JSON.stringify(nom)}, dataset: { id: ${JSON.stringify(id)} } };
-                document.querySelector = () => __champ;`);
-    }
-
     test('renommer met à jour le nom, et l\'adresse suit le nom', async () => {
         const app = await pageTournois({ 'coupe-du-dimanche': { version: 3, state: etatTournoi('Coupe du Dimanche') } });
         saisir(app, 'coupe-du-dimanche', 'Coupe du Dimanche 2026');

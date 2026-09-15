@@ -11,10 +11,7 @@ import vm from 'node:vm';
 
 const racine = fileURLToPath(new URL('../..', import.meta.url));
 
-// Ordre de chargement de public/index.html
-
-
-// Les trois pages de l'application.
+// Les pages de l'application.
 export const PAGES = ['index.html', 'joueurs.html', 'tournois.html', 'stats.html', 'sauvegarde.html'];
 
 /** Les scripts que charge une page, dans son ordre à elle. Ceux de public/js/
@@ -27,8 +24,9 @@ export function scriptsDeLaPage(page = 'index.html') {
         .map(chemin => (chemin.startsWith('js/') ? chemin.slice(3) : chemin));
 }
 
-/** Retient le résultat par argument : les fichiers de public/ ne changent pas
-    pendant une exécution, et la suite instancie l'application 390 fois. */
+/** Le même résultat pour une même clé. Sert à ne lire les fichiers de public/
+    qu'une fois par exécution, et à rendre un élément stable par identifiant ou
+    par sélecteur — comme le fait un vrai document. */
 function memoiser(fn) {
     const cache = new Map();
     return (cle) => {
@@ -89,7 +87,7 @@ function element(id, caches) {
         scrollIntoView() {},
         closest: () => null,
         contains: () => false,
-        querySelector: () => element(),
+        querySelector: memoiser(() => element()),
         querySelectorAll: () => [],
         getBoundingClientRect: () => ({ x: 0, y: 0, width: 800, height: 400, top: 0, left: 0, right: 800, bottom: 400 }),
     };
@@ -188,18 +186,14 @@ export function chargerApp(options = {}) {
 
     bac.navigator = { clipboard: { writeText: async () => {} }, onLine: true };
 
-    const cacheElements = new Map();
     // Un seul body, comme dans un navigateur : sinon ce qu'on y ajoute
     // disparaît aussitôt, et les tests ne peuvent rien y observer.
     const corps = element('body', caches);
     bac.document = {
-        getElementById(id) {
-            if (!cacheElements.has(id)) cacheElements.set(id, element(id, caches));
-            return cacheElements.get(id);
-        },
+        getElementById: memoiser((id) => element(id, caches)),
         createElement: () => element(),
         createElementNS: () => element(),
-        querySelector: () => element(),
+        querySelector: memoiser(() => element()),
         querySelectorAll: (selecteur) => bac.__selecteurs[selecteur] || [],
         addEventListener() {},
         removeEventListener() {},
