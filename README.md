@@ -406,6 +406,7 @@ tests/
   aide/app.mjs       charge public/js/*.js dans un DOM factice (voir plus bas)
   aide/tournoi.mjs   fabriques : poule générée, résultats joués
   aide/kv.mjs        faux espace KV + appel du Worker
+  aide/serveur.mjs   le vrai Worker sous une page, sur ce KV
   core.test.mjs      départages : Elo, belle, 3e place, barème
   poule.test.mjs     méthode du cercle, aller/retour, classement, progression
   finales.test.mjs   qualification des 4 premiers, demies, Grande Finale, podium
