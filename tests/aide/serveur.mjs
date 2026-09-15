@@ -91,9 +91,8 @@ export async function appAvecServeur({
 
     // Ce que le serveur garde, vu du test. `kv.donnees` est la Map que sert
     // fauxKV, d'où une lecture synchrone : une assertion n'a pas à s'écrire avec
-    // await. Écrire dans le KV en cours de test passe par `app.serveur.kv` tant
-    // qu'une passe n'a pas montré la forme qu'il lui faut (poser une enveloppe,
-    // en retirer une, bousculer une version : ce n'est pas le même geste).
+    // await. Poser une enveloppe en cours de test passe par `app.serveur.kv`
+    // tant qu'une passe n'a pas montré la forme qu'il lui faut.
     const relire = (cle) => (kv.donnees.has(cle) ? JSON.parse(kv.donnees.get(cle)) : null);
 
     app.requetes = requetes;
@@ -104,6 +103,9 @@ export async function appAvecServeur({
         ids: () => [...kv.donnees.keys()]
             .filter(cle => cle.startsWith(PREFIXE_TOURNOI))
             .map(cle => cle.slice(PREFIXE_TOURNOI.length)),
+        // Le tournoi s'évapore derrière le dos de la page : c'est ce que vit un
+        // onglet resté ouvert pendant qu'un autre appareil supprimait.
+        removeTournoi: (id) => kv.donnees.delete(PREFIXE_TOURNOI + id),
     };
     return app;
 }

@@ -2,7 +2,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { chargerApp } from './aide/app.mjs';
+import { appAvecServeur } from './aide/serveur.mjs';
 
 const etatTournoi = (nom, nbJoueurs = 4) => ({
     screen: 'screen-tournament',
@@ -14,58 +14,19 @@ const etatTournoi = (nom, nbJoueurs = 4) => ({
 });
 
 /**
- * Page Tournois branchée sur un faux serveur.
- * `tournois` : { id: { version, state } }.
+ * Page Tournois branchée sur le vrai Worker.
+ * `tournois` : { id: { version, state } } — l'horodatage est ajouté, le serveur
+ * en pose un à chaque écriture et trie la liste là-dessus (`worker.js:387-388`).
  */
-async function pageTournois(tournois = {}, { courant = null, listeEnPanne = false } = {}) {
-    const serveur = { tournois: JSON.parse(JSON.stringify(tournois)) };
-    const requetes = [];
+const pageTournois = (tournois = {}, { courant, listeEnPanne = false } = {}) => appAvecServeur({
+    page: 'tournois.html',
+    courant,
+    panne: listeEnPanne ? LISTE_INJOIGNABLE : null,
+    tournois: Object.fromEntries(Object.entries(tournois).map(
+        ([id, env]) => [id, { updatedAt: '2026-09-01T10:00:00.000Z', ...env }])),
+});
 
-    const app = chargerApp({
-        page: 'tournois.html',
-        fetch: async (url, init) => {
-            const methode = (init && init.method) || 'GET';
-            const chemin = String(url).replace(/^https?:\/\/[^/]*/, '');
-            const corps = init && init.body ? JSON.parse(init.body) : null;
-            const copie = (p) => JSON.parse(JSON.stringify(p));
-            const ok = (p) => ({ ok: true, status: 200, json: async () => copie(p) });
-            requetes.push({ methode, chemin, corps });
-
-            if (chemin.startsWith('/api/joueurs')) return ok({ version: 1, joueurs: [] });
-            if (chemin.startsWith('/api/tournois')) {
-                if (listeEnPanne) throw new Error('hors ligne');
-                return ok({
-                    tournaments: Object.entries(serveur.tournois).map(([id, t]) => ({
-                        id,
-                        name: t.state.tournament.name,
-                        screen: t.state.screen,
-                        players: t.state.tournament.players.length,
-                        updatedAt: '2026-09-01T10:00:00.000Z',
-                    })),
-                    complete: true,
-                });
-            }
-
-            const id = decodeURIComponent((chemin.match(/[?&]id=([^&]*)/) || [])[1] || '');
-            if (methode === 'DELETE') {
-                delete serveur.tournois[id];
-                return ok({ deleted: true });
-            }
-            if (methode === 'POST') {
-                serveur.tournois[id] = { version: (corps.baseVersion || 0) + 1, state: corps.state };
-                return ok({ version: serveur.tournois[id].version });
-            }
-            const t = serveur.tournois[id];
-            return ok(t ? { version: t.version, state: t.state } : { version: 0, state: null });
-        },
-    });
-
-    if (courant) app.stockage.set('tournoi_echecs_courant', courant);
-    await app.pret();
-    app.requetes = requetes;
-    app.serveur = serveur;
-    return app;
-}
+const LISTE_INJOIGNABLE = (_methode, chemin) => chemin.startsWith('/api/tournois') && 'hors-ligne';
 
 const liste = (app) => app.ev('document.getElementById("tournois-liste").innerHTML');
 
@@ -113,9 +74,9 @@ describe('affichage de la liste', () => {
         saisir(app, 'red-indians-cup', 'Big Chief Cup');
         await app.ev(`renameTournoi('red-indians-cup')`);
 
-        assert.ok(app.serveur.tournois['big-chief-cup'], 'écrit à la nouvelle adresse');
-        assert.ok(!app.serveur.tournois['red-indians-cup'], 'ancienne adresse supprimée');
-        assert.equal(app.serveur.tournois['big-chief-cup'].state.tournament.name, 'Big Chief Cup');
+        assert.ok(app.serveur.tournoi('big-chief-cup'), 'écrit à la nouvelle adresse');
+        assert.ok(!app.serveur.tournoi('red-indians-cup'), 'ancienne adresse supprimée');
+        assert.equal(app.serveur.tournoi('big-chief-cup').state.tournament.name, 'Big Chief Cup');
     });
 
     test('un tournoi sans nom n\'est pas marqué comme divergent', async () => {
@@ -152,8 +113,8 @@ describe('renommer un tournoi', () => {
         await app.ev('renameTournoi("coupe-du-dimanche")');
 
         // Le slug « coupe-du-dimanche-2026 » diffère : c'est un déplacement.
-        assert.ok(app.serveur.tournois['coupe-du-dimanche-2026']);
-        assert.equal(app.serveur.tournois['coupe-du-dimanche-2026'].state.tournament.name, 'Coupe du Dimanche 2026');
+        assert.ok(app.serveur.tournoi('coupe-du-dimanche-2026'));
+        assert.equal(app.serveur.tournoi('coupe-du-dimanche-2026').state.tournament.name, 'Coupe du Dimanche 2026');
     });
 
     test('changer le nom déplace le tournoi et efface l\'ancienne adresse', async () => {
@@ -162,8 +123,8 @@ describe('renommer un tournoi', () => {
         saisir(app, 'ancien', 'Tout neuf');
         await app.ev('renameTournoi("ancien")');
 
-        assert.ok(app.serveur.tournois['tout-neuf'], 'écrit à la nouvelle adresse');
-        assert.ok(!app.serveur.tournois.ancien, 'ancienne adresse supprimée');
+        assert.ok(app.serveur.tournoi('tout-neuf'), 'écrit à la nouvelle adresse');
+        assert.ok(!app.serveur.tournoi('ancien'), 'ancienne adresse supprimée');
         const ordre = app.requetes.filter(r => ['POST', 'DELETE'].includes(r.methode)).map(r => r.methode);
         assert.deepEqual(ordre, ['POST', 'DELETE'], 'on écrit avant d\'effacer, jamais l\'inverse');
     });
@@ -173,8 +134,8 @@ describe('renommer un tournoi', () => {
         app.repondreConfirm(false);
         saisir(app, 'ancien', 'Tout neuf');
         await app.ev('renameTournoi("ancien")');
-        assert.ok(app.serveur.tournois.ancien);
-        assert.ok(!app.serveur.tournois['tout-neuf']);
+        assert.ok(app.serveur.tournoi('ancien'));
+        assert.ok(!app.serveur.tournoi('tout-neuf'));
     });
 
     test('un nom déjà pris est refusé', async () => {
@@ -186,20 +147,20 @@ describe('renommer un tournoi', () => {
         saisir(app, 'ancien', 'Tout neuf');
         await app.ev('renameTournoi("ancien")');
         assert.match(app.alertes.at(-1), /existe déjà/);
-        assert.ok(app.serveur.tournois.ancien, 'rien n\'a bougé');
+        assert.ok(app.serveur.tournoi('ancien'), 'rien n\'a bougé');
     });
 
     test('vider le nom garde l\'adresse actuelle', async () => {
         const app = await pageTournois({ abc: { version: 2, state: etatTournoi('Un nom') } });
         saisir(app, 'abc', '');
         await app.ev('renameTournoi("abc")');
-        assert.equal(app.serveur.tournois.abc.state.tournament.name, null);
-        assert.equal(app.serveur.tournois.abc.version, 3, 'écrit sur la version lue');
+        assert.equal(app.serveur.tournoi('abc').state.tournament.name, null);
+        assert.equal(app.serveur.tournoi('abc').version, 3, 'écrit sur la version lue');
     });
 
     test('un tournoi disparu entre-temps est signalé', async () => {
         const app = await pageTournois({ abc: { version: 1, state: etatTournoi('Un nom') } });
-        delete app.serveur.tournois.abc;
+        app.serveur.removeTournoi('abc');
         saisir(app, 'abc', 'Autre');
         await app.ev('renameTournoi("abc")');
         assert.match(app.alertes.at(-1), /n'existe plus/);
@@ -211,7 +172,7 @@ describe('supprimer un tournoi', () => {
         const app = await pageTournois({ abc: { version: 1, state: etatTournoi('A') } });
         app.repondreConfirm(false);
         await app.ev('removeTournoi("abc")');
-        assert.ok(app.serveur.tournois.abc);
+        assert.ok(app.serveur.tournoi('abc'));
     });
 
     test('confirmée, le tournoi part et disparaît de la liste', async () => {
@@ -221,7 +182,7 @@ describe('supprimer un tournoi', () => {
         });
         app.repondreConfirm(true);
         await app.ev('removeTournoi("abc")');
-        assert.deepEqual(Object.keys(app.serveur.tournois), ['def']);
+        assert.deepEqual(app.serveur.ids(), ['def']);
         assert.doesNotMatch(liste(app), /data-id="abc"/);
     });
 
@@ -264,6 +225,6 @@ describe('commencer un nouveau tournoi', () => {
         const app = await avecUnTournoiEnCours();
         app.ev('openNouveauTournoi()');
         assert.deepEqual(app.requetes.filter(r => r.methode === 'DELETE'), []);
-        assert.ok(app.serveur.tournois.abc);
+        assert.ok(app.serveur.tournoi('abc'));
     });
 });
