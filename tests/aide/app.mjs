@@ -27,25 +27,40 @@ export function scriptsDeLaPage(page = 'index.html') {
         .map(chemin => (chemin.startsWith('js/') ? chemin.slice(3) : chemin));
 }
 
-export function lireScript(nom) {
-    return readFileSync(racine + 'public/' + (nom.includes('/') ? nom : 'js/' + nom), 'utf8');
+/** Retient le résultat par argument : les fichiers de public/ ne changent pas
+    pendant une exécution, et la suite instancie l'application 390 fois. */
+function memoiser(fn) {
+    const cache = new Map();
+    return (cle) => {
+        if (!cache.has(cle)) cache.set(cle, fn(cle));
+        return cache.get(cle);
+    };
 }
 
-export function lireFichier(chemin) {
-    return readFileSync(racine + chemin, 'utf8');
+/** Chemin de public/ pour un script : nom nu pour ceux de public/js/. */
+function cheminScript(nom) {
+    return 'public/' + (nom.includes('/') ? nom : 'js/' + nom);
 }
+
+export const lireFichier = memoiser((chemin) => readFileSync(racine + chemin, 'utf8'));
+
+export function lireScript(nom) {
+    return lireFichier(cheminScript(nom));
+}
+
+/** Le script compilé : `vm.Script` est immuable, il se partage entre contextes. */
+const scriptCompile = memoiser(
+    (nom) => new vm.Script(lireScript(nom), { filename: cheminScript(nom) }));
 
 // Éléments qui portent l'attribut `hidden` dans index.html : le faux DOM doit
 // partir du même état, sinon un test croit un panneau ouvert alors que la page
 // le montre fermé.
-function idsCaches(page) {
-    return new Set(
-        [...readFileSync(racine + 'public/' + page, 'utf8').matchAll(/<[a-z][^>]*>/gi)]
-            .map(m => m[0])
-            .filter(balise => /\shidden(\s|>|=)/.test(balise))
-            .map(balise => (balise.match(/\bid="([^"]+)"/) || [])[1])
-            .filter(Boolean));
-}
+const idsCaches = memoiser((page) => new Set(
+    [...lireFichier('public/' + page).matchAll(/<[a-z][^>]*>/gi)]
+        .map(m => m[0])
+        .filter(balise => /\shidden(\s|>|=)/.test(balise))
+        .map(balise => (balise.match(/\bid="([^"]+)"/) || [])[1])
+        .filter(Boolean)));
 
 // Élément DOM factice : accepte tout ce que le code de rendu lui demande.
 function element(id, caches) {
@@ -199,8 +214,7 @@ export function chargerApp(options = {}) {
     const contexte = vm.createContext(bac);
     const scripts = options.scripts ?? scriptsDeLaPage(page);
     for (const nom of scripts) {
-        vm.runInContext(lireScript(nom), contexte,
-            { filename: 'public/' + (nom.includes('/') ? nom : 'js/' + nom) });
+        scriptCompile(nom).runInContext(contexte);
     }
 
     // La confirmation est un panneau dans la page : les tests répondent à sa
