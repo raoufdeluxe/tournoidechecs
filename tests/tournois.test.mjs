@@ -7,22 +7,21 @@ import { chargerApp } from './aide/app.mjs';
 const MOTIF_ID = /^[a-z0-9-]{1,64}$/; // celui du Worker
 
 describe('slugify — « Tournoi des potes » devient une adresse', () => {
-    const cas = [
-        ['Tournoi des potes', 'tournoi-des-potes'],
-        ['Été à Noël', 'ete-a-noel'],
-        ['  espaces   multiples  ', 'espaces-multiples'],
-        ['Ponctuation !?#@', 'ponctuation'],
-        ['MAJUSCULES', 'majuscules'],
-        ['déjà-un-slug', 'deja-un-slug'],
-        ['1000 & 1 nuits', '1000-1-nuits'],
-        ['---bordé de tirets---', 'borde-de-tirets'],
-    ];
-    for (const [entree, attendu] of cas) {
-        test(`« ${entree} » → « ${attendu} »`, () => {
-            const app = chargerApp();
-            assert.equal(app.appel('slugify', entree), attendu);
-        });
-    }
+    test('accents, ponctuation, majuscules et espaces se réduisent à des mots liés par des tirets', () => {
+        const app = chargerApp();
+        for (const [entree, attendu] of [
+            ['Tournoi des potes', 'tournoi-des-potes'],
+            ['Été à Noël', 'ete-a-noel'],
+            ['  espaces   multiples  ', 'espaces-multiples'],
+            ['Ponctuation !?#@', 'ponctuation'],
+            ['MAJUSCULES', 'majuscules'],
+            ['déjà-un-slug', 'deja-un-slug'],
+            ['1000 & 1 nuits', '1000-1-nuits'],
+            ['---bordé de tirets---', 'borde-de-tirets'],
+        ]) {
+            assert.equal(app.appel('slugify', entree), attendu, `« ${entree} » → « ${attendu} »`);
+        }
+    });
 
     test('un nom très long est coupé sans laisser de tiret en bout', () => {
         const app = chargerApp();

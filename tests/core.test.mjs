@@ -10,36 +10,35 @@ const manche = (num, p1, p2, joue = true) => ({
 });
 
 describe('applyResultat', () => {
-    for (const [valeur, attendu] of [
-        ['p1', { player1Score: 1, player2Score: 0, played: true }],
-        ['p2', { player1Score: 0, player2Score: 1, played: true }],
-        ['draw', { player1Score: 0.5, player2Score: 0.5, played: true }],
-        ['', { player1Score: null, player2Score: null, played: false }],
-    ]) {
-        test(`« ${valeur || 'vide'} » donne ${JSON.stringify(attendu)}`, () => {
-            const app = chargerApp();
+    test('chaque résultat pose les deux scores, et le résultat vide remet la manche à jouer', () => {
+        const app = chargerApp();
+        for (const [valeur, attendu] of [
+            ['p1', { player1Score: 1, player2Score: 0, played: true }],
+            ['p2', { player1Score: 0, player2Score: 1, played: true }],
+            ['draw', { player1Score: 0.5, player2Score: 0.5, played: true }],
+            ['', { player1Score: null, player2Score: null, played: false }],
+        ]) {
             app.set('globalThis.m', { player1Score: 9, player2Score: 9, played: true });
             app.ev(`applyResultat(m, ${JSON.stringify(valeur)})`);
-            assert.deepEqual(app.json('m'), attendu);
-        });
-    }
+            assert.deepEqual(app.json('m'), attendu, `« ${valeur || 'vide'} »`);
+        }
+    });
 });
 
 describe('resolveVainqueurElo — le plus bas Elo l\'emporte', () => {
-    const cas = [
-        ['Elo plus bas côté p1', 1200, 1800, 'p1'],
-        ['Elo plus bas côté p2', 1800, 1200, 'p2'],
-        ['Elos identiques', 1500, 1500, null],
-        ['Elo manquant chez p1', null, 1500, null],
-        ['Elo manquant chez p2', 1500, null, null],
-        ['Elo manquant des deux côtés', null, null, null],
-    ];
-    for (const [nom, e1, e2, attendu] of cas) {
-        test(nom, () => {
-            const app = chargerApp();
-            assert.equal(app.appel('resolveVainqueurElo', { id: 0, elo: e1 }, { id: 1, elo: e2 }), attendu);
-        });
-    }
+    test('le plus bas Elo gagne ; à Elo égal ou manquant, personne', () => {
+        const app = chargerApp();
+        for (const [nom, e1, e2, attendu] of [
+            ['Elo plus bas côté p1', 1200, 1800, 'p1'],
+            ['Elo plus bas côté p2', 1800, 1200, 'p2'],
+            ['Elos identiques', 1500, 1500, null],
+            ['Elo manquant chez p1', null, 1500, null],
+            ['Elo manquant chez p2', 1500, null, null],
+            ['Elo manquant des deux côtés', null, null, null],
+        ]) {
+            assert.equal(app.appel('resolveVainqueurElo', { id: 0, elo: e1 }, { id: 1, elo: e2 }), attendu, nom);
+        }
+    });
 
     test('un Elo de 0 est une valeur, pas une absence', () => {
         const app = chargerApp();
