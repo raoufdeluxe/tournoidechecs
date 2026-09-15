@@ -17,7 +17,7 @@ export const PAGES = ['index.html', 'joueurs.html', 'tournois.html', 'stats.html
 /** Les scripts que charge une page, dans son ordre à elle. Ceux de public/js/
     gardent leur nom nu ; une page d'un sous-dossier peut en charger d'autres,
     qui reviennent alors en chemin relatif à public/. */
-export function scriptsDeLaPage(page = 'index.html') {
+function scriptsDeLaPage(page = 'index.html') {
     const dossier = page.slice(0, page.lastIndexOf('/') + 1);
     return [...lireFichier('public/' + page).matchAll(/<script src="([^"]+)"><\/script>/g)]
         .map(m => new URL(m[1], 'file:///' + dossier).pathname.slice(1))
