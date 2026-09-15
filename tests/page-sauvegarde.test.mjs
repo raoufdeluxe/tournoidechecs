@@ -2,87 +2,69 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { chargerApp } from './aide/app.mjs';
+import { appAvecServeur } from './aide/serveur.mjs';
 
-/** Page Sauvegarde branchée sur un faux serveur qui tient tournois et fiches. */
-async function pageSauvegarde({ tournois = [], fiches = [], panne = null } = {}) {
-    const serveur = { tournois: [...tournois], joueurs: fiches.map(f => ({ ...f })), version: 1 };
-    const requetes = [];
+/** Un tournoi enregistré. La liste du serveur ne montre que ceux qui ont au
+    moins un partant (`worker.js:382-383`) : un identifiant nu n'y paraîtrait pas. */
+const enveloppe = (nom) => ({
+    version: 1,
+    updatedAt: '2026-09-01T10:00:00.000Z',
+    state: {
+        screen: 'screen-tournament',
+        tournament: { name: nom, players: [{ id: 0, name: 'J0', elo: null }], matches: [] },
+    },
+});
 
-    const app = chargerApp({
-        page: 'sauvegarde.html',
-        fetch: async (url, init) => {
-            const methode = (init && init.method) || 'GET';
-            const chemin = String(url).replace(/^https?:\/\/[^/]*/, '');
-            const corps = init && init.body ? JSON.parse(init.body) : null;
-            const copie = (p) => JSON.parse(JSON.stringify(p));
-            const ok = (p) => ({ ok: true, status: 200, json: async () => copie(p) });
-            requetes.push({ methode, chemin });
+/** Page Sauvegarde branchée sur le vrai Worker. `tournois` : des identifiants. */
+const pageSauvegarde = ({ tournois = [], joueurs = [], panne } = {}) => appAvecServeur({
+    page: 'sauvegarde.html',
+    joueurs,
+    panne,
+    tournois: Object.fromEntries(tournois.map(id => [id, enveloppe(id)])),
+});
 
-            if (chemin.startsWith('/api/joueurs')) {
-                if (methode === 'PUT') {
-                    if (panne === 'joueurs') return { ok: false, status: 500, json: async () => ({}) };
-                    serveur.joueurs = corps.joueurs;
-                    return ok({ version: ++serveur.version });
-                }
-                return ok({ version: serveur.version, joueurs: serveur.joueurs });
-            }
-            if (chemin.startsWith('/api/tournois')) {
-                if (panne === 'liste') throw new Error('hors ligne');
-                return ok({ tournaments: serveur.tournois.map(id => ({ id, name: id, screen: null, players: 4 })), complete: true });
-            }
-            const id = decodeURIComponent((chemin.match(/[?&]id=([^&]*)/) || [])[1] || '');
-            if (methode === 'DELETE') {
-                if (panne === id) return { ok: false, status: 500, json: async () => ({}) };
-                serveur.tournois = serveur.tournois.filter(t => t !== id);
-                return ok({ deleted: true });
-            }
-            return ok({ version: 0, state: null });
-        },
-    });
-
-    await app.pret();
-    app.requetes = requetes;
-    app.serveur = serveur;
-    return app;
-}
+// Les trois pannes que ce fichier éprouve. Le vrai Worker ne tombe jamais : ce
+// sont elles qui mettent la page devant un serveur qui ne répond pas.
+const LISTE_INJOIGNABLE = (_methode, chemin) => chemin.startsWith('/api/tournois') && 'hors-ligne';
+const FICHES_REFUSEES = (methode, chemin) => methode === 'PUT' && chemin.startsWith('/api/joueurs') && 500;
+const suppressionRefusee = (id) => (methode, chemin) => methode === 'DELETE' && chemin.includes('id=' + id) && 500;
 
 const resume = (app) => app.ev('document.getElementById("sauvegarde-resume").textContent');
 
 describe('état affiché', () => {
     test('compte les tournois et les fiches', async () => {
-        const app = await pageSauvegarde({ tournois: ['a', 'b', 'c'], fiches: [{ id: 'j-aa', nom: 'Alice', elo: null }] });
+        const app = await pageSauvegarde({ tournois: ['a', 'b', 'c'], joueurs: [{ id: 'j-aa', nom: 'Alice', elo: null }] });
         assert.match(resume(app), /3 tournois et 1 fiche de joueur/);
     });
 
     test('accorde le singulier', async () => {
-        const app = await pageSauvegarde({ tournois: ['a'], fiches: [] });
+        const app = await pageSauvegarde({ tournois: ['a'], joueurs: [] });
         assert.match(resume(app), /1 tournoi et 0 fiche de joueur/);
     });
 
     test('serveur injoignable : on le dit', async () => {
-        const app = await pageSauvegarde({ panne: 'liste' });
+        const app = await pageSauvegarde({ panne: LISTE_INJOIGNABLE });
         assert.match(resume(app), /indisponible/);
     });
 });
 
 describe('tout effacer', () => {
-    const contenu = { tournois: ['abc', 'def'], fiches: [{ id: 'j-aa', nom: 'Alice', elo: null }] };
+    const contenu = { tournois: ['abc', 'def'], joueurs: [{ id: 'j-aa', nom: 'Alice', elo: null }] };
 
     test('annuler la saisie ne touche à rien', async () => {
         const app = await pageSauvegarde(contenu);
         app.repondrePrompt(null);
         await app.ev('eraseTout()');
-        assert.deepEqual(app.serveur.tournois, ['abc', 'def']);
-        assert.equal(app.serveur.joueurs.length, 1);
+        assert.deepEqual(app.serveur.ids(), ['abc', 'def']);
+        assert.equal(app.serveur.joueurs().length, 1);
     });
 
     test('un mot approximatif n\'efface rien', async () => {
         const app = await pageSauvegarde(contenu);
         app.repondrePrompt('oui');
         await app.ev('eraseTout()');
-        assert.deepEqual(app.serveur.tournois, ['abc', 'def']);
-        assert.equal(app.serveur.joueurs.length, 1);
+        assert.deepEqual(app.serveur.ids(), ['abc', 'def']);
+        assert.equal(app.serveur.joueurs().length, 1);
     });
 
     test('la demande annonce ce qui va disparaître et réclame le mot', async () => {
@@ -99,8 +81,8 @@ describe('tout effacer', () => {
         const app = await pageSauvegarde(contenu);
         app.repondrePrompt('EFFACER');
         await app.ev('eraseTout()');
-        assert.deepEqual(app.serveur.tournois, []);
-        assert.deepEqual(app.serveur.joueurs, []);
+        assert.deepEqual(app.serveur.ids(), []);
+        assert.deepEqual(app.serveur.joueurs(), []);
         assert.match(app.alertes.at(-1), /2 tournoi\(s\) et 1 fiche\(s\) effacés/);
     });
 
@@ -108,7 +90,7 @@ describe('tout effacer', () => {
         const app = await pageSauvegarde(contenu);
         app.repondrePrompt('  effacer ');
         await app.ev('eraseTout()');
-        assert.deepEqual(app.serveur.tournois, []);
+        assert.deepEqual(app.serveur.ids(), []);
     });
 
     test('chaque tournoi part par une suppression distincte', async () => {
@@ -131,16 +113,16 @@ describe('tout effacer', () => {
     });
 
     test('un tournoi récalcitrant n\'empêche pas les autres, et est signalé', async () => {
-        const app = await pageSauvegarde({ ...contenu, panne: 'abc' });
+        const app = await pageSauvegarde({ ...contenu, panne: suppressionRefusee('abc') });
         app.repondrePrompt('EFFACER');
         await app.ev('eraseTout()');
-        assert.deepEqual(app.serveur.tournois, ['abc'], 'seul celui en échec reste');
+        assert.deepEqual(app.serveur.ids(), ['abc'], 'seul celui en échec reste');
         assert.match(app.alertes.at(-1), /1 tournoi\(s\) et 1 fiche\(s\) effacés/);
         assert.match(app.alertes.at(-1), /En échec[\s\S]*abc/);
     });
 
     test('un échec sur les fiches est signalé sans être compté', async () => {
-        const app = await pageSauvegarde({ ...contenu, panne: 'joueurs' });
+        const app = await pageSauvegarde({ ...contenu, panne: FICHES_REFUSEES });
         app.repondrePrompt('EFFACER');
         await app.ev('eraseTout()');
         assert.match(app.alertes.at(-1), /2 tournoi\(s\) et 0 fiche\(s\) effacés/);
@@ -148,7 +130,7 @@ describe('tout effacer', () => {
     });
 
     test('rien à effacer : on le dit sans rien demander', async () => {
-        const app = await pageSauvegarde({ tournois: [], fiches: [] });
+        const app = await pageSauvegarde({ tournois: [], joueurs: [] });
         await app.ev('eraseTout()');
         assert.match(app.alertes.at(-1), /rien à effacer/i);
         assert.deepEqual(app.requetes.filter(r => r.methode === 'DELETE'), []);
@@ -162,7 +144,7 @@ describe('tout effacer', () => {
     });
 
     test('le bouton est rendu, même après un échec', async () => {
-        const app = await pageSauvegarde({ ...contenu, panne: 'abc' });
+        const app = await pageSauvegarde({ ...contenu, panne: suppressionRefusee('abc') });
         app.repondrePrompt('EFFACER');
         await app.ev('eraseTout()');
         assert.equal(app.ev('document.getElementById("btn-raz").disabled'), false);
