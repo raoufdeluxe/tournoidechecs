@@ -431,9 +431,11 @@ comme le ferait la page. Les minuteries et `fetch` sont pilotés depuis le test 
 c'est ce qui permet de vérifier le back-off (1s, 2s, 4s… 30s) sans attendre.
 
 `statique.test.mjs` attrape ce qu'aucun test unitaire ne voit : un `onclick=`
-qui appelle une fonction supprimée, un `getElementById` orphelin, un script
-ajouté dans `public/js/` mais oublié dans `index.html`, un binding absent de
-`wrangler.toml`, ou la table `[assets]` qui ne serait plus la dernière.
+qui appelle une fonction supprimée, un `getElementById` orphelin, un identifiant
+déclaré deux fois, un chemin d'icône ou de raccourci qui ne mène nulle part, un
+`confirm()` réintroduit, ou un binding écrit après `[assets]` dans
+`wrangler.toml` — qui appartiendrait alors à cette table et disparaîtrait du
+Worker sans un mot.
 
 La CI GitHub Actions (`.github/workflows/ci.yml`) rejoue tout cela à chaque
 push et chaque pull request, et vérifie en plus que le Worker se compile

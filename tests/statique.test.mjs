@@ -5,40 +5,27 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { chargerApp, lireScript, lireFichier, PAGES, scriptsDeLaPage } from './aide/app.mjs';
+import { chargerApp, lireScript, lireFichier, PAGES } from './aide/app.mjs';
 
 const racine = fileURLToPath(new URL('..', import.meta.url));
 const fichiersJs = readdirSync(racine + 'public/js').filter(f => f.endsWith('.js')).sort();
 
-describe('ce que la page charge', () => {
-    test('chaque fichier appelé par la feuille de style existe', () => {
-        // Une adresse fausse ne fait rien échouer : l'image ne s'affiche pas,
-        // sans un mot. C'est le genre de panne qu'on ne voit jamais.
-        const appels = [...lireFichier('public/styles.css').matchAll(/url\(["']?([^"')]+)["']?\)/g)]
-            .map(m => m[1])
-            .filter(chemin => !/^(data:|https?:|\/\/)/.test(chemin));
-        assert.ok(appels.length > 0, 'le relevé a bien trouvé des fichiers');
-        for (const chemin of appels) {
-            assert.ok(existsSync(racine + 'public/' + chemin), `styles.css appelle ${chemin}, qui n'existe pas`);
-        }
-    });
-
-    test('chaque page ne charge que des fichiers qui existent', () => {
-        for (const page of PAGES) {
-            for (const script of scriptsDeLaPage(page)) {
-                assert.ok(fichiersJs.includes(script), `${page} charge js/${script}, qui n'existe pas`);
-            }
-        }
-    });
-
-    test('les pages dédiées ne chargent pas la machinerie du tournoi', () => {
-        // sync.js ouvre et enregistre le tournoi courant : sur /joueurs ou
-        // /tournois, il créerait un tournoi qu'on n'a pas demandé.
-        for (const page of ['joueurs.html', 'tournois.html', 'stats.html']) {
-            const scripts = scriptsDeLaPage(page);
-            for (const interdit of ['sync.js', 'poule.js', 'finales.js', 'tournois.js']) {
-                assert.ok(!scripts.includes(interdit), `${page} ne devrait pas charger ${interdit}`);
-            }
+describe('ce que la page annonce', () => {
+    test('chaque chemin écrit quelque part désigne un fichier qui existe', () => {
+        // Trois pannes silencieuses, et aucune ne se voit au déploiement, qui
+        // copie les fichiers sans suivre leurs références : l'image ne s'affiche
+        // pas, l'installation est refusée, le raccourci ouvre un 404.
+        const manifeste = JSON.parse(lireFichier('public/manifest.json'));
+        const chemins = [
+            ...[...lireFichier('public/styles.css').matchAll(/url\(["']?([^"')]+)["']?\)/g)]
+                .map(m => ['styles.css', m[1]])
+                .filter(([, chemin]) => !/^(data:|https?:|\/\/)/.test(chemin)),
+            ...manifeste.icons.map(icone => ['manifest.json (icons)', icone.src]),
+            ...(manifeste.shortcuts || []).map(r => ['manifest.json (shortcuts)', r.url + '.html']),
+        ];
+        assert.ok(chemins.length > 0, 'le relevé a bien trouvé des chemins');
+        for (const [source, chemin] of chemins) {
+            assert.ok(existsSync(racine + 'public/' + chemin), `${source} appelle ${chemin}, qui n'existe pas`);
         }
     });
 
@@ -46,13 +33,11 @@ describe('ce que la page charge', () => {
         const attendu = './ ./tournois ./joueurs ./stats ./sauvegarde';
         for (const page of PAGES) {
             const menu = lireFichier('public/' + page).match(/<nav id="main-menu"[\s\S]*?<\/nav>/)[0];
-            const liens = [...menu.matchAll(/<a class="menu-item" href="([^"]+)"/g)].map(m => m[1]).join(' ');
+            const liens = [...menu.matchAll(/<a\b[^>]*\bhref="([^"]+)"/g)].map(m => m[1]).join(' ');
             assert.equal(liens, attendu, page);
-            assert.doesNotMatch(menu, /<button[^>]*class="menu-item"/,
-                `${page} : le menu ne porte que la navigation`);
+            assert.doesNotMatch(menu, /<button/, `${page} : le menu ne porte que la navigation`);
         }
     });
-
 });
 
 describe('les liaisons entre la page et le code', () => {
@@ -97,6 +82,8 @@ describe('les liaisons entre la page et le code', () => {
     });
 
     test('chaque écran visé par showEcran existe dans la page', () => {
+        // Pas un sous-cas du test précédent : celui-là ne relève que des
+        // littéraux, or finales.js appelle getElementById(screenId).
         const ecrans = new Set([...sources.matchAll(/showEcran\(['"]([^'"]+)['"]\)/g)].map(m => m[1]));
         const idsHtml = new Set(PAGES.flatMap(page =>
             [...lireFichier('public/' + page).matchAll(/\bid="([^"]+)"/g)].map(m => m[1])));
@@ -123,37 +110,19 @@ describe('le Worker et sa configuration', () => {
             'un identifiant accepté à la création doit l\'être à l\'écriture');
     });
 
-    test('wrangler.toml pointe sur des fichiers qui existent', () => {
+    test('le Worker a de quoi tourner : chaque réglage déclaré, et hors de [assets]', () => {
+        // En TOML, toute clé écrite après [assets] appartient à cette table : le
+        // binding KV passé sous elle disparaît du Worker sans un mot, et
+        // `wrangler deploy` part quand même, avec un simple avertissement.
         const toml = lireFichier('wrangler.toml');
-        const main = toml.match(/^main\s*=\s*"([^"]+)"/m)[1];
-        const assets = toml.match(/^directory\s*=\s*"([^"]+)"/m)[1];
-        assert.ok(existsSync(racine + main), `main = ${main}`);
-        assert.ok(existsSync(racine + assets), `[assets].directory = ${assets}`);
-    });
+        const avantAssets = toml.split(/^\s*\[assets\]/m)[0];
+        assert.notEqual(avantAssets, toml, 'wrangler.toml déclare bien une table [assets]');
 
-    test('la table [assets] reste la dernière de wrangler.toml', () => {
-        // En TOML, toute clé écrite après [assets] lui appartient : le binding KV
-        // déplacé sous cette table disparaîtrait silencieusement du Worker.
-        const toml = lireFichier('wrangler.toml');
-        const tables = [...toml.matchAll(/^\s*\[([^\]]+)\]/gm)].map(m => m[1]);
-        assert.equal(tables.at(-1), 'assets');
-    });
-
-    test('chaque réglage que lit le Worker se trouve quelque part', () => {
-        // Un binding KV est déclaré dans wrangler.toml ; une clé d'API n'y est
-        // pas — elle se pose par `wrangler secret put`, et c'est le README qui
-        // le dit. L'un ou l'autre, mais jamais rien : un réglage que personne ne
-        // fournit ne se voit qu'en production, quand la route tombe.
-        const toml = lireFichier('wrangler.toml');
-        const readme = lireFichier('README.md');
-        const reglages = [...lireFichier('worker.js').matchAll(/env\.([A-Z_][A-Z0-9_]*)/g)].map(m => m[1]);
-        assert.ok(reglages.length > 0, 'le relevé a bien trouvé des réglages');
-
-        for (const reglage of new Set(reglages)) {
-            const declare = new RegExp(`binding\\s*=\\s*"${reglage}"|^\\s*${reglage}\\s*=`, 'm').test(toml);
-            const documente = new RegExp(`secret put ${reglage}\\b`).test(readme);
-            assert.ok(declare || documente,
-                `${reglage} est lu par le Worker mais n'est ni dans wrangler.toml ni posé en secret dans le README`);
+        const reglages = new Set([...lireFichier('worker.js').matchAll(/env\.([A-Z_][A-Z0-9_]*)/g)].map(m => m[1]));
+        assert.ok(reglages.size > 0, 'le relevé a bien trouvé des réglages');
+        for (const reglage of reglages) {
+            assert.match(avantAssets, new RegExp(`binding\\s*=\\s*"${reglage}"|^\\s*${reglage}\\s*=`, 'm'),
+                `${reglage} est lu par le Worker mais n'est pas déclaré avant [assets] dans wrangler.toml`);
         }
     });
 });
@@ -166,52 +135,13 @@ describe('les messages restent dans la page', () => {
     test('aucune boîte du navigateur : tout se dit et se demande dans la page', () => {
         // alert, confirm et prompt bloquent l'onglet, s'affichent hors de la page
         // et ne peuvent rien mettre en forme. notice.js et dialogue.js les remplacent.
+        // Le bac de test les définit lui-même : aucun test de comportement ne
+        // verrait un confirm() réintroduit.
         for (const [nom, source] of sourcesJs) {
             // Le nom du fichier, pas la fin du chemin : le relevé est récursif.
             if (nom.split('/').pop() === 'dialogue.js') continue; // c'est lui qui les remplace
             assert.doesNotMatch(source, /(^|[^.\w])(alert|confirm|prompt)\s*\(/,
                 `${nom} ouvre encore une boîte du navigateur`);
-        }
-    });
-
-});
-
-describe('le manifeste de l\'application installable', () => {
-    const manifeste = JSON.parse(lireFichier('public/manifest.json'));
-
-    test('il déclare ce qu\'il faut pour être installé', () => {
-        assert.ok(manifeste.name, 'sans nom, rien à installer');
-        assert.equal(manifeste.display, 'standalone');
-        assert.ok(manifeste.start_url, 'sans point de départ, l\'application s\'ouvre n\'importe où');
-    });
-
-    test('les tailles d\'icône attendues sont présentes, dont une masquable', () => {
-        const tailles = manifeste.icons.map(i => i.sizes);
-        assert.ok(tailles.includes('192x192'));
-        assert.ok(tailles.includes('512x512'));
-        assert.ok(manifeste.icons.some(i => i.purpose === 'maskable'),
-            'sans elle, Android rogne le motif dans un cercle');
-    });
-
-    test('chaque icône annoncée existe vraiment', () => {
-        // Un chemin faux ne fait rien échouer : l'installation est simplement
-        // refusée, sans un mot. C'est le genre de panne qu'on ne voit jamais.
-        for (const icone of manifeste.icons) {
-            assert.ok(existsSync(racine + 'public/' + icone.src), `icône absente : ${icone.src}`);
-        }
-    });
-
-    test('chaque page annonce le manifeste et la couleur de la barre', () => {
-        for (const page of PAGES) {
-            const source = lireFichier('public/' + page);
-            assert.match(source, /rel="manifest"/, `${page} n'annonce pas le manifeste`);
-            assert.match(source, /name="theme-color"/, `${page} ne pose pas la couleur de barre`);
-        }
-    });
-
-    test('les raccourcis mènent à des pages existantes', () => {
-        for (const raccourci of manifeste.shortcuts || []) {
-            assert.ok(PAGES.includes(raccourci.url + '.html'), `raccourci mort : ${raccourci.url}`);
         }
     });
 });

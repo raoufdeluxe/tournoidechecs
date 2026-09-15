@@ -90,6 +90,14 @@ describe('les filtres proposés', () => {
         assert.match(selecteur(app), /href="\.\/joueurs"/);
     });
 
+    test('la page ne fait pas tourner de tournoi', async () => {
+        const app = await pageStats({ fiches: DEUX_JOUEURS, tournois: UN_TOURNOI });
+        // Elle lit les tournois pour compter les parties, mais n'en ouvre aucun
+        // et n'écrit jamais : une visite des stats ne crée rien.
+        assert.equal(app.ev('typeof saveEtat'), 'undefined');
+        assert.deepEqual(app.appelsFetch.filter(a => a.init && a.init.method && a.init.method !== 'GET'), []);
+    });
+
     test('un nom piégé ne s\'injecte pas dans la page', async () => {
         const app = await pageStats({
             fiches: [{ id: 'j-a', nom: '<img src=x onerror="window.__XSS=1">', elo: null }],
